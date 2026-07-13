@@ -1,0 +1,136 @@
+'use client';
+
+import { useTimerStore } from '@/store/useTimerStore';
+import { Settings, X } from 'lucide-react';
+import { useState, useEffect } from 'react';
+
+export default function SettingsModal() {
+  const [isOpen, setIsOpen] = useState(false);
+  const { settings, updateSettings } = useTimerStore();
+  const [localSettings, setLocalSettings] = useState(settings);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    setLocalSettings(settings);
+  }, [settings]);
+
+  if (!mounted) return null;
+
+  const handleSave = () => {
+    updateSettings(localSettings);
+    setIsOpen(false);
+  };
+
+  return (
+    <>
+      <button
+        onClick={() => setIsOpen(true)}
+        className="absolute top-6 right-6 p-2 text-white/50 hover:text-white bg-black/20 hover:bg-black/40 rounded-full backdrop-blur-sm transition-all"
+      >
+        <Settings size={24} />
+      </button>
+
+      {isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-[#1a1a1a] text-white w-full max-w-md rounded-2xl shadow-2xl p-6 relative animate-in fade-in zoom-in duration-200">
+            <button
+              onClick={() => setIsOpen(false)}
+              className="absolute top-4 right-4 text-white/50 hover:text-white transition-colors"
+            >
+              <X size={20} />
+            </button>
+
+            <h2 className="text-2xl font-light mb-6 tracking-wide">Timer Settings</h2>
+
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <label className="flex justify-between text-sm font-medium text-white/70">
+                  <span>Focus Time (minutes)</span>
+                  <span>{localSettings.focusTime}</span>
+                </label>
+                <input
+                  type="range"
+                  min="5"
+                  max="90"
+                  step="5"
+                  value={localSettings.focusTime}
+                  onChange={(e) => setLocalSettings({ ...localSettings, focusTime: parseInt(e.target.value) })}
+                  className="w-full accent-blue-500"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="flex justify-between text-sm font-medium text-white/70">
+                  <span>Short Break (minutes)</span>
+                  <span>{localSettings.shortBreak}</span>
+                </label>
+                <input
+                  type="range"
+                  min="1"
+                  max="15"
+                  step="1"
+                  value={localSettings.shortBreak}
+                  onChange={(e) => setLocalSettings({ ...localSettings, shortBreak: parseInt(e.target.value) })}
+                  className="w-full accent-green-500"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="flex justify-between text-sm font-medium text-white/70">
+                  <span>Long Break (minutes)</span>
+                  <span>{localSettings.longBreak}</span>
+                </label>
+                <input
+                  type="range"
+                  min="5"
+                  max="30"
+                  step="5"
+                  value={localSettings.longBreak}
+                  onChange={(e) => setLocalSettings({ ...localSettings, longBreak: parseInt(e.target.value) })}
+                  className="w-full accent-purple-500"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="flex justify-between text-sm font-medium text-white/70">
+                  <span>Long Break Interval</span>
+                  <span>{localSettings.cycleCount} sessions</span>
+                </label>
+                <input
+                  type="range"
+                  min="2"
+                  max="10"
+                  step="1"
+                  value={localSettings.cycleCount}
+                  onChange={(e) => setLocalSettings({ ...localSettings, cycleCount: parseInt(e.target.value) })}
+                  className="w-full accent-yellow-500"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="flex justify-between text-sm font-medium text-white/70">
+                  <span>Background Audio (Spotify/YouTube URL)</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="Paste URL here..."
+                  value={localSettings.audioUrl || ''}
+                  onChange={(e) => setLocalSettings({ ...localSettings, audioUrl: e.target.value })}
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-blue-500 transition-colors"
+                />
+              </div>
+            </div>
+
+            <button
+              onClick={handleSave}
+              className="mt-8 w-full py-3 bg-white text-black font-medium rounded-xl hover:bg-white/90 transition-colors"
+            >
+              Save Changes
+            </button>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
