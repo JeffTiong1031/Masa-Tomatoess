@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { ArrowLeft, Trash2, TrendingUp, Clock, Target } from 'lucide-react';
 import { ActivityCalendar } from 'react-activity-calendar';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import Leaderboard from '@/components/Leaderboard';
 
 export default function Dashboard() {
   const [mounted, setMounted] = useState(false);
@@ -137,6 +138,9 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
+
+        {/* Leaderboard Section */}
+        <Leaderboard />
 
         {/* Heatmap Section */}
         <div className="bg-white/5 backdrop-blur-xl border border-white/10 shadow-2xl p-8 rounded-[2.5rem] mb-8 overflow-x-auto">

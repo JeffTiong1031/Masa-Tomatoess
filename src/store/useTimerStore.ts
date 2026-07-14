@@ -207,7 +207,11 @@ export const useTimerStore = create<TimerState>()(
               completedAt: Date.now(),
               taskName: state.taskName,
               tagColor: state.tagColor,
-              interruptions: state.interruptions
+              interruptions: state.interruptions,
+              synced: false
+            }).then(() => {
+              // Trigger sync immediately after insert
+              import('@/lib/sync').then(({ syncSessions }) => syncSessions());
             }).catch(err => console.error("Failed to log session:", err));
 
             // ring alarm and pause

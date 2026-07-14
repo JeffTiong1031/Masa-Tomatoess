@@ -9,6 +9,7 @@ export interface SessionRecord {
   taskName?: string;
   tagColor?: string;
   interruptions?: number;
+  synced?: boolean;
 }
 
 const db = new Dexie('PomodoroDB') as Dexie & {
@@ -22,6 +23,10 @@ db.version(1).stores({
 
 db.version(2).stores({
   sessions: '++id, date, mode, taskName',
+});
+
+db.version(3).stores({
+  sessions: '++id, date, mode, taskName, synced',
 });
 
 export { db };
