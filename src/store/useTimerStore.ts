@@ -208,7 +208,8 @@ export const useTimerStore = create<TimerState>()(
               taskName: state.taskName,
               tagColor: state.tagColor,
               interruptions: state.interruptions,
-              synced: false
+              synced: false,
+              userName: localStorage.getItem('user_name') || undefined
             }).then(() => {
               // Trigger sync immediately after insert
               import('@/lib/sync').then(({ syncSessions }) => syncSessions());
@@ -243,7 +244,6 @@ export const useTimerStore = create<TimerState>()(
       name: 'pomodoro-settings',
       partialize: (state) => ({ 
         settings: state.settings,
-        taskName: state.taskName,
         tagColor: state.tagColor,
         strictMode: state.strictMode,
         customColors: state.customColors

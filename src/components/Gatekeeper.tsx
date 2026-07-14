@@ -25,11 +25,11 @@ export default function Gatekeeper({ children }: { children: React.ReactNode }) 
   const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    const isValid = await verifyPassword(password);
-    if (isValid) {
+    const result = await verifyPassword(password);
+    if (result.success) {
       setIsPasswordVerified(true);
     } else {
-      setError('Incorrect password');
+      setError(result.error || 'Incorrect password');
     }
   };
 
@@ -75,16 +75,16 @@ export default function Gatekeeper({ children }: { children: React.ReactNode }) 
         ) : (
           <div className="flex flex-col gap-4">
             <button
-              onClick={() => handleIdentitySelect('User A')}
+              onClick={() => handleIdentitySelect('Jeff')}
               className="px-4 py-4 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-lg transition-colors font-medium"
             >
-              User A
+              Jeff
             </button>
             <button
-              onClick={() => handleIdentitySelect('User B')}
+              onClick={() => handleIdentitySelect('Rachel')}
               className="px-4 py-4 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-lg transition-colors font-medium"
             >
-              User B
+              Rachel
             </button>
           </div>
         )}

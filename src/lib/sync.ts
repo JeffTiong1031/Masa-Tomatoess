@@ -18,8 +18,8 @@ export async function syncSessions() {
 
     const payload = unsyncedSessions.map((session) => ({
       user_name: userName,
-      duration_minutes: session.durationMinutes,
-      task_name: session.taskName || null,
+      duration_minutes: Math.min(Math.max(1, session.durationMinutes), 120),
+      task_name: (session.taskName || '').slice(0, 200).replace(/[<>]/g, '') || null,
       created_at: new Date(session.completedAt).toISOString(),
     }));
 

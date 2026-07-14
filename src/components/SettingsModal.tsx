@@ -64,9 +64,26 @@ export default function SettingsModal() {
 
             <div className="space-y-6">
               <div className="space-y-2">
-                <label className="flex justify-between text-sm font-medium text-white/70">
+                <label className="flex items-center justify-between text-sm font-medium text-white/70">
                   <span>Focus Time (minutes)</span>
-                  <span>{localSettings.focusTime}</span>
+                  <input
+                    type="number"
+                    min="5"
+                    step="5"
+                    value={localSettings.focusTime}
+                    onChange={(e) => setLocalSettings({ ...localSettings, focusTime: parseInt(e.target.value) || 5 })}
+                    onBlur={(e) => {
+                      const val = Math.max(5, Math.round(parseInt(e.target.value) / 5) * 5) || 5;
+                      setLocalSettings({ ...localSettings, focusTime: val });
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                         const val = Math.max(5, Math.round(parseInt(e.currentTarget.value) / 5) * 5) || 5;
+                         setLocalSettings({ ...localSettings, focusTime: val });
+                      }
+                    }}
+                    className="w-16 bg-white/5 border border-white/10 rounded px-2 py-1 text-right text-white focus:outline-none focus:border-blue-500"
+                  />
                 </label>
                 <input
                   type="range"
@@ -80,15 +97,32 @@ export default function SettingsModal() {
               </div>
 
               <div className="space-y-2">
-                <label className="flex justify-between text-sm font-medium text-white/70">
+                <label className="flex items-center justify-between text-sm font-medium text-white/70">
                   <span>Short Break (minutes)</span>
-                  <span>{localSettings.shortBreak}</span>
+                  <input
+                    type="number"
+                    min="5"
+                    step="5"
+                    value={localSettings.shortBreak}
+                    onChange={(e) => setLocalSettings({ ...localSettings, shortBreak: parseInt(e.target.value) || 5 })}
+                    onBlur={(e) => {
+                      const val = Math.max(5, Math.round(parseInt(e.target.value) / 5) * 5) || 5;
+                      setLocalSettings({ ...localSettings, shortBreak: val });
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                         const val = Math.max(5, Math.round(parseInt(e.currentTarget.value) / 5) * 5) || 5;
+                         setLocalSettings({ ...localSettings, shortBreak: val });
+                      }
+                    }}
+                    className="w-16 bg-white/5 border border-white/10 rounded px-2 py-1 text-right text-white focus:outline-none focus:border-green-500"
+                  />
                 </label>
                 <input
                   type="range"
-                  min="1"
+                  min="5"
                   max="15"
-                  step="1"
+                  step="5"
                   value={localSettings.shortBreak}
                   onChange={(e) => setLocalSettings({ ...localSettings, shortBreak: parseInt(e.target.value) })}
                   className="w-full accent-green-500"
@@ -96,9 +130,26 @@ export default function SettingsModal() {
               </div>
 
               <div className="space-y-2">
-                <label className="flex justify-between text-sm font-medium text-white/70">
+                <label className="flex items-center justify-between text-sm font-medium text-white/70">
                   <span>Long Break (minutes)</span>
-                  <span>{localSettings.longBreak}</span>
+                  <input
+                    type="number"
+                    min="5"
+                    step="5"
+                    value={localSettings.longBreak}
+                    onChange={(e) => setLocalSettings({ ...localSettings, longBreak: parseInt(e.target.value) || 5 })}
+                    onBlur={(e) => {
+                      const val = Math.max(5, Math.round(parseInt(e.target.value) / 5) * 5) || 5;
+                      setLocalSettings({ ...localSettings, longBreak: val });
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                         const val = Math.max(5, Math.round(parseInt(e.currentTarget.value) / 5) * 5) || 5;
+                         setLocalSettings({ ...localSettings, longBreak: val });
+                      }
+                    }}
+                    className="w-16 bg-white/5 border border-white/10 rounded px-2 py-1 text-right text-white focus:outline-none focus:border-purple-500"
+                  />
                 </label>
                 <input
                   type="range"
@@ -112,9 +163,27 @@ export default function SettingsModal() {
               </div>
 
               <div className="space-y-2">
-                <label className="flex justify-between text-sm font-medium text-white/70">
+                <label className="flex items-center justify-between text-sm font-medium text-white/70">
                   <span>Long Break Interval</span>
-                  <span>{localSettings.cycleCount} sessions</span>
+                  <input
+                    type="number"
+                    min="2"
+                    max="10"
+                    step="1"
+                    value={localSettings.cycleCount}
+                    onChange={(e) => setLocalSettings({ ...localSettings, cycleCount: parseInt(e.target.value) || 2 })}
+                    onBlur={(e) => {
+                      const val = Math.max(2, parseInt(e.target.value) || 2);
+                      setLocalSettings({ ...localSettings, cycleCount: val });
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                         const val = Math.max(2, parseInt(e.currentTarget.value) || 2);
+                         setLocalSettings({ ...localSettings, cycleCount: val });
+                      }
+                    }}
+                    className="w-16 bg-white/5 border border-white/10 rounded px-2 py-1 text-right text-white focus:outline-none focus:border-yellow-500"
+                  />
                 </label>
                 <input
                   type="range"

@@ -8,6 +8,7 @@ import { ArrowLeft, Trash2, TrendingUp, Clock, Target } from 'lucide-react';
 import { ActivityCalendar } from 'react-activity-calendar';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import Leaderboard from '@/components/Leaderboard';
+import { clearUserSessions } from '@/app/actions/clearSessions';
 
 export default function Dashboard() {
   const [mounted, setMounted] = useState(false);
@@ -20,12 +21,42 @@ export default function Dashboard() {
   const sessions = useLiveQuery(() => db.sessions.toArray()) || [];
 
   const handleClearData = async () => {
-    if (confirm('Are you sure you want to clear all focus history? This cannot be undone.')) {
+    if (confirm('Are you sure you want to clear your focus history? This cannot be undone.')) {
       try {
-        await db.sessions.clear();
+        const userName = localStorage.getItem('user_name');
+        
+        // 1. Delete from Supabase via secure Server Action
+        if (userName) {
+          const result = await clearUserSessions(userName);
+          if (!result.success) {
+            console.error('Failed to clear Supabase history:', result.error);
+          }
+        }
+        
+        // 2. Delete from Dexie (only for this user, or fallback to clear all if no userName is attached to old records?)
+        // To be safe and clean up legacy data without a userName, if we are clearing, we can delete where userName == current or userName is undefined.
+        // Actually, to be precise, let's delete only current user's records to preserve the other user's local history.
+        if (userName) {
+           await db.sessions.where('userName').equals(userName).delete();
+           // also delete old legacy records that had no username, assuming they belonged to this user or are just old
+           const oldSessions = await db.sessions.filter(s => !s.userName).primaryKeys();
+           await db.sessions.bulkDelete(oldSessions);
+        } else {
+           await db.sessions.clear();
+        }
+        
+        // Force a reload to refresh the leaderboard
+        window.location.reload();
       } catch (err) {
         console.error('Failed to clear database:', err);
       }
+    }
+  };
+
+  const handleLogOut = () => {
+    if (confirm('Are you sure you want to log out? You will need the secret password to enter again.')) {
+      localStorage.removeItem('user_name');
+      window.location.href = '/';
     }
   };
 
@@ -96,14 +127,22 @@ export default function Dashboard() {
             </Link>
             <h1 className="text-5xl font-extralight tracking-tight drop-shadow-md">Analytics Dashboard</h1>
           </div>
-          <button 
-            onClick={handleClearData}
-            className="flex items-center gap-2 px-5 py-2.5 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 hover:border-red-500/30 rounded-xl text-sm font-medium text-red-400 hover:text-red-300 transition-all shadow-lg"
-            title="Clear History"
-          >
-            <Trash2 size={16} />
-            Clear History
-          </button>
+          <div className="flex items-center gap-4">
+            <button 
+              onClick={handleLogOut}
+              className="px-5 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-sm font-medium text-white/70 hover:text-white transition-all shadow-lg"
+            >
+              Log Out
+            </button>
+            <button 
+              onClick={handleClearData}
+              className="flex items-center gap-2 px-5 py-2.5 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 hover:border-red-500/30 rounded-xl text-sm font-medium text-red-400 hover:text-red-300 transition-all shadow-lg"
+              title="Clear History"
+            >
+              <Trash2 size={16} />
+              Clear History
+            </button>
+          </div>
         </header>
 
         {/* Stats Row */}
