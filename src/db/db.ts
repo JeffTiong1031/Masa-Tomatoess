@@ -6,6 +6,9 @@ export interface SessionRecord {
   durationMinutes: number;
   mode: 'focus' | 'shortBreak' | 'longBreak';
   completedAt: number; // Unix timestamp
+  taskName?: string;
+  tagColor?: string;
+  interruptions?: number;
 }
 
 const db = new Dexie('PomodoroDB') as Dexie & {
@@ -15,6 +18,10 @@ const db = new Dexie('PomodoroDB') as Dexie & {
 // Schema definition
 db.version(1).stores({
   sessions: '++id, date, mode', // Primary key and indexed props
+});
+
+db.version(2).stores({
+  sessions: '++id, date, mode, taskName',
 });
 
 export { db };

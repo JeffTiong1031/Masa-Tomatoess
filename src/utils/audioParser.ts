@@ -3,7 +3,7 @@ export type AudioPlatform = 'spotify' | 'youtube' | null;
 export interface ParsedAudio {
   platform: AudioPlatform;
   id: string;
-  type?: 'track' | 'album' | 'playlist' | 'episode' | 'show'; // For Spotify
+  type?: 'track' | 'album' | 'playlist' | 'episode' | 'show' | 'artist'; // For Spotify
 }
 
 export function parseAudioUrl(url: string): ParsedAudio {
@@ -21,7 +21,7 @@ export function parseAudioUrl(url: string): ParsedAudio {
 
   // Parse Spotify
   // Matches: open.spotify.com/track/ID, open.spotify.com/playlist/ID, etc.
-  const spotifyRegex = /open\.spotify\.com\/(track|album|playlist|episode|show)\/([a-zA-Z0-9]+)/i;
+  const spotifyRegex = /open\.spotify\.com\/(track|album|playlist|episode|show|artist)\/([a-zA-Z0-9]+)/i;
   const spotifyMatch = url.match(spotifyRegex);
   if (spotifyMatch && spotifyMatch[1] && spotifyMatch[2]) {
     return { 

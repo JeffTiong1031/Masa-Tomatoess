@@ -11,6 +11,7 @@ interface TimerSettings {
   cycleCount: number;
   audioUrl: string;
   themeId: string;
+  alarmSound: string;
 }
 
 interface TimerState {
@@ -25,6 +26,19 @@ interface TimerState {
   isAlarmRinging: boolean;
   currentCycle: number; // starts at 1, goes up to cycleCount
 
+  // Tagging & Analytics
+  taskName: string;
+  tagColor: string;
+  interruptions: number;
+  customColors: string[];
+
+  // Drift-Free Engine
+  targetEndTime: number | null;
+
+  // Strict Mode
+  strictMode: boolean;
+  showStrictWarning: boolean;
+
   // Actions
   start: () => void;
   pause: () => void;
@@ -33,6 +47,14 @@ interface TimerState {
   tick: () => void;
   setMode: (mode: TimerMode) => void;
   stopAlarm: () => void;
+
+  // New Actions
+  setTaskDetails: (name: string, color: string) => void;
+  toggleStrictMode: () => void;
+  clearStrictWarning: () => void;
+  addCustomColor: (color: string) => void;
+  updateCustomColor: (index: number, newColor: string) => void;
+  clearCustomColors: () => void;
 }
 
 const DEFAULT_SETTINGS: TimerSettings = {
@@ -42,6 +64,7 @@ const DEFAULT_SETTINGS: TimerSettings = {
   cycleCount: 4,
   audioUrl: '',
   themeId: 'none',
+  alarmSound: 'bell',
 };
 
 export const useTimerStore = create<TimerState>()(
@@ -53,6 +76,14 @@ export const useTimerStore = create<TimerState>()(
       isActive: false,
       isAlarmRinging: false,
       currentCycle: 1,
+
+      taskName: '',
+      tagColor: '#3b82f6',
+      interruptions: 0,
+      customColors: [],
+      targetEndTime: null,
+      strictMode: false,
+      showStrictWarning: false,
 
       updateSettings: (newSettings) =>
         set((state) => {
@@ -74,19 +105,49 @@ export const useTimerStore = create<TimerState>()(
           else if (mode === 'shortBreak') nextTimeLeft = state.settings.shortBreak * 60;
           else if (mode === 'longBreak') nextTimeLeft = state.settings.longBreak * 60;
           
-          return { mode, timeLeft: nextTimeLeft, isActive: false };
+          return { mode, timeLeft: nextTimeLeft, isActive: false, targetEndTime: null };
         }),
 
       start: () => {
         const state = get();
         if (state.isAlarmRinging) {
           get().skip();
-          set({ isAlarmRinging: false, isActive: true });
+          set({ 
+            isAlarmRinging: false, 
+            isActive: true,
+            targetEndTime: Date.now() + get().timeLeft * 1000
+          });
         } else {
-          set({ isActive: true });
+          set({ 
+            isActive: true,
+            targetEndTime: Date.now() + state.timeLeft * 1000
+          });
         }
       },
-      pause: () => set({ isActive: false }),
+      pause: () => {
+        const state = get();
+        if (state.strictMode && state.mode === 'focus') {
+          set({ 
+            isActive: false, 
+            timeLeft: state.settings.focusTime * 60,
+            showStrictWarning: true,
+            targetEndTime: null
+          });
+        } else {
+          let nextTimeLeft = state.timeLeft;
+          if (state.targetEndTime) {
+            nextTimeLeft = Math.max(0, Math.ceil((state.targetEndTime - Date.now()) / 1000));
+          }
+          const nextInterruptions = state.mode === 'focus' ? state.interruptions + 1 : state.interruptions;
+          
+          set({ 
+            isActive: false, 
+            timeLeft: nextTimeLeft,
+            interruptions: nextInterruptions,
+            targetEndTime: null
+          });
+        }
+      },
       reset: () =>
         set((state) => {
           let nextTimeLeft = state.timeLeft;
@@ -94,7 +155,7 @@ export const useTimerStore = create<TimerState>()(
           else if (state.mode === 'shortBreak') nextTimeLeft = state.settings.shortBreak * 60;
           else if (state.mode === 'longBreak') nextTimeLeft = state.settings.longBreak * 60;
 
-          return { timeLeft: nextTimeLeft, isActive: false, isAlarmRinging: false };
+          return { timeLeft: nextTimeLeft, isActive: false, isAlarmRinging: false, targetEndTime: null };
         }),
       
       stopAlarm: () => set({ isAlarmRinging: false }),
@@ -122,10 +183,12 @@ export const useTimerStore = create<TimerState>()(
 
       tick: () =>
         set((state) => {
-          if (!state.isActive) return state;
+          if (!state.isActive || !state.targetEndTime) return state;
 
-          if (state.timeLeft > 0) {
-            return { timeLeft: state.timeLeft - 1 };
+          const exactTimeLeft = Math.max(0, Math.ceil((state.targetEndTime - Date.now()) / 1000));
+
+          if (exactTimeLeft > 0) {
+            return { timeLeft: exactTimeLeft };
           } else {
             // Timer reached 0, strictly log the completed session
             const today = new Date();
@@ -141,17 +204,46 @@ export const useTimerStore = create<TimerState>()(
               date: dateStr,
               durationMinutes: duration,
               mode: state.mode,
-              completedAt: Date.now()
+              completedAt: Date.now(),
+              taskName: state.taskName,
+              tagColor: state.tagColor,
+              interruptions: state.interruptions
             }).catch(err => console.error("Failed to log session:", err));
 
             // ring alarm and pause
-            return { isAlarmRinging: true, isActive: false };
+            return { 
+              isAlarmRinging: true, 
+              isActive: false,
+              targetEndTime: null,
+              interruptions: 0
+            };
           }
         }),
+
+      setTaskDetails: (name, color) => set({ taskName: name, tagColor: color }),
+      toggleStrictMode: () => set((state) => ({ strictMode: !state.strictMode })),
+      clearStrictWarning: () => set({ showStrictWarning: false }),
+      addCustomColor: (color) => set((state) => {
+        if (state.customColors.includes(color)) return state;
+        if (state.customColors.length >= 4) return state;
+        return { customColors: [...state.customColors, color] };
+      }),
+      updateCustomColor: (index, newColor) => set((state) => {
+        const newColors = [...state.customColors];
+        newColors[index] = newColor;
+        return { customColors: newColors };
+      }),
+      clearCustomColors: () => set({ customColors: [] }),
     }),
     {
       name: 'pomodoro-settings',
-      partialize: (state) => ({ settings: state.settings }), // Only persist settings
+      partialize: (state) => ({ 
+        settings: state.settings,
+        taskName: state.taskName,
+        tagColor: state.tagColor,
+        strictMode: state.strictMode,
+        customColors: state.customColors
+      }), 
     }
   )
 );
