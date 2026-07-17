@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { db } from '@/db/db';
+import { elapsedMinutesToLog } from '@/lib/flexibleTime';
 
 export type TimerMode = 'focus' | 'shortBreak' | 'longBreak';
 
@@ -55,6 +56,11 @@ interface TimerState {
   addCustomColor: (color: string) => void;
   updateCustomColor: (index: number, newColor: string) => void;
   clearCustomColors: () => void;
+
+  getClassicElapsedSeconds: () => number;
+  isClassicOngoing: () => boolean;
+  endAndLogPartialFocus: () => void;
+  hardResetToIdleFocus: () => void;
 }
 
 const DEFAULT_SETTINGS: TimerSettings = {
@@ -239,6 +245,72 @@ export const useTimerStore = create<TimerState>()(
         return { customColors: newColors };
       }),
       clearCustomColors: () => set({ customColors: [] }),
+
+      getClassicElapsedSeconds: () => {
+        const state = get();
+        let timeLeft = state.timeLeft;
+        if (state.isActive && state.targetEndTime) {
+          timeLeft = Math.max(0, Math.ceil((state.targetEndTime - Date.now()) / 1000));
+        }
+        const fullSeconds =
+          state.mode === 'focus'
+            ? state.settings.focusTime * 60
+            : state.mode === 'shortBreak'
+            ? state.settings.shortBreak * 60
+            : state.settings.longBreak * 60;
+        return Math.max(0, fullSeconds - timeLeft);
+      },
+
+      isClassicOngoing: () => {
+        const state = get();
+        if (state.isActive || state.isAlarmRinging) return true;
+        const fullSeconds =
+          state.mode === 'focus'
+            ? state.settings.focusTime * 60
+            : state.mode === 'shortBreak'
+            ? state.settings.shortBreak * 60
+            : state.settings.longBreak * 60;
+        return state.timeLeft < fullSeconds;
+      },
+
+      hardResetToIdleFocus: () =>
+        set((state) => ({
+          mode: 'focus',
+          timeLeft: state.settings.focusTime * 60,
+          isActive: false,
+          isAlarmRinging: false,
+          targetEndTime: null,
+          showStrictWarning: false,
+        })),
+
+      endAndLogPartialFocus: () => {
+        const state = get();
+        if (state.mode === 'focus') {
+          const elapsed = get().getClassicElapsedSeconds();
+          const minutes = elapsedMinutesToLog(elapsed);
+          if (minutes != null) {
+            const dateStr = new Date().toISOString().split('T')[0];
+            db.sessions
+              .add({
+                date: dateStr,
+                durationMinutes: minutes,
+                mode: 'focus',
+                completedAt: Date.now(),
+                taskName: state.taskName,
+                tagColor: state.tagColor,
+                interruptions: state.interruptions,
+                synced: false,
+                userName: localStorage.getItem('user_name') || undefined,
+              })
+              .then(() => {
+                import('@/lib/sync').then(({ syncSessions }) => syncSessions());
+              })
+              .catch((err) => console.error('Failed to log partial focus:', err));
+          }
+        }
+        get().hardResetToIdleFocus();
+        set({ interruptions: 0 });
+      },
     }),
     {
       name: 'pomodoro-settings',

@@ -3,8 +3,7 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/db/db';
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
-import { ArrowLeft, Trash2, TrendingUp, Clock, Target } from 'lucide-react';
+import { Trash2, TrendingUp, Clock, Target } from 'lucide-react';
 import { ActivityCalendar } from 'react-activity-calendar';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import Leaderboard from '@/components/Leaderboard';
@@ -119,12 +118,8 @@ export default function Dashboard() {
     <main className="min-h-screen bg-zinc-950 text-white p-8 overflow-y-auto">
       <div className="max-w-5xl mx-auto">
         
-        <header className="flex items-center justify-between mb-12">
+        <header className="flex items-center justify-between mb-12 mt-16">
           <div>
-            <Link href="/" className="inline-flex items-center text-white/50 hover:text-white transition-colors mb-6 text-sm font-medium tracking-wide">
-              <ArrowLeft size={18} className="mr-2" />
-              Back to Timer
-            </Link>
             <h1 className="text-5xl font-extralight tracking-tight drop-shadow-md">Analytics Dashboard</h1>
           </div>
           <div className="flex items-center gap-4">

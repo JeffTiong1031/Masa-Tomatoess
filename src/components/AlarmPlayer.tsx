@@ -1,20 +1,22 @@
 'use client';
 
 import { useTimerStore } from '@/store/useTimerStore';
+import { useFlexibleStore } from '@/store/useFlexibleStore';
 import { useEffect, useRef } from 'react';
 import { playAlarmLoop, type AlarmSoundId } from '@/utils/alarmSounds';
 
 export default function AlarmPlayer() {
-  const { isAlarmRinging, settings } = useTimerStore();
+  const classicRinging = useTimerStore((s) => s.isAlarmRinging);
+  const flexibleRinging = useFlexibleStore((s) => s.isAlarmRinging);
+  const alarmSound = useTimerStore((s) => s.settings.alarmSound);
+  const isAlarmRinging = classicRinging || flexibleRinging;
   const stopRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     if (isAlarmRinging) {
-      // Start looping the selected alarm sound
-      const soundId = (settings?.alarmSound || 'bell') as AlarmSoundId;
+      const soundId = (alarmSound || 'bell') as AlarmSoundId;
       stopRef.current = playAlarmLoop(soundId);
     } else {
-      // Stop the alarm
       if (stopRef.current) {
         stopRef.current();
         stopRef.current = null;
@@ -27,8 +29,7 @@ export default function AlarmPlayer() {
         stopRef.current = null;
       }
     };
-  }, [isAlarmRinging, settings?.alarmSound]);
+  }, [isAlarmRinging, alarmSound]);
 
-  // No DOM element needed — Web Audio API plays directly
   return null;
 }

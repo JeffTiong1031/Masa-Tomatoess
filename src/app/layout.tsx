@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import Gatekeeper from "@/components/Gatekeeper";
+import ClientProviders from "@/components/ClientProviders";
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -28,9 +29,7 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <Gatekeeper>
-          {children}
-        </Gatekeeper>
+        <ClientProviders>{children}</ClientProviders>
       </body>
     </html>
   );
