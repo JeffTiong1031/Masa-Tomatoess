@@ -9,14 +9,16 @@ import TimerEngine from '@/components/TimerEngine';
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen relative overflow-hidden bg-zinc-950">
+    <div className="min-h-dvh relative bg-[var(--mt-midnight)] overflow-x-hidden">
       <BackgroundManager />
-      <AppNav />
-      <TimerEngine />
-      {children}
-      <ThemeModal />
-      <AudioPlayer />
-      <AlarmPlayer />
+      <div className="relative z-10 min-h-dvh flex flex-col">
+        <AppNav />
+        <TimerEngine />
+        <div className="flex-1 flex flex-col">{children}</div>
+        <ThemeModal />
+        <AudioPlayer />
+        <AlarmPlayer />
+      </div>
     </div>
   );
 }

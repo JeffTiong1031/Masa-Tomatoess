@@ -1,5 +1,7 @@
 'use client';
 
+import Modal from '@/components/ui/Modal';
+
 interface SessionConflictDialogProps {
   open: boolean;
   onConfirm: () => void;
@@ -11,30 +13,34 @@ export default function SessionConflictDialog({
   onConfirm,
   onCancel,
 }: SessionConflictDialogProps) {
-  if (!open) return null;
-
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="bg-[#1a1a1a] text-white w-full max-w-sm rounded-2xl shadow-2xl p-6 relative">
-        <h2 className="text-xl font-light mb-3 tracking-wide">Ongoing session</h2>
-        <p className="text-sm text-white/70 mb-6 leading-relaxed">
-          You have an ongoing session. Do you wish to start a new one?
-        </p>
+    <Modal
+      open={open}
+      onClose={onCancel}
+      title="Ongoing session"
+      maxWidthClass="max-w-sm"
+      footer={
         <div className="flex gap-3">
           <button
+            type="button"
             onClick={onCancel}
-            className="flex-1 py-2.5 rounded-xl bg-white/10 text-white/80 hover:bg-white/15 transition-colors"
+            className="flex-1 min-h-11 py-2.5 rounded-xl bg-white/10 text-white/80 hover:bg-white/15 transition-colors"
           >
             No
           </button>
           <button
+            type="button"
             onClick={onConfirm}
-            className="flex-1 py-2.5 rounded-xl bg-white text-black font-medium hover:bg-white/90 transition-colors"
+            className="flex-1 min-h-11 py-2.5 rounded-xl bg-white text-black font-medium hover:bg-white/90 transition-colors"
           >
             Yes
           </button>
         </div>
-      </div>
-    </div>
+      }
+    >
+      <p className="text-sm text-white/70 leading-relaxed">
+        You have an ongoing session. Do you wish to start a new one?
+      </p>
+    </Modal>
   );
 }

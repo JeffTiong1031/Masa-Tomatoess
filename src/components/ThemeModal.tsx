@@ -1,103 +1,154 @@
 'use client';
 
 import { useTimerStore } from '@/store/useTimerStore';
-import { Palette, X, Upload } from 'lucide-react';
-import { useState, useRef } from 'react';
-import { set } from 'idb-keyval';
-
+import { Palette, Upload } from 'lucide-react';
+import { useRef, useState } from 'react';
+import Modal from '@/components/ui/Modal';
+import { BACKGROUND_PRESETS } from '@/lib/backgrounds';
+import { saveCustomTheme } from '@/lib/backgroundStorage';
 export default function ThemeModal() {
   const [isOpen, setIsOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
   const { settings, updateSettings } = useTimerStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const defaultThemes = [
-    { id: 'none', name: 'Default Gradient', src: '' },
-    { id: '/themes/cafe.png', name: 'Lofi Cafe', src: '/themes/cafe.png' },
-    { id: '/themes/dark.png', name: 'Minimalist Dark', src: '/themes/dark.png' },
-    { id: '/themes/nature.png', name: 'Nature Retreat', src: '/themes/nature.png' },
-  ];
-
   const handleThemeSelect = (themeId: string) => {
+    setError(null);
     updateSettings({ themeId });
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      try {
-        await set('custom-theme-file', file);
-        updateSettings({ themeId: 'custom' });
-        // Dispatch event to notify page.tsx to reload custom theme
-        window.dispatchEvent(new Event('custom-theme-updated'));
-      } catch (err) {
-        console.error('Failed to save custom theme:', err);
-      }
+    e.target.value = '';
+    if (!file) return;
+    setUploading(true);
+    setError(null);
+    const result = await saveCustomTheme(file);
+    setUploading(false);
+    if (!result.ok) {
+      setError(result.error ?? 'Upload failed');
+      return;
     }
+    updateSettings({ themeId: 'custom' });
+    window.dispatchEvent(new Event('custom-theme-updated'));
   };
 
   return (
     <>
       <button
+        type="button"
         onClick={() => setIsOpen(true)}
-        className="absolute top-6 right-20 p-2 text-white/50 hover:text-white bg-black/20 hover:bg-black/40 rounded-full backdrop-blur-sm transition-all"
+        className="absolute z-40 min-h-11 min-w-11 inline-flex items-center justify-center text-white/50 hover:text-white bg-black/25 hover:bg-black/45 rounded-full backdrop-blur-sm transition-all border border-white/10"
+        style={{
+          top: 'calc(var(--mt-safe-top) + 1.15rem)',
+          // Leave room for the page settings button on the far right
+          right: 'calc(var(--mt-safe-right) + 3.75rem)',
+        }}
         title="Theme Manager"
+        aria-label="Open theme manager"
       >
-        <Palette size={24} />
+        <Palette size={22} />
       </button>
 
-      {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-[#1a1a1a] text-white w-full max-w-2xl rounded-2xl shadow-2xl p-6 relative animate-in fade-in zoom-in duration-200">
-            <button
-              onClick={() => setIsOpen(false)}
-              className="absolute top-4 right-4 text-white/50 hover:text-white transition-colors"
-            >
-              <X size={20} />
-            </button>
+      <Modal
+        open={isOpen}
+        onClose={() => setIsOpen(false)}
+        title="Theme Manager"
+        variant="sheet"
+        maxWidthClass="max-w-2xl"
+      >
+        <p className="text-sm text-white/50 mb-4">
+          Live loops animate when your connection and motion preferences allow.
+          Uploads stay on this device only.
+        </p>
 
-            <h2 className="text-2xl font-light mb-6 tracking-wide">Theme Manager</h2>
-
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-              {defaultThemes.map((theme) => (
-                <button
-                  key={theme.id}
-                  onClick={() => handleThemeSelect(theme.id)}
-                  className={`relative aspect-video rounded-xl overflow-hidden transition-all duration-300 hover:scale-[1.02] ${
-                    settings.themeId === theme.id ? 'ring-4 ring-blue-500 scale-[1.02]' : 'ring-1 ring-white/10'
-                  }`}
-                >
-                  {theme.id === 'none' ? (
-                    <div className="w-full h-full bg-gradient-to-br from-blue-900 via-zinc-900 to-purple-900" />
-                  ) : (
-                    <img src={theme.src} alt={theme.name} className="w-full h-full object-cover" />
-                  )}
-                  <div className="absolute inset-0 bg-black/40 flex items-end p-2 opacity-0 hover:opacity-100 transition-opacity">
-                    <span className="text-xs font-medium">{theme.name}</span>
-                  </div>
-                </button>
-              ))}
-
-              {/* Upload Custom Card */}
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className={`relative aspect-video rounded-xl flex flex-col items-center justify-center bg-white/5 hover:bg-white/10 transition-all duration-300 ${
-                  settings.themeId === 'custom' ? 'ring-4 ring-blue-500 scale-[1.02]' : 'ring-1 ring-white/10'
-                }`}
-              >
-                <Upload size={24} className="text-white/50 mb-2" />
-                <span className="text-xs font-medium text-white/50">Upload Custom</span>
-              </button>
-              <input 
-                type="file" 
-                ref={fileInputRef} 
-                onChange={handleFileUpload} 
-                accept="image/*" 
-                className="hidden" 
-              />
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          <button
+            type="button"
+            onClick={() => handleThemeSelect('none')}
+            className={`relative aspect-video rounded-xl overflow-hidden transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 ${
+              settings.themeId === 'none'
+                ? 'ring-2 ring-blue-500 scale-[1.01]'
+                : 'ring-1 ring-white/10'
+            }`}
+          >
+            <div className="w-full h-full bg-gradient-to-br from-blue-900 via-zinc-900 to-indigo-950" />
+            <div className="absolute inset-x-0 bottom-0 bg-black/55 px-2 py-1.5">
+              <span className="text-xs font-medium">Midnight Gradient</span>
             </div>
-          </div>
+          </button>
+
+          {BACKGROUND_PRESETS.map((theme) => (
+            <button
+              type="button"
+              key={theme.id}
+              onClick={() => handleThemeSelect(theme.id)}
+              className={`relative aspect-video rounded-xl overflow-hidden transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 ${
+                settings.themeId === theme.id
+                  ? 'ring-2 ring-blue-500 scale-[1.01]'
+                  : 'ring-1 ring-white/10'
+              }`}
+            >
+              {theme.kind === 'image' ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={theme.src}
+                  alt=""
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div
+                  className="w-full h-full bg-cover bg-center"
+                  style={{
+                    backgroundImage: theme.poster
+                      ? `url(${theme.poster})`
+                      : undefined,
+                    backgroundColor: '#0b1628',
+                  }}
+                >
+                  <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 to-purple-700/30" />
+                  <span className="absolute top-2 left-2 text-[10px] uppercase tracking-wider bg-black/50 px-1.5 py-0.5 rounded">
+                    Live
+                  </span>
+                </div>
+              )}
+              <div className="absolute inset-x-0 bottom-0 bg-black/55 px-2 py-1.5 text-left">
+                <span className="text-xs font-medium">{theme.name}</span>
+              </div>
+            </button>
+          ))}
+
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            className={`relative aspect-video rounded-xl flex flex-col items-center justify-center bg-white/5 hover:bg-white/10 transition-all disabled:opacity-60 ${
+              settings.themeId === 'custom'
+                ? 'ring-2 ring-blue-500 scale-[1.01]'
+                : 'ring-1 ring-white/10'
+            }`}
+          >
+            <Upload size={22} className="text-white/50 mb-2" />
+            <span className="text-xs font-medium text-white/70 px-2 text-center">
+              {uploading ? 'Saving…' : 'Upload image or video'}
+            </span>
+          </button>
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileUpload}
+            accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime"
+            className="hidden"
+          />
         </div>
-      )}
+
+        {error && (
+          <p className="mt-4 text-sm text-red-400" role="alert">
+            {error}
+          </p>
+        )}
+      </Modal>
     </>
   );
 }
