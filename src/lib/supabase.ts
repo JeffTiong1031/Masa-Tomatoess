@@ -12,7 +12,7 @@ Supabase Schema for focus_sessions:
 create table focus_sessions (
   id uuid primary key default gen_random_uuid(),
   user_name text not null,
-  duration_minutes integer not null,
+  duration_minutes integer not null, -- CHECK (duration_minutes > 0 AND duration_minutes <= 1440)
   task_name text,
   created_at timestamptz default now()
 );

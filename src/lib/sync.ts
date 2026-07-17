@@ -1,5 +1,6 @@
 import { db } from '@/db/db';
 import { supabase } from './supabase';
+import { clampDurationMinutes } from './sessionDuration';
 import {
   dateStrFromCompletedAt,
   findMissingRemoteSessions,
@@ -24,7 +25,7 @@ export async function pushSessions() {
 
     const payload = unsyncedSessions.map((session) => ({
       user_name: userName,
-      duration_minutes: Math.min(Math.max(1, session.durationMinutes), 120),
+      duration_minutes: clampDurationMinutes(session.durationMinutes),
       task_name: (session.taskName || '').slice(0, 200).replace(/[<>]/g, '') || null,
       created_at: new Date(session.completedAt).toISOString(),
     }));

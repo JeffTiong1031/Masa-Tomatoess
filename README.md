@@ -110,7 +110,7 @@ The app has been through a full security audit. Key hardening measures:
 - **Timing-safe password comparison** using `crypto.timingSafeEqual`.
 - **Rate limiting** on login — 5 failed attempts triggers a 15-minute lockout.
 - **Server-side data deletion** via Server Actions with user validation whitelist.
-- **Input sanitization** — task names truncated/stripped, durations clamped to `[1, 120]`.
+- **Input sanitization** — task names truncated/stripped, durations clamped to `[1, 1440]` (24h, for long flexible sessions).
 - **Security headers** — `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy`, and `Permissions-Policy`.
 
 ---
@@ -140,7 +140,7 @@ Run this SQL in your **Supabase Dashboard → SQL Editor**:
 CREATE TABLE focus_sessions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_name TEXT NOT NULL,
-  duration_minutes INTEGER NOT NULL CHECK (duration_minutes > 0 AND duration_minutes <= 120),
+  duration_minutes INTEGER NOT NULL CHECK (duration_minutes > 0 AND duration_minutes <= 1440),
   task_name TEXT,
   created_at TIMESTAMPTZ DEFAULT now()
 );
@@ -153,6 +153,17 @@ CREATE POLICY "Allow anonymous inserts" ON focus_sessions
 
 CREATE POLICY "Allow anonymous reads" ON focus_sessions
   FOR SELECT TO anon USING (true);
+```
+
+If you already created the table with the old `<= 120` check (before flexible long sessions), run this migration so 200+ minute sessions can sync:
+
+```sql
+ALTER TABLE focus_sessions
+  DROP CONSTRAINT IF EXISTS focus_sessions_duration_minutes_check;
+
+ALTER TABLE focus_sessions
+  ADD CONSTRAINT focus_sessions_duration_minutes_check
+  CHECK (duration_minutes > 0 AND duration_minutes <= 1440);
 ```
 
 ### 4. Run
