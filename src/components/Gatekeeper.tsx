@@ -33,10 +33,17 @@ export default function Gatekeeper({ children }: { children: React.ReactNode }) 
     }
   };
 
-  const handleIdentitySelect = (name: string) => {
+  const handleIdentitySelect = async (name: string) => {
+    setIsSyncing(true);
     localStorage.setItem('user_name', name);
     setUserName(name);
-    syncSessions().catch(console.error);
+    try {
+      await syncSessions();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsSyncing(false);
+    }
   };
 
   if (isLoading) {

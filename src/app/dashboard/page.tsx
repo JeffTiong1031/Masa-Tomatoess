@@ -8,16 +8,28 @@ import { ActivityCalendar } from 'react-activity-calendar';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import Leaderboard from '@/components/Leaderboard';
 import { clearUserSessions } from '@/app/actions/clearSessions';
+import { syncSessions } from '@/lib/sync';
 
 export default function Dashboard() {
   const [mounted, setMounted] = useState(false);
+  const [userName, setUserName] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
+    const name = localStorage.getItem('user_name');
+    setUserName(name);
+    // Refresh local Dexie from Supabase so stats work on any device
+    syncSessions().catch(console.error);
   }, []);
 
-  // Fetch all sessions from Dexie
-  const sessions = useLiveQuery(() => db.sessions.toArray()) || [];
+  // Fetch sessions from Dexie (populated by local completions + cloud pull)
+  const allSessions = useLiveQuery(() => db.sessions.toArray()) || [];
+  const sessions = allSessions.filter(
+    (s) =>
+      s.mode === 'focus' &&
+      !!userName &&
+      (s.userName === userName || !s.userName)
+  );
 
   const handleClearData = async () => {
     if (confirm('Are you sure you want to clear your focus history? This cannot be undone.')) {
@@ -63,10 +75,8 @@ export default function Dashboard() {
 
   // Process data for Activity Calendar (Heatmap)
   const heatmapDataMap = new Map<string, number>();
-  sessions.forEach(s => {
-    if (s.mode === 'focus') {
-      heatmapDataMap.set(s.date, (heatmapDataMap.get(s.date) || 0) + 1);
-    }
+  sessions.forEach((s) => {
+    heatmapDataMap.set(s.date, (heatmapDataMap.get(s.date) || 0) + 1);
   });
 
   // react-activity-calendar requires at least a full year of data to look good.
@@ -100,7 +110,7 @@ export default function Dashboard() {
     d.setDate(d.getDate() - i);
     const dateStr = d.toISOString().split('T')[0];
     
-    const daySessions = sessions.filter(s => s.date === dateStr && s.mode === 'focus');
+    const daySessions = sessions.filter((s) => s.date === dateStr);
     const totalMinutes = daySessions.reduce((sum, s) => sum + s.durationMinutes, 0);
     
     weeklyData.push({
@@ -110,8 +120,8 @@ export default function Dashboard() {
   }
 
   // Aggregate Stats
-  const totalFocusSessions = sessions.filter(s => s.mode === 'focus').length;
-  const totalFocusMinutes = sessions.filter(s => s.mode === 'focus').reduce((sum, s) => sum + s.durationMinutes, 0);
+  const totalFocusSessions = sessions.length;
+  const totalFocusMinutes = sessions.reduce((sum, s) => sum + s.durationMinutes, 0);
   const totalFocusHours = (totalFocusMinutes / 60).toFixed(1);
 
   return (
