@@ -1,6 +1,7 @@
 'use client';
 
-import AppNav from '@/components/AppNav';
+import AppNav from '@/components/nav/AppNav';
+import NavDrawer from '@/components/nav/NavDrawer';
 import BackgroundManager from '@/components/BackgroundManager';
 import ThemeModal from '@/components/ThemeModal';
 import AudioPlayer from '@/components/AudioPlayer';
@@ -9,12 +10,15 @@ import TimerEngine from '@/components/TimerEngine';
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-dvh relative bg-[var(--mt-midnight)] overflow-x-hidden">
+    <div className="relative min-h-dvh overflow-x-hidden">
       <BackgroundManager />
-      <div className="relative z-10 min-h-dvh flex flex-col">
-        <AppNav />
+      <div className="relative z-10 flex min-h-dvh flex-col">
+        <NavDrawer />
+        {/* TimerEngine stays here, above the route groups, so a running
+            timer survives navigation between sections. Do not move it. */}
         <TimerEngine />
-        <div className="flex-1 flex flex-col">{children}</div>
+        <div className="flex flex-1 flex-col">{children}</div>
+        <AppNav />
         <ThemeModal />
         <AudioPlayer />
         <AlarmPlayer />
