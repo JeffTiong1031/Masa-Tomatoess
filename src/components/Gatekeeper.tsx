@@ -81,7 +81,7 @@ export default function Gatekeeper({ children }: { children: React.ReactNode }) 
         role="dialog"
         aria-modal="true"
         aria-labelledby="gatekeeper-title"
-        className="bg-[var(--mt-surface)] border border-white/10 p-6 sm:p-8 rounded-2xl shadow-2xl w-full max-w-md text-white"
+        className="bg-[var(--mt-surface)] border border-[var(--mt-border)] p-6 sm:p-8 rounded-2xl shadow-2xl w-full max-w-md text-[var(--mt-text)]"
       >
         <h2
           id="gatekeeper-title"
@@ -101,18 +101,18 @@ export default function Gatekeeper({ children }: { children: React.ReactNode }) 
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Password..."
-              className="min-h-12 px-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400/60 text-white"
+              className="min-h-12 px-4 py-3 bg-[color-mix(in_srgb,var(--mt-text)_6%,transparent)] border border-[var(--mt-border)] rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--mt-accent)] text-[var(--mt-text)]"
               autoFocus
               autoComplete="current-password"
             />
             {error && (
-              <p className="text-red-400 text-sm text-center" role="alert">
+              <p className="text-[var(--mt-danger)] text-sm text-center" role="alert">
                 {error}
               </p>
             )}
             <button
               type="submit"
-              className="min-h-12 px-4 py-3 bg-white text-black font-semibold rounded-xl hover:bg-zinc-200 transition-colors"
+              className="min-h-12 px-4 py-3 bg-[var(--mt-accent)] text-[var(--mt-accent-contrast)] font-semibold rounded-xl hover:opacity-90 transition-colors"
             >
               Verify
             </button>
@@ -123,7 +123,7 @@ export default function Gatekeeper({ children }: { children: React.ReactNode }) 
               type="button"
               disabled={isSyncing}
               onClick={() => handleIdentitySelect('Jeff')}
-              className="min-h-14 px-4 py-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-colors font-medium disabled:opacity-50"
+              className="min-h-14 px-4 py-4 bg-[color-mix(in_srgb,var(--mt-text)_6%,transparent)] hover:bg-[color-mix(in_srgb,var(--mt-text)_10%,transparent)] border border-[var(--mt-border)] rounded-xl transition-colors font-medium disabled:opacity-50"
             >
               Jeff
             </button>
@@ -131,7 +131,7 @@ export default function Gatekeeper({ children }: { children: React.ReactNode }) 
               type="button"
               disabled={isSyncing}
               onClick={() => handleIdentitySelect('Rachel')}
-              className="min-h-14 px-4 py-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-colors font-medium disabled:opacity-50"
+              className="min-h-14 px-4 py-4 bg-[color-mix(in_srgb,var(--mt-text)_6%,transparent)] hover:bg-[color-mix(in_srgb,var(--mt-text)_10%,transparent)] border border-[var(--mt-border)] rounded-xl transition-colors font-medium disabled:opacity-50"
             >
               Rachel
             </button>
