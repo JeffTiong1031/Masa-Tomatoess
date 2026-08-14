@@ -13,6 +13,7 @@ export default function NavDrawer() {
   const panelRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const touchStartX = useRef<number | null>(null);
+  const touchStartY = useRef<number | null>(null);
 
   const close = useCallback(() => {
     setOpen(false);
@@ -106,11 +107,17 @@ export default function NavDrawer() {
             aria-label="Navigation"
             onTouchStart={(e) => {
               touchStartX.current = e.touches[0].clientX;
+              touchStartY.current = e.touches[0].clientY;
             }}
             onTouchEnd={(e) => {
               const start = touchStartX.current;
+              const startY = touchStartY.current;
               touchStartX.current = null;
-              if (start !== null && start - e.changedTouches[0].clientX > 60) close();
+              touchStartY.current = null;
+              if (start === null || startY === null) return;
+              const dx = start - e.changedTouches[0].clientX;
+              const dy = e.changedTouches[0].clientY - startY;
+              if (dx > 60 && dx > Math.abs(dy)) close();
             }}
             className="absolute inset-y-0 left-0 flex w-[80%] max-w-xs flex-col overflow-y-auto border-r border-[var(--mt-border)] bg-[var(--mt-surface)]"
             style={{
