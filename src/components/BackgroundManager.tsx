@@ -2,6 +2,7 @@
 
 import { useTimerStore } from '@/store/useTimerStore';
 import { useEffect, useMemo, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import {
   getPresetById,
   isLivePresetId,
@@ -9,6 +10,10 @@ import {
   shouldUseAnimatedBackground,
 } from '@/lib/backgrounds';
 import { loadCustomThemeFile, loadCustomThemeMeta } from '@/lib/backgroundStorage';
+
+/** Routes rendered in the dark focus mood. Photo themes and the scrim
+ *  apply only here — they were built for white-on-dark (spec §6.4). */
+const FOCUS_ROUTES = ['/timer', '/flexible'];
 
 function readConnectionFlags() {
   if (typeof navigator === 'undefined') {
@@ -81,6 +86,10 @@ function LiveLoop({ id, animate }: { id: string; animate: boolean }) {
 }
 
 export default function BackgroundManager() {
+  const pathname = usePathname();
+  const isFocusRoute = FOCUS_ROUTES.some(
+    (r) => pathname === r || pathname.startsWith(`${r}/`)
+  );
   const { settings } = useTimerStore();
   const [customUrl, setCustomUrl] = useState<string | null>(null);
   const [customKind, setCustomKind] = useState<'image' | 'video'>('image');
@@ -157,10 +166,25 @@ export default function BackgroundManager() {
     source.type === 'preset' ? getPresetById(source.id) : undefined;
   const showScrim = source.type !== 'gradient';
 
+  if (!isFocusRoute) {
+    return (
+      <div className="absolute inset-0 z-0 overflow-hidden bg-[var(--mac-cream)]">
+        <div
+          className="absolute -left-[15%] -top-[10%] h-[55vh] w-[55vh] rounded-full opacity-40 blur-3xl"
+          style={{ background: 'var(--mac-accent-cycle)' }}
+        />
+        <div
+          className="absolute -bottom-[15%] -right-[10%] h-[60vh] w-[60vh] rounded-full opacity-35 blur-3xl"
+          style={{ background: 'var(--mac-accent-countdown)' }}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="absolute inset-0 z-0 overflow-hidden transition-all duration-1000 ease-in-out">
       {source.type === 'gradient' && (
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-900/30 via-[var(--mt-midnight)] to-indigo-950/40" />
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-900/30 via-[var(--mac-plum)] to-indigo-950/40" />
       )}
 
       {source.type === 'preset' && preset && isLivePresetId(preset.id) && (

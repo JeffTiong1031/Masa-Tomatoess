@@ -59,7 +59,10 @@ export default function Gatekeeper({ children }: { children: React.ReactNode }) 
 
   if (!mounted) {
     return (
-      <div className="min-h-dvh bg-[var(--mt-midnight)] flex items-center justify-center text-white">
+      <div
+        data-mood="light"
+        className="min-h-dvh bg-[var(--mt-bg)] flex items-center justify-center text-[var(--mt-text)]"
+      >
         Loading...
       </div>
     );
@@ -70,7 +73,10 @@ export default function Gatekeeper({ children }: { children: React.ReactNode }) 
   }
 
   return (
-    <div className="fixed inset-0 z-[9999] bg-[var(--mt-midnight)]/85 backdrop-blur-md flex items-end sm:items-center justify-center p-4 pb-[max(1rem,var(--mt-safe-bottom))]">
+    <div
+      data-mood="light"
+      className="fixed inset-0 z-[9999] bg-[var(--mt-bg)]/85 backdrop-blur-md flex items-end sm:items-center justify-center p-4 pb-[max(1rem,var(--mt-safe-bottom))]"
+    >
       <div
         role="dialog"
         aria-modal="true"
