@@ -31,7 +31,7 @@ Explicitly out of scope for this round:
 - Real data, forms, or Supabase tables for the five new sections.
 - Offline page loading (service-worker shell caching).
 - Push notifications.
-- A downloadable `.apk` file (parked — see §11).
+- A downloadable `.apk` file — decided against, not deferred (§11).
 - Any change to authentication.
 
 ## 4. Decisions
@@ -44,6 +44,8 @@ Explicitly out of scope for this round:
 | D4 | The rule: **dark = actively focusing, light = everything else** — this puts Dashboard on the light side | "Pomodoro stuff vs life stuff" |
 | D5 | New sections ship as designed shells with visibly-fake sample data | Bare stubs; one section built for real |
 | D6 | Full sweep now — all 15 colour-carrying files converted in this round | Phased sweep in a later round |
+| D7 | Both users see all data, including the period cycle — shared visibility is the intent | Per-user separation behind real accounts |
+| D8 | No `.apk` file, ever — home-screen install is the delivery mechanism | PWABuilder-packaged APK as a follow-up |
 
 ## 5. Information architecture
 
@@ -256,7 +258,7 @@ hub and plum in the timer with no runtime code.
 On Android, Chrome installs a PWA by having Google mint a genuine Android
 package on the device — it appears in the app drawer and in Settings → Apps and
 uninstalls like any other app. On iOS, Add to Home Screen produces a full-screen
-app with its own icon. No `.apk` file is produced by this round; see §11.
+app with its own icon. No `.apk` file is produced, now or later (D8).
 
 ## 9. Testing and verification
 
@@ -292,16 +294,20 @@ including today.
 4. **Rachel's home-screen shortcut changes behaviour** — it will open the hub
    rather than the timer. Tell her rather than letting her discover it.
 
-## 11. Open questions
+## 11. Resolved questions
 
-- **Shared-secret privacy.** Authentication is one shared password followed by
-  choosing a name; there is no wall between Jeff and Rachel, and anyone with the
-  password sees everything. Period-cycle data is a different category from
-  Pomodoro counts and deserves a deliberate decision. Nothing is stored this
-  round, so this is deferred to the `/cycle` feature spec — but it must be
-  answered before that feature stores anything.
-- **`.apk` file.** Parked as an optional follow-up. PWABuilder can package the
-  manifest into a signed APK for Android only; it requires the manifest to exist
-  first, changes no application code, and requires "install from unknown
-  sources" on the receiving phone. iOS has no equivalent without a paid Apple
-  Developer account and a Mac.
+Both questions raised during design were answered on 2026-08-15. Neither remains
+open; they are recorded here because the reasoning matters to later work.
+
+- **Shared-secret privacy — resolved: no separation (D7).** Authentication stays
+  as it is: one shared password, then choose a name. Both users see all data,
+  the period cycle included. This is deliberate, not inherited — shared
+  visibility is the point of a couple's app. The consequence to carry forward:
+  the `/cycle` feature spec must **not** introduce per-user scoping or a
+  privacy toggle, and any future Supabase tables follow the existing
+  `focus_sessions` pattern of readable-by-both rather than row-level per-user
+  policies.
+- **`.apk` file — resolved: not wanted (D8).** Home-screen install is the
+  delivery mechanism for both phones. PWABuilder packaging is not planned. This
+  removes the only reason the manifest would have needed to satisfy external
+  packaging constraints, so it is written purely for browser install.
