@@ -25,6 +25,12 @@
   --mac-accent-finance: #A9C4E8;
 
   --mac-danger: #E07A6B;
+  /* Deeper terracotta for light mood only: #E07A6B measures 2.93:1 on
+     white, failing AA (4.5:1) for body text. This variant hits 4.96:1 on
+     white / 4.70:1 on cream. It fails against the dark-mood surface
+     (2.92:1), which is why light and dark get separate --mt-danger
+     values below rather than one compromise colour. */
+  --mac-danger-deep: #C1473A;
   --mac-success: #7FBF8F;
 
   /* ---- Layout tokens, mood-independent ---- */
@@ -47,8 +53,12 @@
   --mt-text-subtle: color-mix(in srgb, var(--mac-cocoa) 45%, transparent);
   --mt-accent: var(--mac-accent-timer);
   --mt-accent-contrast: var(--mac-cocoa);
-  --mt-danger: var(--mac-danger);
+  --mt-danger: var(--mac-danger-deep);
   --mt-success: var(--mac-success);
+  /* Non-text focus indicator (WCAG 2.1 §1.4.11, 3:1 minimum). Tracks the
+     mood's text colour, which clears 3:1 against both --mt-bg and
+     --mt-surface in both moods with a wide margin (12:1+). */
+  --mt-focus: var(--mt-text);
 
   /* Chrome that renders OUTSIDE the route groups — the bottom bar, the
      drawer — resolves these from :root, so they carry light-mood values
@@ -97,6 +107,9 @@ body {
   --mt-accent-contrast: var(--mac-cocoa);
   --mt-glass: color-mix(in srgb, var(--mac-white) 72%, transparent);
   --mt-glass-strong: color-mix(in srgb, var(--mac-white) 88%, transparent);
+  /* 4.96:1 on white / 4.70:1 on cream — see --mac-danger-deep above. */
+  --mt-danger: var(--mac-danger-deep);
+  --mt-focus: var(--mt-text);
 }
 
 [data-mood='dark'] {
@@ -110,10 +123,13 @@ body {
   --mt-accent-contrast: var(--mac-plum);
   --mt-glass: color-mix(in srgb, var(--mac-plum) 45%, transparent);
   --mt-glass-strong: color-mix(in srgb, var(--mac-plum) 62%, transparent);
+  /* 4.95:1 on #31262E — --mac-danger already clears AA in dark mood. */
+  --mt-danger: var(--mac-danger);
+  --mt-focus: var(--mt-text);
 }
 
 *:focus-visible {
-  outline: 2px solid var(--mt-accent);
+  outline: 2px solid var(--mt-focus);
   outline-offset: 2px;
 }
 
