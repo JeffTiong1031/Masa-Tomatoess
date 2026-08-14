@@ -42,3 +42,4 @@ next-env.d.ts
 
 # superdesign temp
 .superdesign/tmp/
+.superpowers/

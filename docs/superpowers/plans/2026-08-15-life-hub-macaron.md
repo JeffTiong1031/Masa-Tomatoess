@@ -123,12 +123,16 @@ Replace the existing `:root` block in `src/app/globals.css` (lines 3-30, ending 
   --mt-danger: var(--mac-danger);
   --mt-success: var(--mac-success);
 
+  /* Chrome that renders OUTSIDE the route groups — the bottom bar, the
+     drawer — resolves these from :root, so they carry light-mood values
+     here and are NOT legacy aliases. Do not delete them in Task 12. */
+  --mt-glass: color-mix(in srgb, var(--mac-white) 72%, transparent);
+  --mt-glass-strong: color-mix(in srgb, var(--mac-white) 88%, transparent);
+
   /* Legacy alias. Deleted in Task 12 once the sweep is complete. */
   --mt-midnight: var(--mt-bg);
   --mt-navy: var(--mt-surface);
   --mt-surface-elevated: var(--mt-surface-raised);
-  --mt-glass: var(--mt-surface);
-  --mt-glass-strong: var(--mt-surface);
   --mt-accent-glow: color-mix(in srgb, var(--mt-accent) 55%, transparent);
   --background: var(--mt-bg);
   --foreground: var(--mt-text);
@@ -456,12 +460,16 @@ export default function LifeLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div data-mood="light" className="flex flex-1 flex-col bg-[var(--mt-bg)]">
+    <div data-mood="light" className="flex flex-1 flex-col text-[var(--mt-text)]">
       {children}
     </div>
   );
 }
 ```
+
+**This div must not set a background.** It sits above `BackgroundManager` in
+paint order, so a background here would cover the photo themes on focus
+routes. Its only job is to re-point the tokens.
 
 - [ ] **Step 2: Create the dark group layout**
 
@@ -480,12 +488,14 @@ export default function FocusLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div data-mood="dark" className="flex flex-1 flex-col bg-[var(--mt-bg)]">
+    <div data-mood="dark" className="flex flex-1 flex-col text-[var(--mt-text)]">
       {children}
     </div>
   );
 }
 ```
+
+Same rule as the light layout: `data-mood` only, no background.
 
 - [ ] **Step 3: Move the three existing pages**
 
@@ -526,8 +536,13 @@ export const viewport: Viewport = {
 ```
 
 ```tsx
-<body className="min-h-full flex flex-col bg-[var(--mt-bg)] text-[var(--mt-text)]">
+<body className="min-h-full flex flex-col">
 ```
+
+**Deliberately no background and no text colour on `body`.** It renders outside
+both route groups, so any mood-dependent value here resolves to the light
+default and would paint over dark routes. The page ground comes from the
+`html:has()` rule in Task 1; text colour comes from each group layout.
 
 - [ ] **Step 6: Verify routing and the timer-survives-navigation guarantee**
 
@@ -1087,7 +1102,7 @@ import TimerEngine from '@/components/TimerEngine';
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="relative min-h-dvh overflow-x-hidden bg-[var(--mt-bg)]">
+    <div className="relative min-h-dvh overflow-x-hidden">
       <BackgroundManager />
       <div className="relative z-10 flex min-h-dvh flex-col">
         <NavDrawer />
@@ -1184,7 +1199,25 @@ if (!isFocusRoute) {
 }
 ```
 
-- [ ] **Step 2: Give the Gatekeeper the light mood explicitly**
+- [ ] **Step 2: Drop the legacy token from the gradient branch**
+
+`BackgroundManager` renders outside the route groups, so it must not depend on
+a token Task 12 deletes. In the `source.type === 'gradient'` branch, change:
+
+```tsx
+<div className="absolute inset-0 bg-gradient-to-br from-blue-900/30 via-[var(--mt-midnight)] to-indigo-950/40" />
+```
+
+to:
+
+```tsx
+<div className="absolute inset-0 bg-gradient-to-br from-blue-900/30 via-[var(--mac-plum)] to-indigo-950/40" />
+```
+
+`--mac-plum` rather than `--mt-bg`: this branch only ever paints under the dark
+focus routes, and `--mt-bg` outside a route group resolves to cream.
+
+- [ ] **Step 3: Give the Gatekeeper the light mood explicitly**
 
 `Gatekeeper` renders above the route groups and inherits no mood. In `src/components/Gatekeeper.tsx`, add `data-mood="light"` to the outer overlay div (the one with `className="fixed inset-0 z-[9999] …"`), and to the loading div returned when `!mounted`:
 
@@ -1204,7 +1237,7 @@ if (!isFocusRoute) {
 </div>
 ```
 
-- [ ] **Step 3: Verify**
+- [ ] **Step 4: Verify**
 
 Run: `npm run dev`
 - `/timer` and `/flexible` still show the selected photo/gradient theme with the scrim.
@@ -1212,7 +1245,7 @@ Run: `npm run dev`
 - Switching themes in the theme modal still changes the background on `/timer`.
 - Clearing `localStorage.user_name` and reloading shows the Gatekeeper on cream with readable dark text.
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 5: Commit**
 
 ```bash
 git add src/components/BackgroundManager.tsx src/components/Gatekeeper.tsx
@@ -1308,7 +1341,12 @@ export default function HubGrid() {
               className="inline-flex h-9 w-9 items-center justify-center rounded-xl"
               style={{ background: 'var(--mt-accent)' }}
             >
-              <Icon size={18} strokeWidth={1.9} aria-hidden color="#3B2E2A" />
+              <Icon
+                size={18}
+                strokeWidth={1.9}
+                aria-hidden
+                className="text-[var(--mt-accent-contrast)]"
+              />
             </span>
             <span className="text-sm font-semibold text-[var(--mt-text)]">
               {label}
@@ -1904,14 +1942,22 @@ In `src/app/globals.css`, remove this block added in Task 1:
   --mt-midnight: var(--mt-bg);
   --mt-navy: var(--mt-surface);
   --mt-surface-elevated: var(--mt-surface-raised);
-  --mt-glass: var(--mt-surface);
-  --mt-glass-strong: var(--mt-surface);
   --mt-accent-glow: color-mix(in srgb, var(--mt-accent) 55%, transparent);
 ```
 
-Keep `--background` and `--foreground` — the `@theme inline` block references them.
+**Delete exactly those four lines and nothing else.** Keep `--background` and
+`--foreground` — the `@theme inline` block references them. Keep the `:root`
+definitions of `--mt-glass` and `--mt-glass-strong`: `AppNav` and `NavDrawer`
+render outside the route groups and resolve them from `:root`, so removing
+them would leave the bottom bar with no background.
 
-`--mt-glass` and `--mt-glass-strong` remain defined inside the two `[data-mood]` blocks, so removing the `:root` copies is safe for anything rendered inside a route group. `BackgroundManager` and `Gatekeeper` render **outside** the groups: confirm neither still references `--mt-glass`.
+After deleting, confirm nothing outside the route groups still references a
+removed token:
+
+```bash
+grep -rn "mt-midnight\|mt-navy\|mt-surface-elevated\|mt-accent-glow" src
+```
+Expected: no results.
 
 - [ ] **Step 3: Verify no hardcoded colours remain**
 
