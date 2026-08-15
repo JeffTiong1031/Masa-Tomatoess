@@ -121,7 +121,7 @@ export default function Dashboard() {
   const todayKey = new Date().toISOString().split('T')[0];
 
   if (!mounted) {
-    return <div className="min-h-dvh bg-[var(--mt-midnight)]" />;
+    return <div className="min-h-dvh bg-[var(--mt-bg)]" />;
   }
 
   return (

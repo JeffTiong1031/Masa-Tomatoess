@@ -82,7 +82,7 @@ export default function TimerDisplay() {
       {showStrictWarning && (
         <div
           role="status"
-          className="absolute -top-14 left-1/2 -translate-x-1/2 max-w-[min(92vw,20rem)] bg-[var(--mt-danger)]/90 backdrop-blur-md text-[var(--mt-text)] px-4 py-2.5 rounded-full shadow-2xl z-50 text-sm font-medium border border-[var(--mt-border)] text-center"
+          className="absolute -top-14 left-1/2 -translate-x-1/2 max-w-[min(92vw,20rem)] bg-[var(--mt-danger)]/90 backdrop-blur-md text-[var(--mt-danger-contrast)] px-4 py-2.5 rounded-full shadow-2xl z-50 text-sm font-medium border border-[var(--mt-border)] text-center"
         >
           Focus session broken!
         </div>

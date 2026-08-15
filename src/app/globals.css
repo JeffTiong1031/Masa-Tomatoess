@@ -37,6 +37,15 @@
   --mac-danger-deep: #C1473A;
   --mac-success: #7FBF8F;
 
+  /* Rank-tier badge hues (Leaderboard #1/#3). Deep shades for light mood
+     (readable on white/cream), bright shades for dark mood (readable on
+     the dark surface). Not "raw macaron" section-accent colours — these
+     exist solely to keep gold/bronze recognisable while clearing 4.5:1. */
+  --mac-rank-gold-light: #B45309;   /* 5.02:1 on --mac-white */
+  --mac-rank-gold-dark: #EAB308;    /* 7.57:1 on dark-mood --mt-surface (#31262E) */
+  --mac-rank-bronze-light: #C2410C; /* 5.18:1 on --mac-white */
+  --mac-rank-bronze-dark: #FB923C;  /* 6.41:1 on dark-mood --mt-surface (#31262E) */
+
   /* ---- Layout tokens, mood-independent ---- */
   --mt-radius-card: 1.5rem;
   --mt-radius-control: 9999px;
@@ -58,7 +67,15 @@
   --mt-accent: var(--mac-accent-timer);
   --mt-accent-contrast: var(--mac-cocoa);
   --mt-danger: var(--mac-danger-deep);
+  /* 4.96:1 on --mac-white — text sitting on the --mt-danger fill itself
+     (e.g. an alert banner), distinct from --mt-danger's own contrast
+     against a surface. */
+  --mt-danger-contrast: var(--mac-white);
   --mt-success: var(--mac-success);
+  /* 6.06:1 on --mac-success — text sitting on the --mt-success fill. */
+  --mt-success-contrast: var(--mac-cocoa);
+  --mt-rank-gold: var(--mac-rank-gold-light);
+  --mt-rank-bronze: var(--mac-rank-bronze-light);
   /* Non-text focus indicator (WCAG 2.1 §1.4.11, 3:1 minimum). Tracks the
      mood's text colour, which clears 3:1 against both --mt-bg and
      --mt-surface in both moods with a wide margin (12:1+). */
@@ -108,6 +125,10 @@ body {
   --mt-glass-strong: color-mix(in srgb, var(--mac-white) 88%, transparent);
   /* 4.96:1 on white / 4.70:1 on cream — see --mac-danger-deep above. */
   --mt-danger: var(--mac-danger-deep);
+  --mt-danger-contrast: var(--mac-white);
+  --mt-success-contrast: var(--mac-cocoa);
+  --mt-rank-gold: var(--mac-rank-gold-light);
+  --mt-rank-bronze: var(--mac-rank-bronze-light);
   --mt-focus: var(--mt-text);
 }
 
@@ -124,6 +145,12 @@ body {
   --mt-glass-strong: color-mix(in srgb, var(--mac-plum) 62%, transparent);
   /* 4.95:1 on #31262E — --mac-danger already clears AA in dark mood. */
   --mt-danger: var(--mac-danger);
+  /* 5.67:1 on --mac-danger (#E07A6B) — text sitting on the fill. */
+  --mt-danger-contrast: var(--mac-plum);
+  /* 7.71:1 on --mac-success (#7FBF8F) — text sitting on the fill. */
+  --mt-success-contrast: var(--mac-plum);
+  --mt-rank-gold: var(--mac-rank-gold-dark);
+  --mt-rank-bronze: var(--mac-rank-bronze-dark);
   --mt-focus: var(--mt-text);
 }
 

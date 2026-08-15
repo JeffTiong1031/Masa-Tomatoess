@@ -68,7 +68,7 @@ export default function Leaderboard() {
     <div className="mt-glass shadow-2xl p-5 sm:p-8 rounded-[1.75rem] mb-6 sm:mb-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6 sm:mb-8">
         <h2 className="text-lg sm:text-xl font-light tracking-wide text-[var(--mt-text)] flex items-center gap-3">
-          <Trophy className="text-yellow-500" size={22} aria-hidden />
+          <Trophy className="text-[var(--mt-rank-gold)]" size={22} aria-hidden />
           Leaderboard
         </h2>
 
@@ -133,10 +133,10 @@ export default function Leaderboard() {
                   <span
                     className={`font-bold text-lg w-6 shrink-0 ${
                       index === 0
-                        ? 'text-yellow-500'
+                        ? 'text-[var(--mt-rank-gold)]'
                         : index === 1
                           ? 'text-[var(--mt-text-muted)]'
-                          : 'text-orange-400'
+                          : 'text-[var(--mt-rank-bronze)]'
                     }`}
                   >
                     #{index + 1}

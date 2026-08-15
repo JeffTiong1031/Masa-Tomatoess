@@ -76,7 +76,7 @@ export default function FlexibleControls() {
               type="button"
               onClick={proceedToRest}
               disabled={elapsedSeconds <= 0}
-              className="flex items-center gap-2 min-h-12 px-6 py-3 rounded-full bg-[var(--mt-success)]/90 text-[var(--mt-text)] font-medium hover:scale-105 transition-all disabled:opacity-40 disabled:hover:scale-100"
+              className="flex items-center gap-2 min-h-12 px-6 py-3 rounded-full bg-[var(--mt-success)]/90 text-[var(--mt-success-contrast)] font-medium hover:scale-105 transition-all disabled:opacity-40 disabled:hover:scale-100"
             >
               <Coffee size={18} />
               Proceed to rest
