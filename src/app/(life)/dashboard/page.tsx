@@ -12,15 +12,19 @@ import { syncSessions } from '@/lib/sync';
 import { buildHeatmapRange, heatmapDaysForWidth } from '@/lib/heatmapRange';
 import { useHasMounted } from '@/hooks/useHasMounted';
 
-// Five-step lavender ramp, cream background up to the dashboard accent
-// (--mac-accent-dashboard, #C4B0E0). react-activity-calendar consumes this
-// as a literal theme prop, not CSS custom properties, so hex is correct
-// here. Both keys carry the same ramp — the dashboard is always light
-// mood, and supplying only one key makes the library fall back to its own
-// defaults for the other.
+// Five-step lavender ramp. Element 1 is react-activity-calendar's
+// "no activity" level — deliberately subtle, close to the cream page.
+// Elements 2-5 carry the actual gradation and are spaced for real
+// luminance progression (each adjacent pair clears 1.35:1, element 5
+// clears 4.5:1 against cream) while staying in the dashboard accent's
+// lavender family (--mac-accent-dashboard, #C4B0E0, sits near element 3).
+// react-activity-calendar consumes this as a literal theme prop, not CSS
+// custom properties, so hex is correct here. Both keys carry the same
+// ramp — the dashboard is always light mood, and supplying only one key
+// makes the library fall back to its own defaults for the other.
 const MACARON_HEATMAP_THEME = {
-  light: ['#F3EAE2', '#E6DCEF', '#D6C6E7', '#C4B0E0', '#A98CD1'],
-  dark: ['#F3EAE2', '#E6DCEF', '#D6C6E7', '#C4B0E0', '#A98CD1'],
+  light: ['#F3EAE2', '#DCC9EC', '#BC9FDC', '#9670C6', '#6E4AA0'],
+  dark: ['#F3EAE2', '#DCC9EC', '#BC9FDC', '#9670C6', '#6E4AA0'],
 };
 
 export default function Dashboard() {
@@ -274,7 +278,7 @@ export default function Dashboard() {
                   color: '#3B2E2A',
                 }}
               />
-              <Bar dataKey="minutes" fill="#C4B0E0" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="minutes" fill="#9670C6" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
