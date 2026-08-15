@@ -6,7 +6,9 @@ export type AccentName =
   | 'countdown'
   | 'meals'
   | 'fitness'
-  | 'finance';
+  | 'finance'
+  | 'calendar'
+  | 'timetable';
 
 /** Resolves to the raw accent token. Set on a wrapper so descendants
  *  inherit it through --mt-accent without prop-drilling. */
