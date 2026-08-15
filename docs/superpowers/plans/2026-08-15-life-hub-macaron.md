@@ -2034,7 +2034,7 @@ Recharts `fill` and `stroke` props take literal colours, not CSS variables resol
 
 - Bar/area fill: `#C4B0E0`
 - Grid lines: `#F0E4DA`
-- Axis ticks and labels: `#8A7570`
+- Axis ticks and labels: `#796763` (this is `--mac-cocoa-muted` as darkened in Task 11 — the original `#8A7570` measured 4.09:1 on cream and failed AA)
 - Tooltip: `contentStyle={{ background: '#FFFFFF', border: '1px solid #F0E4DA', borderRadius: 12, color: '#3B2E2A' }}`
 
 - [ ] **Step 3: Recolour the leaderboard rows**
