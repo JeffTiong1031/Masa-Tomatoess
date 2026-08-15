@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useIsMdUp } from '@/hooks/useMediaQuery';
-import { ALL_LINKS, BOTTOM_BAR_HREFS, isActiveHref } from './navLinks';
+import { ALL_LINKS, BOTTOM_BAR_HREFS, isActiveHref, isFocusRoute } from './navLinks';
 import { accentVar } from '@/components/ui/PageShell';
 
 const BOTTOM_LINKS = BOTTOM_BAR_HREFS.map((href) => {
@@ -26,9 +26,10 @@ export default function AppNav() {
       className="fixed inset-x-0 bottom-0 z-50 border-t border-[var(--mt-border)] bg-[var(--mt-glass-strong)] backdrop-blur-xl"
       style={{ paddingBottom: 'var(--mt-safe-bottom)' }}
     >
-      <div className="mx-auto grid max-w-lg grid-cols-4">
+      <div className="mx-auto grid max-w-lg grid-cols-3">
         {BOTTOM_LINKS.map(({ href, label, icon: Icon, accent }) => {
-          const active = isActiveHref(pathname, href);
+          const active =
+            href === '/timer' ? isFocusRoute(pathname) : isActiveHref(pathname, href);
           return (
             <Link
               key={href}
