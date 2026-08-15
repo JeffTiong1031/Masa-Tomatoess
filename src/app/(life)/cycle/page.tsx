@@ -37,7 +37,7 @@ export default function CyclePage() {
         </div>
         <div
           className="grid grid-cols-7 gap-1.5"
-          role="grid"
+          role="list"
           aria-label="Your 28-day cycle"
         >
           {DAYS.map((day) => {
@@ -45,17 +45,18 @@ export default function CyclePage() {
             return (
               <div
                 key={day}
-                role="gridcell"
+                role="listitem"
                 aria-label={`Day ${day}${isPredicted ? ', predicted period day' : ''}`}
                 className="flex aspect-square items-center justify-center rounded-lg text-xs text-[var(--mt-text)]"
                 style={{
                   background: isPredicted
                     ? 'var(--mt-accent)'
                     : 'color-mix(in srgb, var(--mt-border) 60%, transparent)',
-                  border: isPredicted ? '2px solid var(--mt-text-muted)' : 'none',
+                  border: isPredicted ? '3px solid var(--mt-text)' : 'none',
                 }}
               >
                 {day}
+                {isPredicted && <span style={{ fontSize: '3px', marginLeft: '2px', lineHeight: '1' }}>●</span>}
               </div>
             );
           })}
