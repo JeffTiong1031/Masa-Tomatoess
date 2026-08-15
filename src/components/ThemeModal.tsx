@@ -123,7 +123,7 @@ export default function ThemeModal() {
             type="button"
             onClick={() => fileInputRef.current?.click()}
             disabled={uploading}
-            className={`relative aspect-video rounded-xl flex flex-col items-center justify-center bg-[color-mix(in_srgb,var(--mt-text)_6%,transparent)] hover:bg-[color-mix(in_srgb,var(--mt-text)_6%,transparent)] transition-all disabled:opacity-60 ${
+            className={`relative aspect-video rounded-xl flex flex-col items-center justify-center bg-[color-mix(in_srgb,var(--mt-text)_6%,transparent)] hover:bg-[color-mix(in_srgb,var(--mt-text)_12%,transparent)] transition-all disabled:opacity-60 ${
               settings.themeId === 'custom'
                 ? 'ring-2 ring-[var(--mt-focus)] scale-[1.01]'
                 : 'ring-1 ring-[var(--mt-border)]'

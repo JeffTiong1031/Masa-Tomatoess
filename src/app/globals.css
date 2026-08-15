@@ -6,7 +6,11 @@
   --mac-white: #FFFFFF;
   --mac-border-light: #F0E4DA;
   --mac-cocoa: #3B2E2A;
-  --mac-cocoa-muted: #8A7570;
+  /* 5.34:1 on white / 5.06:1 on cream (#FDF8F3, the binding constraint since
+     it's darker than white) — both clear AA's 4.5:1 for normal text with
+     headroom, while staying well below --mac-cocoa's 12.36:1 so muted text
+     still reads as clearly secondary, not a second primary colour. */
+  --mac-cocoa-muted: #796763;
 
   --mac-plum: #241C22;
   --mac-plum-raised: #31262E;
