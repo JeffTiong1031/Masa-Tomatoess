@@ -16,9 +16,17 @@ const WEEK = [
 export default function FitnessPage() {
   return (
     <PageShell title="Fitness" subtitle="Moving this week" accent="fitness">
-      <div className="mb-4 grid grid-cols-2 gap-3">
-        <StatTile label="Workouts" value="4" hint="this week" accent="fitness" />
-        <StatTile label="Minutes" value="185" hint="this week" accent="fitness" />
+      <div className="mb-4">
+        <div className="mb-2 flex items-center justify-between px-1">
+          <span className="text-xs font-medium uppercase tracking-wide text-[var(--mt-text-muted)]">
+            Activity
+          </span>
+          <SampleChip />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <StatTile label="Workouts" value="4" hint="this week" accent="fitness" />
+          <StatTile label="Minutes" value="185" hint="this week" accent="fitness" />
+        </div>
       </div>
 
       <Card className="mb-4">
