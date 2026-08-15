@@ -1893,7 +1893,7 @@ Replace every hardcoded colour according to this table. It is exhaustive for the
 | `border-white/10`, `border-blue-300/10`, `border-zinc-800` | `border-[var(--mt-border)]` |
 | `text-red-400`, `text-red-500`, `bg-red-500` | `text-[var(--mt-danger)]` / `bg-[var(--mt-danger)]` |
 | `text-green-400`, `bg-emerald-500` | `text-[var(--mt-success)]` / `bg-[var(--mt-success)]` |
-| `focus:ring-blue-400/60`, `ring-blue-500` | `focus:ring-[var(--mt-accent)]` |
+| `focus:ring-blue-400/60`, `ring-blue-500` | `focus:ring-[var(--mt-focus)]` |
 | `hover:bg-zinc-200` (on a primary button) | `hover:opacity-90` |
 | `shadow-[0_14px_40px_rgba(2,6,23,0.35)]` and similar hardcoded shadows | `shadow-[0_8px_24px_color-mix(in_srgb,var(--mt-accent)_14%,transparent)]` |
 
@@ -1922,7 +1922,9 @@ git commit -m "refactor: convert modals to semantic mood tokens"
 ### Task 12: Colour sweep — remaining components
 
 **Files:**
-- Modify: `src/components/TimerDisplay.tsx` (14), `src/components/FlexibleSettingsModal.tsx` (14), `src/components/Leaderboard.tsx` (13), `src/components/FlexibleControls.tsx` (8), `src/components/Gatekeeper.tsx` (6), `src/components/FlexibleDisplay.tsx` (6), `src/components/AudioPlayer.tsx` (4), `src/components/SessionConflictDialog.tsx` (3), `src/components/Controls.tsx` (3)
+- Modify: `src/components/TimerDisplay.tsx` (14), `src/components/FlexibleSettingsModal.tsx` (14), `src/components/Leaderboard.tsx` (13), `src/components/FlexibleControls.tsx` (8), `src/components/FlexibleDisplay.tsx` (6), `src/components/AudioPlayer.tsx` (4), `src/components/SessionConflictDialog.tsx` (3), `src/components/Controls.tsx` (3)
+
+**`Gatekeeper.tsx` is NOT in this list** — its conversion was pulled forward into Task 7. Under light mood `--mt-surface` resolves to `#FFFFFF`, so its `text-white` made the login screen white-on-white and blocked all human verification of the branch. Do not convert it again; verify it is already token-based and move on.
 - Modify: `src/app/globals.css` (remove legacy aliases)
 
 **Interfaces:**
@@ -2118,17 +2120,19 @@ Replace `src/components/InstallPrompt.tsx`:
 ```tsx
 'use client';
 
-import { useEffect, useState } from 'react';
 import { Share, Plus } from 'lucide-react';
+import { useHasMounted } from '@/hooks/useHasMounted';
 
 export default function InstallPrompt() {
-  const [isIOS, setIsIOS] = useState(false);
-  const [isStandalone, setIsStandalone] = useState(true);
-
-  useEffect(() => {
-    setIsIOS(/iPad|iPhone|iPod/.test(navigator.userAgent));
-    setIsStandalone(window.matchMedia('(display-mode: standalone)').matches);
-  }, []);
+  // useHasMounted (useSyncExternalStore) reports false on the server and on
+  // the first client render, then flips true. Deriving from it keeps the
+  // hydration render pure AND avoids react-hooks/set-state-in-effect, which
+  // is error severity in this repo — an unconditional setState in an effect
+  // body will fail `npm run lint`.
+  const mounted = useHasMounted();
+  const isIOS = mounted && /iPad|iPhone|iPod/.test(navigator.userAgent);
+  const isStandalone =
+    !mounted || window.matchMedia('(display-mode: standalone)').matches;
 
   // Already installed, or still server-rendering — say nothing.
   if (isStandalone) return null;
