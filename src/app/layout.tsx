@@ -16,6 +16,14 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Masa Tomato",
   description: "A premium Pomodoro productivity OS",
+  appleWebApp: {
+    capable: true,
+    title: "Masa Tomato",
+    statusBarStyle: "default",
+  },
+  icons: {
+    apple: "/apple-touch-icon.png",
+  },
 };
 
 export const viewport: Viewport = {
