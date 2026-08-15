@@ -24,21 +24,21 @@ export default function SessionConflictDialog({
           <button
             type="button"
             onClick={onCancel}
-            className="flex-1 min-h-11 py-2.5 rounded-xl bg-white/10 text-white/80 hover:bg-white/15 transition-colors"
+            className="flex-1 min-h-11 py-2.5 rounded-xl bg-[color-mix(in_srgb,var(--mt-text)_6%,transparent)] text-[var(--mt-text)] hover:bg-[color-mix(in_srgb,var(--mt-text)_12%,transparent)] transition-colors"
           >
             No
           </button>
           <button
             type="button"
             onClick={onConfirm}
-            className="flex-1 min-h-11 py-2.5 rounded-xl bg-white text-black font-medium hover:bg-white/90 transition-colors"
+            className="flex-1 min-h-11 py-2.5 rounded-xl bg-[var(--mt-accent)] text-[var(--mt-accent-contrast)] font-medium hover:opacity-90 transition-colors"
           >
             Yes
           </button>
         </div>
       }
     >
-      <p className="text-sm text-white/70 leading-relaxed">
+      <p className="text-sm text-[var(--mt-text-muted)] leading-relaxed">
         You have an ongoing session. Do you wish to start a new one?
       </p>
     </Modal>

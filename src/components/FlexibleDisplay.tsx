@@ -42,11 +42,11 @@ export default function FlexibleDisplay() {
 
   return (
     <div className="flex flex-col items-center gap-4 w-full max-w-[20rem]">
-      <p className="text-sm uppercase tracking-[0.2em] text-white/50">{label}</p>
+      <p className="text-sm uppercase tracking-[0.2em] text-[var(--mt-text-muted)]">{label}</p>
 
       <div className="relative flex items-center justify-center w-full aspect-square rounded-[var(--mt-radius-card)] mt-glass shadow-2xl">
         <span
-          className="text-[clamp(2.5rem,14vw,4.5rem)] font-light tabular-nums text-white tracking-tight"
+          className="text-[clamp(2.5rem,14vw,4.5rem)] font-light tabular-nums text-[var(--mt-text)] tracking-tight"
           aria-live="polite"
           aria-atomic="true"
         >
@@ -55,17 +55,17 @@ export default function FlexibleDisplay() {
       </div>
 
       {phase === 'study' && elapsedSeconds > 0 && (
-        <p className="text-sm text-white/50 text-center px-2">
+        <p className="text-sm text-[var(--mt-text-muted)] text-center px-2">
           Rest will be{' '}
-          <span className="text-white/80 tabular-nums">
+          <span className="text-[var(--mt-text)] tabular-nums">
             {formatTime(predictedRest)}
           </span>
-          <span className="text-white/40"> (study ÷ {restRatio})</span>
+          <span className="text-[var(--mt-text-subtle)]"> (study ÷ {restRatio})</span>
         </p>
       )}
 
       {phase === 'rest' && (
-        <p className="text-sm text-white/50">Rest countdown · ratio /{restRatio}</p>
+        <p className="text-sm text-[var(--mt-text-muted)]">Rest countdown · ratio /{restRatio}</p>
       )}
     </div>
   );

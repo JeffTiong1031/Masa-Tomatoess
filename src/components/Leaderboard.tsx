@@ -67,13 +67,13 @@ export default function Leaderboard() {
   return (
     <div className="mt-glass shadow-2xl p-5 sm:p-8 rounded-[1.75rem] mb-6 sm:mb-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6 sm:mb-8">
-        <h2 className="text-lg sm:text-xl font-light tracking-wide text-white/90 flex items-center gap-3">
+        <h2 className="text-lg sm:text-xl font-light tracking-wide text-[var(--mt-text)] flex items-center gap-3">
           <Trophy className="text-yellow-500" size={22} aria-hidden />
           Leaderboard
         </h2>
 
         <div
-          className="flex flex-wrap bg-black/20 p-1 rounded-xl"
+          className="flex flex-wrap bg-[color-mix(in_srgb,var(--mt-text)_12%,transparent)] p-1 rounded-xl"
           role="tablist"
           aria-label="Leaderboard timeframe"
         >
@@ -92,8 +92,8 @@ export default function Leaderboard() {
               onClick={() => setTimeframe(value)}
               className={`min-h-10 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                 timeframe === value
-                  ? 'bg-white/10 text-white'
-                  : 'text-white/50 hover:text-white/80'
+                  ? 'bg-[color-mix(in_srgb,var(--mt-text)_12%,transparent)] text-[var(--mt-text)]'
+                  : 'text-[var(--mt-text-muted)] hover:text-[var(--mt-text)]'
               }`}
             >
               {label}
@@ -104,11 +104,11 @@ export default function Leaderboard() {
 
       {isLoading ? (
         <div className="animate-pulse flex flex-col gap-4">
-          <div className="h-16 bg-white/5 rounded-2xl" />
-          <div className="h-16 bg-white/5 rounded-2xl" />
+          <div className="h-16 bg-[color-mix(in_srgb,var(--mt-text)_6%,transparent)] rounded-2xl" />
+          <div className="h-16 bg-[color-mix(in_srgb,var(--mt-text)_6%,transparent)] rounded-2xl" />
         </div>
       ) : data.length === 0 ? (
-        <div className="text-center py-8 text-white/40 font-light">
+        <div className="text-center py-8 text-[var(--mt-text-subtle)] font-light">
           No sessions recorded for this timeframe yet.
         </div>
       ) : (
@@ -123,10 +123,10 @@ export default function Leaderboard() {
             return (
               <div
                 key={user.userName}
-                className="relative bg-black/20 rounded-2xl p-4 overflow-hidden border border-white/5 flex items-center justify-between gap-3"
+                className="relative bg-[color-mix(in_srgb,var(--mt-text)_12%,transparent)] rounded-2xl p-4 overflow-hidden border border-[var(--mt-border)] flex items-center justify-between gap-3"
               >
                 <div
-                  className="absolute left-0 top-0 bottom-0 bg-blue-500/10 z-0 transition-all duration-1000 ease-out"
+                  className="absolute left-0 top-0 bottom-0 bg-[color-mix(in_srgb,var(--mt-accent)_10%,transparent)] z-0 transition-all duration-1000 ease-out"
                   style={{ width: `${percentage}%` }}
                 />
                 <div className="relative z-10 flex items-center gap-3 sm:gap-4 min-w-0">
@@ -135,21 +135,21 @@ export default function Leaderboard() {
                       index === 0
                         ? 'text-yellow-500'
                         : index === 1
-                          ? 'text-zinc-400'
+                          ? 'text-[var(--mt-text-muted)]'
                           : 'text-orange-400'
                     }`}
                   >
                     #{index + 1}
                   </span>
-                  <span className="font-medium text-white/90 truncate">
+                  <span className="font-medium text-[var(--mt-text)] truncate">
                     {user.userName}
                   </span>
                 </div>
                 <div className="relative z-10 font-light tracking-tight shrink-0">
-                  <span className="text-xl sm:text-2xl text-white">
+                  <span className="text-xl sm:text-2xl text-[var(--mt-text)]">
                     {user.totalMinutes}
                   </span>
-                  <span className="text-sm text-white/40 ml-2">min</span>
+                  <span className="text-sm text-[var(--mt-text-subtle)] ml-2">min</span>
                 </div>
               </div>
             );

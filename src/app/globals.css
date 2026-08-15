@@ -70,11 +70,6 @@
   --mt-glass: color-mix(in srgb, var(--mac-white) 72%, transparent);
   --mt-glass-strong: color-mix(in srgb, var(--mac-white) 88%, transparent);
 
-  /* Legacy alias. Deleted in Task 12 once the sweep is complete. */
-  --mt-midnight: var(--mt-bg);
-  --mt-navy: var(--mt-surface);
-  --mt-surface-elevated: var(--mt-surface-raised);
-  --mt-accent-glow: color-mix(in srgb, var(--mt-accent) 55%, transparent);
   --background: var(--mt-bg);
   --foreground: var(--mt-text);
 }

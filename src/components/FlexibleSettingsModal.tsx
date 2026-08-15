@@ -58,7 +58,7 @@ export default function FlexibleSettingsModal() {
       <button
         type="button"
         onClick={openModal}
-        className="absolute z-40 min-h-11 min-w-11 inline-flex items-center justify-center text-white/50 hover:text-white bg-black/25 hover:bg-black/45 rounded-full backdrop-blur-sm transition-all border border-white/10"
+        className="absolute z-40 min-h-11 min-w-11 inline-flex items-center justify-center text-[var(--mt-text-muted)] hover:text-[var(--mt-text)] bg-[var(--mt-glass)] hover:bg-[var(--mt-glass-strong)] rounded-full backdrop-blur-sm transition-all border border-[var(--mt-border)]"
         style={{
           top: 'calc(var(--mt-safe-top) + 1.15rem)',
           right: 'calc(var(--mt-safe-right) + 1rem)',
@@ -77,7 +77,7 @@ export default function FlexibleSettingsModal() {
           <button
             type="button"
             onClick={handleSave}
-            className="w-full min-h-12 py-3 bg-white text-black font-medium rounded-xl hover:bg-white/90 transition-colors"
+            className="w-full min-h-12 py-3 bg-[var(--mt-accent)] text-[var(--mt-accent-contrast)] font-medium rounded-xl hover:opacity-90 transition-colors"
           >
             Save Changes
           </button>
@@ -85,7 +85,7 @@ export default function FlexibleSettingsModal() {
       >
         <div className="space-y-6">
           <div className="space-y-2">
-            <label className="flex items-center justify-between text-sm font-medium text-white/70 gap-3">
+            <label className="flex items-center justify-between text-sm font-medium text-[var(--mt-text)] gap-3">
               <span>Rest = study ÷ N</span>
               <input
                 type="number"
@@ -97,7 +97,7 @@ export default function FlexibleSettingsModal() {
                 onBlur={(e) =>
                   setLocalRatio(clampRestRatio(parseInt(e.target.value, 10)))
                 }
-                className="w-16 min-h-10 bg-white/5 border border-white/10 rounded px-2 py-1 text-right text-white focus:outline-none focus:border-blue-500"
+                className="w-16 min-h-10 bg-[color-mix(in_srgb,var(--mt-text)_6%,transparent)] border border-[var(--mt-border)] rounded px-2 py-1 text-right text-[var(--mt-text)] focus:outline-none focus:border-[var(--mt-focus)]"
               />
             </label>
             <input
@@ -107,10 +107,10 @@ export default function FlexibleSettingsModal() {
               step={1}
               value={clampRestRatio(localRatio)}
               onChange={(e) => setLocalRatio(parseInt(e.target.value, 10))}
-              className="w-full accent-blue-500"
+              className="w-full accent-[var(--mt-accent)]"
               aria-label="Rest ratio"
             />
-            <p className="text-xs text-white/50">
+            <p className="text-xs text-[var(--mt-text-muted)]">
               Example: 30 min study → {exampleRestMin} min rest
             </p>
           </div>
@@ -118,7 +118,7 @@ export default function FlexibleSettingsModal() {
           <div className="space-y-2">
             <label
               htmlFor="flex-audio-url"
-              className="flex justify-between text-sm font-medium text-white/70"
+              className="flex justify-between text-sm font-medium text-[var(--mt-text)]"
             >
               <span>Background Audio (Spotify/YouTube URL)</span>
             </label>
@@ -128,14 +128,14 @@ export default function FlexibleSettingsModal() {
               placeholder="Paste URL here..."
               value={localAudioUrl || ''}
               onChange={(e) => setLocalAudioUrl(e.target.value)}
-              className="w-full min-h-11 bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-blue-500 transition-colors"
+              className="w-full min-h-11 bg-[color-mix(in_srgb,var(--mt-text)_6%,transparent)] border border-[var(--mt-border)] rounded-lg px-4 py-2 text-sm text-[var(--mt-text)] placeholder:text-[var(--mt-text-subtle)] focus:outline-none focus:border-[var(--mt-focus)] transition-colors"
             />
           </div>
 
           <div className="space-y-2">
             <label
               htmlFor="flex-alarm-sound"
-              className="flex justify-between text-sm font-medium text-white/70"
+              className="flex justify-between text-sm font-medium text-[var(--mt-text)]"
             >
               <span>Alarm Sound</span>
             </label>
@@ -144,10 +144,10 @@ export default function FlexibleSettingsModal() {
                 id="flex-alarm-sound"
                 value={localAlarmSound}
                 onChange={(e) => setLocalAlarmSound(e.target.value)}
-                className="flex-1 min-h-11 bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:border-blue-500 transition-colors"
+                className="flex-1 min-h-11 bg-[color-mix(in_srgb,var(--mt-text)_6%,transparent)] border border-[var(--mt-border)] rounded-lg px-4 py-2 text-sm text-[var(--mt-text)] focus:outline-none focus:border-[var(--mt-focus)] transition-colors"
               >
                 {Object.entries(ALARM_LABELS).map(([id, label]) => (
-                  <option key={id} value={id} className="bg-[#1a1a1a]">
+                  <option key={id} value={id} className="bg-[var(--mt-surface)]">
                     {label}
                   </option>
                 ))}
@@ -156,10 +156,10 @@ export default function FlexibleSettingsModal() {
                 type="button"
                 onClick={handlePlayPreview}
                 disabled={isPreviewing}
-                className={`min-h-11 min-w-11 inline-flex items-center justify-center rounded-lg transition-colors text-white ${
+                className={`min-h-11 min-w-11 inline-flex items-center justify-center rounded-lg transition-colors text-[var(--mt-text)] ${
                   isPreviewing
-                    ? 'bg-white/5 cursor-not-allowed'
-                    : 'bg-white/10 hover:bg-white/20'
+                    ? 'bg-[color-mix(in_srgb,var(--mt-text)_6%,transparent)] cursor-not-allowed'
+                    : 'bg-[color-mix(in_srgb,var(--mt-text)_6%,transparent)] hover:bg-[color-mix(in_srgb,var(--mt-text)_12%,transparent)]'
                 }`}
                 title="Preview Sound"
                 aria-label="Preview alarm sound"

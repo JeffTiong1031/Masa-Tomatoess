@@ -65,13 +65,13 @@ export default function AudioPlayer() {
   if (!isMdUp) {
     return (
       <div
-        className="fixed z-40 left-3 right-3 rounded-2xl overflow-hidden border border-white/10 bg-[#121212] shadow-2xl"
+        className="fixed z-40 left-3 right-3 rounded-2xl overflow-hidden border border-[var(--mt-border)] bg-[var(--mt-surface)] shadow-2xl"
         style={{ bottom: `calc(var(--mt-safe-bottom) + ${bottomOffset}px)` }}
       >
         <button
           type="button"
           onClick={() => setCollapsed((c) => !c)}
-          className="w-full min-h-11 px-3 flex items-center justify-between gap-2 text-white/80 bg-[#1a1a1a]"
+          className="w-full min-h-11 px-3 flex items-center justify-between gap-2 text-[var(--mt-text)] bg-[var(--mt-surface-raised)]"
           aria-expanded={!collapsed}
           aria-controls="mobile-audio-panel"
         >
@@ -105,8 +105,8 @@ export default function AudioPlayer() {
       className="z-40"
       cancel=".no-drag"
     >
-      <div className="w-full h-full flex flex-col bg-[#121212] rounded-2xl overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.5)] border border-white/10 group">
-        <div className="w-full h-7 bg-[#1a1a1a] flex items-center justify-center cursor-move text-white/30 group-hover:text-white/70 transition-colors">
+      <div className="w-full h-full flex flex-col bg-[var(--mt-surface)] rounded-2xl overflow-hidden shadow-[0_8px_24px_color-mix(in_srgb,var(--mt-accent)_14%,transparent)] border border-[var(--mt-border)] group">
+        <div className="w-full h-7 bg-[var(--mt-surface-raised)] flex items-center justify-center cursor-move text-[var(--mt-text-subtle)] group-hover:text-[var(--mt-text-muted)] transition-colors">
           <GripHorizontal size={16} aria-hidden />
           <span className="sr-only">Drag audio player</span>
         </div>

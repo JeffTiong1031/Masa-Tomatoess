@@ -82,7 +82,7 @@ export default function TimerDisplay() {
       {showStrictWarning && (
         <div
           role="status"
-          className="absolute -top-14 left-1/2 -translate-x-1/2 max-w-[min(92vw,20rem)] bg-red-500/90 backdrop-blur-md text-white px-4 py-2.5 rounded-full shadow-2xl z-50 text-sm font-medium border border-white/20 text-center"
+          className="absolute -top-14 left-1/2 -translate-x-1/2 max-w-[min(92vw,20rem)] bg-[var(--mt-danger)]/90 backdrop-blur-md text-[var(--mt-text)] px-4 py-2.5 rounded-full shadow-2xl z-50 text-sm font-medium border border-[var(--mt-border)] text-center"
         >
           Focus session broken!
         </div>
@@ -95,7 +95,7 @@ export default function TimerDisplay() {
         <button
           type="button"
           onClick={() => setShowColorPicker(!showColorPicker)}
-          className="min-h-11 min-w-11 rounded-full border border-white/20 cursor-pointer flex-shrink-0 transition-transform hover:scale-105"
+          className="min-h-11 min-w-11 rounded-full border border-[var(--mt-border)] cursor-pointer flex-shrink-0 transition-transform hover:scale-105"
           style={{ backgroundColor: tagColor }}
           title="Choose a tag color"
           aria-label="Choose task tag color"
@@ -103,7 +103,7 @@ export default function TimerDisplay() {
         />
 
         {showColorPicker && (
-          <div className="absolute top-14 left-0 bg-[var(--mt-surface)] border border-white/10 rounded-2xl p-3 shadow-2xl z-50 w-[min(92vw,14rem)]">
+          <div className="absolute top-14 left-0 bg-[var(--mt-surface)] border border-[var(--mt-border)] rounded-2xl p-3 shadow-2xl z-50 w-[min(92vw,14rem)]">
             <div className="grid grid-cols-5 gap-2">
               {[
                 '#ef4444',
@@ -125,7 +125,7 @@ export default function TimerDisplay() {
                     setShowColorPicker(false);
                   }}
                   className={`min-h-9 min-w-9 rounded-full border-2 transition-transform hover:scale-110 ${
-                    tagColor === color ? 'border-white' : 'border-transparent'
+                    tagColor === color ? 'border-[var(--mt-text)]' : 'border-transparent'
                   }`}
                   style={{ backgroundColor: color }}
                   aria-label={`Select color ${color}`}
@@ -133,16 +133,16 @@ export default function TimerDisplay() {
               ))}
             </div>
 
-            <div className="mt-3 pt-3 border-t border-white/10">
+            <div className="mt-3 pt-3 border-t border-[var(--mt-border)]">
               <div className="flex items-center justify-between mb-2 gap-2">
-                <div className="text-[10px] font-bold text-white/50 tracking-wider">
+                <div className="text-[10px] font-bold text-[var(--mt-text-muted)] tracking-wider">
                   CUSTOM (MAX 4)
                 </div>
                 {customColors.length > 0 && (
                   <button
                     type="button"
                     onClick={() => clearCustomColors()}
-                    className="text-[10px] font-medium text-red-400/70 hover:text-red-400 min-h-8 px-1"
+                    className="text-[10px] font-medium text-[var(--mt-danger)]/70 hover:text-[var(--mt-danger)] min-h-8 px-1"
                   >
                     Clear All
                   </button>
@@ -151,10 +151,10 @@ export default function TimerDisplay() {
               <div className="flex items-center gap-2 flex-wrap">
                 {customColors.length < 4 && (
                   <label
-                    className="flex items-center justify-center min-h-9 min-w-9 rounded-full bg-white/10 hover:bg-white/20 cursor-pointer"
+                    className="flex items-center justify-center min-h-9 min-w-9 rounded-full bg-[color-mix(in_srgb,var(--mt-text)_6%,transparent)] hover:bg-[color-mix(in_srgb,var(--mt-text)_12%,transparent)] cursor-pointer"
                     title="Add Custom Color"
                   >
-                    <Plus size={14} className="text-white" aria-hidden />
+                    <Plus size={14} className="text-[var(--mt-text)]" aria-hidden />
                     <span className="sr-only">Add custom color</span>
                     <input
                       type="color"
@@ -174,7 +174,7 @@ export default function TimerDisplay() {
                     onClick={() => setTaskDetails(taskName, color)}
                     className={`flex items-center justify-center min-h-9 min-w-9 rounded-full border cursor-pointer ${
                       tagColor === color
-                        ? 'border-white shadow-[0_0_8px_rgba(255,255,255,0.4)]'
+                        ? 'border-[var(--mt-text)] shadow-[0_0_8px_color-mix(in_srgb,var(--mt-text)_40%,transparent)]'
                         : 'border-transparent'
                     }`}
                     style={{ backgroundColor: color }}
@@ -206,11 +206,11 @@ export default function TimerDisplay() {
           placeholder="What are you working on?"
           value={taskName}
           onChange={(e) => setTaskDetails(e.target.value, tagColor)}
-          className="flex-1 min-h-11 bg-transparent border-none text-white text-sm focus:outline-none placeholder:text-white/40 font-medium tracking-wide pr-3"
+          className="flex-1 min-h-11 bg-transparent border-none text-[var(--mt-text)] text-sm focus:outline-none placeholder:text-[var(--mt-text-subtle)] font-medium tracking-wide pr-3"
         />
       </div>
 
-      <div className="relative flex flex-col items-center justify-center w-full aspect-square max-w-[22rem] mt-glass rounded-[var(--mt-radius-card)] shadow-[0_32px_64px_rgba(0,0,0,0.45)]">
+      <div className="relative flex flex-col items-center justify-center w-full aspect-square max-w-[22rem] mt-glass rounded-[var(--mt-radius-card)] shadow-[0_8px_24px_color-mix(in_srgb,var(--mt-accent)_14%,transparent)]">
         <svg
           className="absolute inset-[8%] w-[84%] h-[84%] transform -rotate-90 pointer-events-none"
           viewBox="0 0 100 100"
@@ -220,7 +220,7 @@ export default function TimerDisplay() {
             cx="50"
             cy="50"
             r={radius}
-            className="text-white/5 stroke-current"
+            className="text-[color-mix(in_srgb,var(--mt-text)_6%,transparent)] stroke-current"
             strokeWidth="6"
             fill="transparent"
           />
@@ -228,7 +228,7 @@ export default function TimerDisplay() {
             cx="50"
             cy="50"
             r={radius}
-            className="text-blue-500 stroke-current transition-all duration-1000 ease-linear drop-shadow-[0_0_12px_rgba(59,130,246,0.6)]"
+            className="text-[var(--mt-accent)] stroke-current transition-all duration-1000 ease-linear drop-shadow-[0_0_12px_color-mix(in_srgb,var(--mt-accent)_60%,transparent)]"
             strokeWidth="6"
             strokeLinecap="round"
             fill="transparent"
@@ -237,11 +237,11 @@ export default function TimerDisplay() {
         </svg>
 
         <div className="text-center z-10 flex flex-col items-center px-4">
-          <span className="text-xs font-bold tracking-[0.25em] text-white/50 uppercase mb-2">
+          <span className="text-xs font-bold tracking-[0.25em] text-[var(--mt-text-muted)] uppercase mb-2">
             {getModeLabel()}
           </span>
           <h1
-            className="text-[clamp(2.75rem,16vw,5rem)] leading-none font-extralight tabular-nums tracking-tighter text-white drop-shadow-2xl"
+            className="text-[clamp(2.75rem,16vw,5rem)] leading-none font-extralight tabular-nums tracking-tighter text-[var(--mt-text)] drop-shadow-2xl"
             aria-live="polite"
             aria-atomic="true"
           >
@@ -254,8 +254,8 @@ export default function TimerDisplay() {
                 key={i}
                 className={`w-2 h-2 rounded-full transition-all duration-500 shadow-sm ${
                   i < currentCycle
-                    ? 'bg-white scale-110 shadow-white/50'
-                    : 'bg-white/15'
+                    ? 'bg-[var(--mt-accent)] scale-110 shadow-[var(--mt-accent)]/50'
+                    : 'bg-[color-mix(in_srgb,var(--mt-text)_12%,transparent)]'
                 }`}
               />
             ))}
