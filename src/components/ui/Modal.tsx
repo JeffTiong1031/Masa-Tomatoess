@@ -87,7 +87,7 @@ export default function Modal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/35 backdrop-blur-sm p-0 sm:p-4"
       role="presentation"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose();
@@ -98,7 +98,7 @@ export default function Modal({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className={`bg-[var(--mt-surface)] text-white shadow-2xl border border-white/10 relative flex flex-col overflow-hidden ${panelBase}`}
+        className={`bg-[var(--mt-surface)] text-[var(--mt-text)] shadow-2xl border border-[var(--mt-border)] relative flex flex-col overflow-hidden ${panelBase}`}
       >
         <div className="flex items-center justify-between gap-3 px-5 pt-5 pb-3 shrink-0">
           <h2 id={titleId} className="text-xl sm:text-2xl font-light tracking-wide">
@@ -107,7 +107,7 @@ export default function Modal({
           <button
             type="button"
             onClick={onClose}
-            className="min-h-11 min-w-11 inline-flex items-center justify-center rounded-full text-white/50 hover:text-white hover:bg-white/10 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400"
+            className="min-h-11 min-w-11 inline-flex items-center justify-center rounded-full text-[var(--mt-text-muted)] hover:text-[var(--mt-text)] hover:bg-[color-mix(in_srgb,var(--mt-text)_6%,transparent)] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--mt-focus)]"
             aria-label="Close"
           >
             <X size={20} />
@@ -117,7 +117,7 @@ export default function Modal({
           {children}
         </div>
         {footer ? (
-          <div className="px-5 py-4 border-t border-white/10 shrink-0">{footer}</div>
+          <div className="px-5 py-4 border-t border-[var(--mt-border)] shrink-0">{footer}</div>
         ) : null}
       </div>
     </div>

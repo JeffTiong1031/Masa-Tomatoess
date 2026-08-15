@@ -45,7 +45,7 @@ export default function SettingsModal() {
       <button
         type="button"
         onClick={openModal}
-        className="absolute z-40 min-h-11 min-w-11 inline-flex items-center justify-center text-white/50 hover:text-white bg-black/25 hover:bg-black/45 rounded-full backdrop-blur-sm transition-all border border-white/10"
+        className="absolute z-40 min-h-11 min-w-11 inline-flex items-center justify-center text-[var(--mt-text-muted)] hover:text-[var(--mt-text)] bg-[var(--mt-glass)] hover:bg-[var(--mt-glass-strong)] rounded-full backdrop-blur-sm transition-all border border-[var(--mt-border)]"
         style={{
           top: 'calc(var(--mt-safe-top) + 1.15rem)',
           right: 'calc(var(--mt-safe-right) + 1rem)',
@@ -64,7 +64,7 @@ export default function SettingsModal() {
           <button
             type="button"
             onClick={handleSave}
-            className="w-full min-h-12 py-3 bg-white text-black font-medium rounded-xl hover:bg-white/90 transition-colors"
+            className="w-full min-h-12 py-3 bg-[var(--mt-accent)] text-[var(--mt-accent-contrast)] font-medium rounded-xl hover:opacity-90 transition-colors"
           >
             Save Changes
           </button>
@@ -72,7 +72,7 @@ export default function SettingsModal() {
       >
         <div className="space-y-6">
           <div className="space-y-2">
-            <label className="flex items-center justify-between text-sm font-medium text-white/70 gap-3">
+            <label className="flex items-center justify-between text-sm font-medium text-[var(--mt-text)] gap-3">
               <span>Focus Time (minutes)</span>
               <input
                 type="number"
@@ -90,7 +90,7 @@ export default function SettingsModal() {
                     Math.max(5, Math.round(parseInt(e.target.value) / 5) * 5) || 5;
                   setLocalSettings({ ...localSettings, focusTime: val });
                 }}
-                className="w-16 min-h-10 bg-white/5 border border-white/10 rounded px-2 py-1 text-right text-white focus:outline-none focus:border-blue-500"
+                className="w-16 min-h-10 bg-[color-mix(in_srgb,var(--mt-text)_6%,transparent)] border border-[var(--mt-border)] rounded px-2 py-1 text-right text-[var(--mt-text)] focus:outline-none focus:border-[var(--mt-focus)]"
               />
             </label>
             <input
@@ -105,13 +105,13 @@ export default function SettingsModal() {
                   focusTime: parseInt(e.target.value),
                 })
               }
-              className="w-full accent-blue-500"
+              className="w-full accent-[var(--mt-accent)]"
               aria-label="Focus time"
             />
           </div>
 
           <div className="space-y-2">
-            <label className="flex items-center justify-between text-sm font-medium text-white/70 gap-3">
+            <label className="flex items-center justify-between text-sm font-medium text-[var(--mt-text)] gap-3">
               <span>Short Break (minutes)</span>
               <input
                 type="number"
@@ -129,7 +129,7 @@ export default function SettingsModal() {
                     Math.max(5, Math.round(parseInt(e.target.value) / 5) * 5) || 5;
                   setLocalSettings({ ...localSettings, shortBreak: val });
                 }}
-                className="w-16 min-h-10 bg-white/5 border border-white/10 rounded px-2 py-1 text-right text-white focus:outline-none focus:border-green-500"
+                className="w-16 min-h-10 bg-[color-mix(in_srgb,var(--mt-text)_6%,transparent)] border border-[var(--mt-border)] rounded px-2 py-1 text-right text-[var(--mt-text)] focus:outline-none focus:border-[var(--mt-focus)]"
               />
             </label>
             <input
@@ -144,13 +144,13 @@ export default function SettingsModal() {
                   shortBreak: parseInt(e.target.value),
                 })
               }
-              className="w-full accent-green-500"
+              className="w-full accent-[var(--mt-accent)]"
               aria-label="Short break"
             />
           </div>
 
           <div className="space-y-2">
-            <label className="flex items-center justify-between text-sm font-medium text-white/70 gap-3">
+            <label className="flex items-center justify-between text-sm font-medium text-[var(--mt-text)] gap-3">
               <span>Long Break (minutes)</span>
               <input
                 type="number"
@@ -168,7 +168,7 @@ export default function SettingsModal() {
                     Math.max(5, Math.round(parseInt(e.target.value) / 5) * 5) || 5;
                   setLocalSettings({ ...localSettings, longBreak: val });
                 }}
-                className="w-16 min-h-10 bg-white/5 border border-white/10 rounded px-2 py-1 text-right text-white focus:outline-none focus:border-purple-500"
+                className="w-16 min-h-10 bg-[color-mix(in_srgb,var(--mt-text)_6%,transparent)] border border-[var(--mt-border)] rounded px-2 py-1 text-right text-[var(--mt-text)] focus:outline-none focus:border-[var(--mt-focus)]"
               />
             </label>
             <input
@@ -183,13 +183,13 @@ export default function SettingsModal() {
                   longBreak: parseInt(e.target.value),
                 })
               }
-              className="w-full accent-purple-500"
+              className="w-full accent-[var(--mt-accent)]"
               aria-label="Long break"
             />
           </div>
 
           <div className="space-y-2">
-            <label className="flex items-center justify-between text-sm font-medium text-white/70 gap-3">
+            <label className="flex items-center justify-between text-sm font-medium text-[var(--mt-text)] gap-3">
               <span>Long Break Interval</span>
               <input
                 type="number"
@@ -207,7 +207,7 @@ export default function SettingsModal() {
                   const val = Math.max(2, parseInt(e.target.value) || 2);
                   setLocalSettings({ ...localSettings, cycleCount: val });
                 }}
-                className="w-16 min-h-10 bg-white/5 border border-white/10 rounded px-2 py-1 text-right text-white focus:outline-none focus:border-yellow-500"
+                className="w-16 min-h-10 bg-[color-mix(in_srgb,var(--mt-text)_6%,transparent)] border border-[var(--mt-border)] rounded px-2 py-1 text-right text-[var(--mt-text)] focus:outline-none focus:border-[var(--mt-focus)]"
               />
             </label>
             <input
@@ -222,7 +222,7 @@ export default function SettingsModal() {
                   cycleCount: parseInt(e.target.value),
                 })
               }
-              className="w-full accent-yellow-500"
+              className="w-full accent-[var(--mt-accent)]"
               aria-label="Long break interval"
             />
           </div>
@@ -230,7 +230,7 @@ export default function SettingsModal() {
           <div className="space-y-2">
             <label
               htmlFor="audio-url"
-              className="flex justify-between text-sm font-medium text-white/70"
+              className="flex justify-between text-sm font-medium text-[var(--mt-text)]"
             >
               <span>Background Audio (Spotify/YouTube URL)</span>
             </label>
@@ -242,14 +242,14 @@ export default function SettingsModal() {
               onChange={(e) =>
                 setLocalSettings({ ...localSettings, audioUrl: e.target.value })
               }
-              className="w-full min-h-11 bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-blue-500 transition-colors"
+              className="w-full min-h-11 bg-[color-mix(in_srgb,var(--mt-text)_6%,transparent)] border border-[var(--mt-border)] rounded-lg px-4 py-2 text-sm text-[var(--mt-text)] placeholder:text-[var(--mt-text-subtle)] focus:outline-none focus:border-[var(--mt-focus)] transition-colors"
             />
           </div>
 
           <div className="space-y-2">
             <label
               htmlFor="alarm-sound"
-              className="flex justify-between text-sm font-medium text-white/70"
+              className="flex justify-between text-sm font-medium text-[var(--mt-text)]"
             >
               <span>Alarm Sound</span>
             </label>
@@ -263,10 +263,10 @@ export default function SettingsModal() {
                     alarmSound: e.target.value,
                   })
                 }
-                className="flex-1 min-h-11 bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:border-blue-500 transition-colors"
+                className="flex-1 min-h-11 bg-[color-mix(in_srgb,var(--mt-text)_6%,transparent)] border border-[var(--mt-border)] rounded-lg px-4 py-2 text-sm text-[var(--mt-text)] focus:outline-none focus:border-[var(--mt-focus)] transition-colors"
               >
                 {Object.entries(ALARM_LABELS).map(([id, label]) => (
-                  <option key={id} value={id} className="bg-[#1a1a1a]">
+                  <option key={id} value={id} className="bg-[var(--mt-surface)]">
                     {label}
                   </option>
                 ))}
@@ -275,10 +275,10 @@ export default function SettingsModal() {
                 type="button"
                 onClick={handlePlayPreview}
                 disabled={isPreviewing}
-                className={`min-h-11 min-w-11 inline-flex items-center justify-center rounded-lg transition-colors text-white ${
+                className={`min-h-11 min-w-11 inline-flex items-center justify-center rounded-lg transition-colors text-[var(--mt-text)] ${
                   isPreviewing
-                    ? 'bg-white/5 cursor-not-allowed'
-                    : 'bg-white/10 hover:bg-white/20'
+                    ? 'bg-[color-mix(in_srgb,var(--mt-text)_6%,transparent)] cursor-not-allowed'
+                    : 'bg-[color-mix(in_srgb,var(--mt-text)_6%,transparent)] hover:bg-[color-mix(in_srgb,var(--mt-text)_12%,transparent)]'
                 }`}
                 title="Preview Sound"
                 aria-label="Preview alarm sound"
@@ -292,10 +292,10 @@ export default function SettingsModal() {
             </div>
           </div>
 
-          <div className="flex items-center justify-between pt-4 border-t border-white/10 gap-4">
+          <div className="flex items-center justify-between pt-4 border-t border-[var(--mt-border)] gap-4">
             <div>
-              <h3 className="text-sm font-medium text-white/90">Strict Mode</h3>
-              <p className="text-xs text-white/50 mt-1">
+              <h3 className="text-sm font-medium text-[var(--mt-text)]">Strict Mode</h3>
+              <p className="text-xs text-[var(--mt-text-muted)] mt-1">
                 Pausing a focus session ruins it
               </p>
             </div>
@@ -304,13 +304,15 @@ export default function SettingsModal() {
               role="switch"
               aria-checked={strictMode}
               onClick={toggleStrictMode}
-              className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 ${
-                strictMode ? 'bg-red-500' : 'bg-white/20'
+              className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mt-focus)] ${
+                strictMode ? 'bg-[var(--mt-danger)]' : 'bg-[var(--mt-border)]'
               }`}
             >
               <span
-                className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
-                  strictMode ? 'translate-x-6' : 'translate-x-1'
+                className={`inline-block h-5 w-5 transform rounded-full transition-transform ${
+                  strictMode
+                    ? 'bg-[var(--mt-surface)] translate-x-6'
+                    : 'bg-[var(--mt-text)] translate-x-1'
                 }`}
               />
             </button>
