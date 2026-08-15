@@ -177,13 +177,11 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 mb-8 sm:mb-12">
           <StatCard
             icon={<Target size={22} />}
-            iconClass="bg-blue-500/20 text-blue-400"
             label="Total Focus Sessions"
             value={String(totalFocusSessions)}
           />
           <StatCard
             icon={<Clock size={22} />}
-            iconClass="bg-emerald-500/20 text-emerald-400"
             label="Total Focus Time"
             value={
               <>
@@ -194,7 +192,6 @@ export default function Dashboard() {
           />
           <StatCard
             icon={<TrendingUp size={22} />}
-            iconClass="bg-purple-500/20 text-purple-400"
             label="Today's Focus"
             value={
               <>
@@ -209,7 +206,7 @@ export default function Dashboard() {
 
         <Leaderboard />
 
-        <div className="mt-glass shadow-2xl p-5 sm:p-8 rounded-[1.75rem] mb-6 sm:mb-8 overflow-x-auto">
+        <div className="mt-soft p-5 sm:p-8 mb-6 sm:mb-8 overflow-x-auto">
           <h2 className="text-lg sm:text-xl font-light tracking-wide text-[var(--mt-text)] mb-6">
             Contribution Heatmap
             <span className="block sm:inline text-sm text-[var(--mt-text-subtle)] sm:ml-2">
@@ -249,7 +246,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="mt-glass shadow-2xl p-5 sm:p-8 rounded-[1.75rem] h-72 sm:h-[26rem]">
+        <div className="mt-soft p-5 sm:p-8 h-72 sm:h-[26rem]">
           <h2 className="text-lg sm:text-xl font-light tracking-wide text-[var(--mt-text)] mb-6">
             Focus Minutes (Last 7 Days)
           </h2>
@@ -289,19 +286,20 @@ export default function Dashboard() {
 
 function StatCard({
   icon,
-  iconClass,
   label,
   value,
 }: {
   icon: React.ReactNode;
-  iconClass: string;
   label: string;
   value: React.ReactNode;
 }) {
   return (
-    <div className="mt-glass shadow-2xl p-5 sm:p-6 rounded-[1.5rem] flex items-start gap-4 transition-all hover:bg-[color-mix(in_srgb,var(--mt-text)_6%,transparent)]">
+    <div className="mt-soft p-5 sm:p-6 flex items-start gap-4 transition-all hover:bg-[color-mix(in_srgb,var(--mt-text)_6%,transparent)]">
       <div
-        className={`p-3 rounded-2xl shadow-inner border border-[var(--mt-border)] ${iconClass}`}
+        className="p-3 rounded-2xl shadow-inner border border-[var(--mt-border)] text-[var(--mt-text)]"
+        style={{
+          background: 'color-mix(in srgb, var(--mt-accent) 35%, transparent)',
+        }}
       >
         {icon}
       </div>

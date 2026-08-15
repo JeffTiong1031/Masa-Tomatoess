@@ -3,7 +3,6 @@
 import AppNav from '@/components/nav/AppNav';
 import NavDrawer from '@/components/nav/NavDrawer';
 import BackgroundManager from '@/components/BackgroundManager';
-import ThemeModal from '@/components/ThemeModal';
 import AudioPlayer from '@/components/AudioPlayer';
 import AlarmPlayer from '@/components/AlarmPlayer';
 import TimerEngine from '@/components/TimerEngine';
@@ -19,7 +18,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <TimerEngine />
         <div className="flex flex-1 flex-col">{children}</div>
         <AppNav />
-        <ThemeModal />
         <AudioPlayer />
         <AlarmPlayer />
       </div>

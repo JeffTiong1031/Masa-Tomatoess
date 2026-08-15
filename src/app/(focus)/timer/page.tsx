@@ -1,6 +1,7 @@
 import TimerDisplay from '@/components/TimerDisplay';
 import Controls from '@/components/Controls';
 import SettingsModal from '@/components/SettingsModal';
+import ThemeModal from '@/components/ThemeModal';
 
 export default function TimerPage() {
   return (
@@ -9,6 +10,7 @@ export default function TimerPage() {
         <TimerDisplay />
         <Controls />
       </div>
+      <ThemeModal />
       <SettingsModal />
     </main>
   );

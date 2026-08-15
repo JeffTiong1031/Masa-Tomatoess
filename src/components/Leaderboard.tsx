@@ -65,7 +65,7 @@ export default function Leaderboard() {
   }, [timeframe]);
 
   return (
-    <div className="mt-glass shadow-2xl p-5 sm:p-8 rounded-[1.75rem] mb-6 sm:mb-8">
+    <div className="mt-soft p-5 sm:p-8 mb-6 sm:mb-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6 sm:mb-8">
         <h2 className="text-lg sm:text-xl font-light tracking-wide text-[var(--mt-text)] flex items-center gap-3">
           <Trophy className="text-[var(--mt-rank-gold)]" size={22} aria-hidden />

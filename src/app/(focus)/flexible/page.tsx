@@ -1,6 +1,7 @@
 import FlexibleDisplay from '@/components/FlexibleDisplay';
 import FlexibleControls from '@/components/FlexibleControls';
 import FlexibleSettingsModal from '@/components/FlexibleSettingsModal';
+import ThemeModal from '@/components/ThemeModal';
 
 export default function FlexiblePage() {
   return (
@@ -9,6 +10,7 @@ export default function FlexiblePage() {
         <FlexibleDisplay />
         <FlexibleControls />
       </div>
+      <ThemeModal />
       <FlexibleSettingsModal />
     </main>
   );

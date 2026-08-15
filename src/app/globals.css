@@ -63,7 +63,10 @@
   --mt-border: var(--mac-border-light);
   --mt-text: var(--mac-cocoa);
   --mt-text-muted: var(--mac-cocoa-muted);
-  --mt-text-subtle: color-mix(in srgb, var(--mac-cocoa) 45%, transparent);
+  /* 5.06:1 on --mac-white / 4.93:1 on --mac-cream — both clear AA's 4.5:1
+     for normal text, while staying below --mac-cocoa-muted's 5.34:1/5.06:1
+     so the text -> muted -> subtle hierarchy still reads as a hierarchy. */
+  --mt-text-subtle: color-mix(in srgb, var(--mac-cocoa) 70%, transparent);
   --mt-accent: var(--mac-accent-timer);
   --mt-accent-contrast: var(--mac-cocoa);
   --mt-danger: var(--mac-danger-deep);
@@ -119,7 +122,9 @@ body {
   --mt-border: var(--mac-border-light);
   --mt-text: var(--mac-cocoa);
   --mt-text-muted: var(--mac-cocoa-muted);
-  --mt-text-subtle: color-mix(in srgb, var(--mac-cocoa) 45%, transparent);
+  /* 5.06:1 on --mac-white / 4.93:1 on --mac-cream — see the :root token
+     above for the full rationale. */
+  --mt-text-subtle: color-mix(in srgb, var(--mac-cocoa) 70%, transparent);
   --mt-accent-contrast: var(--mac-cocoa);
   --mt-glass: color-mix(in srgb, var(--mac-white) 72%, transparent);
   --mt-glass-strong: color-mix(in srgb, var(--mac-white) 88%, transparent);
@@ -139,7 +144,11 @@ body {
   --mt-border: var(--mac-border-dark);
   --mt-text: var(--mac-shell);
   --mt-text-muted: var(--mac-shell-muted);
-  --mt-text-subtle: color-mix(in srgb, var(--mac-shell) 40%, transparent);
+  /* 4.95:1 on dark-mood --mt-surface (#31262E) / 5.32:1 on --mt-bg
+     (#241C22) — both clear AA's 4.5:1, while staying below
+     --mac-shell-muted's 6.03:1/6.90:1 so subtle still reads lighter than
+     muted, not the other way around. */
+  --mt-text-subtle: color-mix(in srgb, var(--mac-shell) 55%, transparent);
   --mt-accent-contrast: var(--mac-plum);
   --mt-glass: color-mix(in srgb, var(--mac-plum) 45%, transparent);
   --mt-glass-strong: color-mix(in srgb, var(--mac-plum) 62%, transparent);
