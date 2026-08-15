@@ -1711,24 +1711,39 @@ export default function FitnessPage() {
           </span>
           <SampleChip />
         </div>
-        <div className="grid grid-cols-7 gap-1.5">
+        <ul
+          className="grid grid-cols-7 gap-1.5"
+          aria-label="Workout activity for this week"
+        >
           {WEEK.map(({ day, active }) => (
-            <div key={day} className="flex flex-col items-center gap-1.5">
+            <li
+              key={day}
+              className="flex flex-col items-center gap-1.5"
+              aria-label={`${day}: ${active ? 'worked out' : 'rest day'}`}
+            >
               <div
-                className="flex aspect-square w-full items-center justify-center rounded-lg"
+                className="flex aspect-square w-full items-center justify-center rounded-lg text-[11px] font-semibold"
                 style={{
                   background: active
                     ? 'var(--mt-accent)'
                     : 'color-mix(in srgb, var(--mt-border) 60%, transparent)',
+                  color: 'var(--mt-accent-contrast)',
+                  // Second, non-colour affordance so the distinction survives
+                  // greyscale and colour-blind vision.
+                  boxShadow: active
+                    ? 'inset 0 0 0 2px var(--mt-text)'
+                    : undefined,
                 }}
                 aria-hidden
-              />
-              <span className="text-[10px] text-[var(--mt-text-muted)]">
+              >
+                {active ? '✓' : ''}
+              </div>
+              <span className="text-[10px] text-[var(--mt-text-muted)]" aria-hidden>
                 {day}
               </span>
-            </div>
+            </li>
           ))}
-        </div>
+        </ul>
       </Card>
 
       <button
@@ -1898,6 +1913,10 @@ Replace every hardcoded colour according to this table. It is exhaustive for the
 | `shadow-[0_14px_40px_rgba(2,6,23,0.35)]` and similar hardcoded shadows | `shadow-[0_8px_24px_color-mix(in_srgb,var(--mt-accent)_14%,transparent)]` |
 
 Backdrop overlays (`bg-black/50`, `bg-[var(--mt-midnight)]/85`) become `bg-black/35 backdrop-blur-sm` — a scrim must read as a scrim in both moods.
+
+**Warning — this table flattens state pairs.** The `bg-white/5` / `bg-white/[0.07]` / `bg-white/10` row maps three different opacities onto one 6% value. Wherever a component used two of them to express *state* — `bg-white/5 hover:bg-white/10`, or unselected/selected — applying the table literally makes both ends identical and silently destroys the feedback. This happened once already in Task 11 (`ThemeModal.tsx:126`, the Upload tile's hover became a no-op).
+
+Before converting any element, check whether its original value is part of a pair. If it is, keep the two ends distinct: idle stays at 6%, the raised state goes to **12%** (`bg-[color-mix(in_srgb,var(--mt-text)_12%,transparent)]`). The same applies to `hover:`, `focus:`, `active:`, `aria-selected`, and disabled/enabled pairs. A state that no longer looks different from its base is a defect, not a simplification.
 
 - [ ] **Step 2: Verify in both moods**
 
