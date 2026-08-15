@@ -10,7 +10,15 @@ import StatTile from '@/components/ui/StatTile';
 import { useHasMounted } from '@/hooks/useHasMounted';
 
 /** Sections with no data layer yet (spec §7.1). */
-const INERT = new Set(['/cycle', '/countdown', '/meals', '/fitness', '/finance']);
+const INERT = new Set([
+  '/cycle',
+  '/countdown',
+  '/meals',
+  '/fitness',
+  '/finance',
+  '/calendar',
+  '/timetable',
+]);
 
 function greetingForHour(h: number): string {
   if (h < 12) return 'Good morning';
