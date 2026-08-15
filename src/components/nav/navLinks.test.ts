@@ -6,7 +6,13 @@ import {
   FOCUS_SEGMENTS,
   isActiveHref,
   isFocusRoute,
+  isNavLinkActive,
 } from './navLinks';
+
+/** Written out rather than derived. Asserting FOCUS_HREFS against
+ *  FOCUS_HREFS (or against the list it is built from) restates the
+ *  definition and holds for any contents, including an empty array. */
+const EXPECTED_FOCUS_HREFS = ['/timer', '/flexible', '/dashboard'];
 
 describe('bottom bar', () => {
   it('has exactly three slots', () => {
@@ -24,7 +30,11 @@ describe('bottom bar', () => {
 });
 
 describe('isFocusRoute', () => {
-  it.each(FOCUS_HREFS)('is true on %s', (href) => {
+  it('lists exactly the three Focus routes', () => {
+    expect(FOCUS_HREFS).toEqual(EXPECTED_FOCUS_HREFS);
+  });
+
+  it.each(EXPECTED_FOCUS_HREFS)('is true on %s', (href) => {
     expect(isFocusRoute(href)).toBe(true);
   });
 
@@ -45,6 +55,45 @@ describe('isFocusRoute', () => {
   );
 });
 
+describe('isNavLinkActive', () => {
+  // The rule, not any one call site. AppNav had it and NavDrawer did not,
+  // which left the drawer's Focus entry dark on /flexible and /dashboard
+  // -- and above 768px AppNav renders nothing, so there was no active
+  // indicator anywhere in the app on those two routes. Pinning the shared
+  // function is what stops a third consumer repeating the omission.
+  it.each(EXPECTED_FOCUS_HREFS)(
+    'lights the /timer nav entry on %s',
+    (pathname) => {
+      expect(isNavLinkActive(pathname, '/timer')).toBe(true);
+    },
+  );
+
+  it('is what every ALL_LINKS consumer must use, because isActiveHref is not enough', () => {
+    // If this ever stops being true, the ternary is redundant and the
+    // shared helper can go -- but until then, bypassing it is the bug.
+    expect(isActiveHref('/flexible', '/timer')).toBe(false);
+    expect(isActiveHref('/dashboard', '/timer')).toBe(false);
+  });
+
+  it.each(['/', '/calendar', '/timetable', '/cycle', '/finance'])(
+    'leaves the /timer nav entry dark on %s',
+    (pathname) => {
+      expect(isNavLinkActive(pathname, '/timer')).toBe(false);
+    },
+  );
+
+  it('falls back to plain href matching for every other link', () => {
+    for (const { href } of ALL_LINKS) {
+      if (href === '/timer') continue;
+      expect(isNavLinkActive(href, href), `${href} should be active on itself`).toBe(true);
+      expect(
+        isNavLinkActive('/timer', href),
+        `${href} should be dark on /timer`,
+      ).toBe(false);
+    }
+  });
+});
+
 describe('link table', () => {
   it('labels /timer as Focus, because it is the section entry point', () => {
     expect(ALL_LINKS.find((l) => l.href === '/timer')?.label).toBe('Focus');
@@ -54,7 +103,7 @@ describe('link table', () => {
     // The two labels are intentionally different. This pins that, so a
     // later "tidy-up" that unifies them fails loudly here.
     expect(FOCUS_SEGMENTS.find((s) => s.href === '/timer')?.label).toBe('Timer');
-    expect(FOCUS_HREFS).toEqual(FOCUS_SEGMENTS.map((s) => s.href));
+    expect(FOCUS_SEGMENTS.map((s) => s.href)).toEqual(EXPECTED_FOCUS_HREFS);
   });
 
   it('no longer lists /flexible or /dashboard as separate destinations', () => {

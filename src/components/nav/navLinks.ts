@@ -82,3 +82,16 @@ export function isActiveHref(pathname: string, href: string): boolean {
 export function isFocusRoute(pathname: string): boolean {
   return FOCUS_HREFS.some((href) => isActiveHref(pathname, href));
 }
+
+/** Whether a NavLink from ALL_LINKS should read as the current page.
+ *
+ *  Every consumer of ALL_LINKS -- the bottom bar, the drawer, and
+ *  anything added later -- must call THIS, not isActiveHref. /timer is
+ *  the entry point for a whole section, so it stays lit on /flexible and
+ *  /dashboard; a plain isActiveHref(pathname, '/timer') leaves it dark
+ *  there, and that mistake builds, lints and type-checks cleanly. */
+export function isNavLinkActive(pathname: string, href: string): boolean {
+  return href === '/timer'
+    ? isFocusRoute(pathname)
+    : isActiveHref(pathname, href);
+}

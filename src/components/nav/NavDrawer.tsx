@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Menu, X } from 'lucide-react';
-import { NAV_GROUPS, isActiveHref } from './navLinks';
+import { NAV_GROUPS, isNavLinkActive } from './navLinks';
 import { accentVar } from '@/components/ui/PageShell';
 
 export default function NavDrawer() {
@@ -148,7 +148,7 @@ export default function NavDrawer() {
                     </div>
                   )}
                   {group.links.map(({ href, label, icon: Icon, accent }) => {
-                    const active = isActiveHref(pathname, href);
+                    const active = isNavLinkActive(pathname, href);
                     return (
                       <Link
                         key={href}

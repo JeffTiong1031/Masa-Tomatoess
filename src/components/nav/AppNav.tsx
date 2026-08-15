@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useIsMdUp } from '@/hooks/useMediaQuery';
-import { ALL_LINKS, BOTTOM_BAR_HREFS, isActiveHref, isFocusRoute } from './navLinks';
+import { ALL_LINKS, BOTTOM_BAR_HREFS, isNavLinkActive } from './navLinks';
 import { accentVar } from '@/components/ui/PageShell';
 
 const BOTTOM_LINKS = BOTTOM_BAR_HREFS.map((href) => {
@@ -28,8 +28,7 @@ export default function AppNav() {
     >
       <div className="mx-auto grid max-w-lg grid-cols-3">
         {BOTTOM_LINKS.map(({ href, label, icon: Icon, accent }) => {
-          const active =
-            href === '/timer' ? isFocusRoute(pathname) : isActiveHref(pathname, href);
+          const active = isNavLinkActive(pathname, href);
           return (
             <Link
               key={href}
