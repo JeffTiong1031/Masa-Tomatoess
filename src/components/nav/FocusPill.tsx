@@ -11,8 +11,17 @@ export default function FocusPill() {
   return (
     <nav
       aria-label="Focus sections"
-      className="mx-auto w-full max-w-3xl px-4"
-      style={{ paddingTop: 'calc(var(--mt-safe-top) + 4.25rem)' }}
+      className="mx-auto w-full max-w-3xl"
+      style={{
+        // Clears the fixed hamburger (top: safe-top + 1rem, 2.75rem tall)
+        // for the whole Focus group; .mt-page-pad-focus deliberately does
+        // not repeat it.
+        paddingTop: 'calc(var(--mt-safe-top) + 4.25rem)',
+        // Same horizontal rule as .mt-page-pad -- a plain px-4 lets the end
+        // segments slide under the cutout in landscape on a notched phone.
+        paddingLeft: 'max(1rem, var(--mt-safe-left))',
+        paddingRight: 'max(1rem, var(--mt-safe-right))',
+      }}
     >
       <div className="flex gap-1 rounded-full border border-[var(--mt-border)] bg-[var(--mt-surface)] p-1">
         {FOCUS_SEGMENTS.map(({ href, label, accent }) => {

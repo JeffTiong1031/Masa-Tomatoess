@@ -5,7 +5,7 @@ import ThemeModal from '@/components/ThemeModal';
 
 export default function FlexiblePage() {
   return (
-    <main className="flex-1 flex flex-col items-center justify-center mt-page-pad relative">
+    <main className="flex-1 flex flex-col items-center justify-center mt-page-pad-focus relative">
       <div className="z-10 flex flex-col items-center w-full">
         <FlexibleDisplay />
         <FlexibleControls />

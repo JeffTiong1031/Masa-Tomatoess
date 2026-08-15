@@ -137,7 +137,7 @@ export default function Dashboard() {
 
   return (
     <main
-      className="flex-1 text-[var(--mt-text)] overflow-y-auto mt-page-pad"
+      className="flex-1 text-[var(--mt-text)] overflow-y-auto mt-page-pad-focus"
       style={{ ['--mt-accent' as string]: 'var(--mac-accent-dashboard)' }}
     >
       <div className="max-w-5xl mx-auto px-1 sm:px-2 pb-4">
