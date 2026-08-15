@@ -13,7 +13,33 @@ export const HEATMAP_RAMP = [
   '#C4B0E0',
 ] as const;
 
-/** --mt-surface under the dark mood: the card the heatmap sits on.
- *  Duplicated as a literal because the ramp is consumed by a prop that
- *  resolves before CSS custom properties do. */
-export const HEATMAP_SURFACE = '#31262E';
+/** Literal copies of dark-mood tokens, for the props that consume a
+ *  value before CSS custom properties resolve: react-activity-calendar's
+ *  `theme` and Recharts' stroke / fill / contentStyle. Literals are
+ *  correct at those sites; hand-copying them into the page was not.
+ *
+ *  Every entry below is pinned to its token in heatmapTheme.test.ts, so
+ *  retuning a token fails loudly instead of leaving the chart on a
+ *  colour that is no longer real. */
+export const CHART_COLORS = {
+  /** --mac-shell-muted. Axis labels. */
+  axis: '#B5A2AC',
+  /** --mac-border-dark. Tooltip border and hover cursor fill. */
+  border: '#453640',
+  /** --mac-plum-raised. The .mt-soft card the chart sits on. */
+  surface: '#31262E',
+  /** --mac-plum-elevated. One step UP from the card, deliberately: a
+   *  tooltip painted in the card's own colour reads as unpanelled
+   *  floating text, since a --mac-border-dark edge between two identical
+   *  greys is only 1.282:1. Going the other way, toward --mac-plum, is
+   *  worse still at 1.145:1 -- the tooltip has to float above the card,
+   *  not sink into the page behind it. This clears it by 1.525:1. */
+  tooltipBackground: '#553F4E',
+  /** --mac-shell. Tooltip text. */
+  tooltipText: '#F7EFEA',
+  /** --mac-accent-dashboard. Bar fill, and the top of the ramp above. */
+  bar: '#C4B0E0',
+} as const;
+
+/** --mt-surface under the dark mood: the card the heatmap sits on. */
+export const HEATMAP_SURFACE = CHART_COLORS.surface;

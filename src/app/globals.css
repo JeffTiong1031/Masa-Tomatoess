@@ -14,6 +14,13 @@
 
   --mac-plum: #241C22;
   --mac-plum-raised: #31262E;
+  /* One step further up the same plum ramp, for a surface that floats
+     OVER a card rather than sitting in it -- currently the chart
+     tooltip. It has to be lighter, not darker: darkening a tooltip
+     toward --mac-plum measures 1.145:1 against --mac-plum-raised, which
+     is weaker than the 1.282:1 border it would be replacing. This sits
+     1.525:1 above the card. */
+  --mac-plum-elevated: #553F4E;
   --mac-border-dark: #453640;
   --mac-shell: #F7EFEA;
   --mac-shell-muted: #B5A2AC;

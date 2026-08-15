@@ -11,7 +11,7 @@ import { clearUserSessions } from '@/app/actions/clearSessions';
 import { syncSessions } from '@/lib/sync';
 import { buildHeatmapRange, heatmapDaysForWidth } from '@/lib/heatmapRange';
 import { useHasMounted } from '@/hooks/useHasMounted';
-import { HEATMAP_RAMP } from '@/lib/heatmapTheme';
+import { CHART_COLORS, HEATMAP_RAMP } from '@/lib/heatmapTheme';
 
 // react-activity-calendar consumes this as a literal theme prop, not CSS
 // custom properties, so hex is correct here. Both keys carry the same
@@ -250,28 +250,32 @@ export default function Dashboard() {
             <BarChart data={weeklyData}>
               <XAxis
                 dataKey="name"
-                stroke="#B5A2AC"
+                stroke={CHART_COLORS.axis}
                 fontSize={12}
                 tickLine={false}
                 axisLine={false}
               />
               <YAxis
-                stroke="#B5A2AC"
+                stroke={CHART_COLORS.axis}
                 fontSize={12}
                 tickLine={false}
                 axisLine={false}
                 width={32}
               />
               <Tooltip
-                cursor={{ fill: '#453640' }}
+                cursor={{ fill: CHART_COLORS.border }}
                 contentStyle={{
-                  background: '#31262E',
-                  border: '1px solid #453640',
+                  background: CHART_COLORS.tooltipBackground,
+                  border: `1px solid ${CHART_COLORS.border}`,
                   borderRadius: 12,
-                  color: '#F7EFEA',
+                  color: CHART_COLORS.tooltipText,
                 }}
               />
-              <Bar dataKey="minutes" fill="#C4B0E0" radius={[4, 4, 0, 0]} />
+              <Bar
+                dataKey="minutes"
+                fill={CHART_COLORS.bar}
+                radius={[4, 4, 0, 0]}
+              />
             </BarChart>
           </ResponsiveContainer>
         </div>
