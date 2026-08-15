@@ -599,6 +599,7 @@ import {
   ALL_LINKS,
   BOTTOM_BAR_HREFS,
   FOCUS_HREFS,
+  FOCUS_SEGMENTS,
   isActiveHref,
   isFocusRoute,
 } from './navLinks';
@@ -643,6 +644,13 @@ describe('isFocusRoute', () => {
 describe('link table', () => {
   it('labels /timer as Focus, because it is the section entry point', () => {
     expect(ALL_LINKS.find((l) => l.href === '/timer')?.label).toBe('Focus');
+  });
+
+  it('labels the same route Timer inside the pill', () => {
+    // The two labels are intentionally different. This pins that, so a
+    // later "tidy-up" that unifies them fails loudly here.
+    expect(FOCUS_SEGMENTS.find((s) => s.href === '/timer')?.label).toBe('Timer');
+    expect(FOCUS_HREFS).toEqual(FOCUS_SEGMENTS.map((s) => s.href));
   });
 
   it('no longer lists /flexible or /dashboard as separate destinations', () => {
@@ -723,10 +731,25 @@ export const ALL_LINKS: NavLink[] = NAV_GROUPS.flatMap((g) => g.links);
 /** Bottom-bar slots on mobile: the app's three top-level sections. */
 export const BOTTOM_BAR_HREFS = ['/timer', '/calendar', '/timetable'];
 
-/** The three widgets reachable from inside Focus. /timer is the entry
- *  point and the only one that appears in the drawer or bottom bar; the
- *  other two are reached through the pill. */
-export const FOCUS_HREFS = ['/timer', '/flexible', '/dashboard'];
+/** The three widgets reachable from inside Focus, in pill order.
+ *
+ *  The labels here are deliberately NOT the NavLink labels above:
+ *  ALL_LINKS calls /timer "Focus", because that is what the drawer and
+ *  bottom bar need to say. The pill needs to call the same route
+ *  "Timer". Both lists live in this one file so they cannot drift. */
+export const FOCUS_SEGMENTS: {
+  href: string;
+  label: string;
+  accent: AccentName;
+}[] = [
+  { href: '/timer', label: 'Timer', accent: 'timer' },
+  { href: '/flexible', label: 'Flexible', accent: 'flexible' },
+  { href: '/dashboard', label: 'Dashboard', accent: 'dashboard' },
+];
+
+/** Just the hrefs, for active-state checks. Derived, so the pill and the
+ *  bottom bar can never disagree about what counts as Focus. */
+export const FOCUS_HREFS = FOCUS_SEGMENTS.map((segment) => segment.href);
 
 export function isActiveHref(pathname: string, href: string): boolean {
   return href === '/'
@@ -951,20 +974,29 @@ Expected: a rename entry from `(life)/dashboard/page.tsx` to `(focus)/dashboard/
 
 - [ ] **Step 6: Point the page at the shared ramp**
 
-In `src/app/(focus)/dashboard/page.tsx`, delete the local ramp constant at lines 20-27 (the comment block plus the `light`/`dark` arrays) and import the shared one instead:
+In `src/app/(focus)/dashboard/page.tsx`, the constant is named **`MACARON_HEATMAP_THEME`** and spans **lines 15-28** — a ten-line comment followed by the object. **Keep the name**; it is referenced further down the file.
+
+Replace the whole block with:
+
+```ts
+// react-activity-calendar consumes this as a literal theme prop, not CSS
+// custom properties, so hex is correct here. Both keys carry the same
+// ramp: supplying only one key makes the library fall back to its own
+// defaults for the other. The ramp itself lives in lib/heatmapTheme.ts
+// so its five levels can be asserted in tests.
+const MACARON_HEATMAP_THEME = {
+  light: [...HEATMAP_RAMP],
+  dark: [...HEATMAP_RAMP],
+};
+```
+
+Add the import at the top of the file:
 
 ```ts
 import { HEATMAP_RAMP } from '@/lib/heatmapTheme';
 ```
 
-Then build the theme object from it, keeping both keys pointed at the same ramp exactly as the current code does:
-
-```ts
-const HEATMAP_THEME = {
-  light: [...HEATMAP_RAMP],
-  dark: [...HEATMAP_RAMP],
-};
-```
+The old comment claimed "the dashboard is always light mood" and described contrast against cream. Both statements stop being true in this task, which is why the comment is replaced rather than kept.
 
 - [ ] **Step 7: Convert the remaining seven colour sites**
 
@@ -1044,17 +1076,8 @@ Create `src/components/nav/FocusPill.tsx`:
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { accentVar, type AccentName } from '@/components/ui/PageShell';
-
-/** The pill's own labels. Deliberately NOT derived from ALL_LINKS:
- *  that collection labels /timer as "Focus" for the drawer and bottom
- *  bar, which would render a pill reading "Focus / Flexible /
- *  Dashboard". */
-const SEGMENTS: { href: string; label: string; accent: AccentName }[] = [
-  { href: '/timer', label: 'Timer', accent: 'timer' },
-  { href: '/flexible', label: 'Flexible', accent: 'flexible' },
-  { href: '/dashboard', label: 'Dashboard', accent: 'dashboard' },
-];
+import { accentVar } from '@/components/ui/PageShell';
+import { FOCUS_SEGMENTS } from './navLinks';
 
 export default function FocusPill() {
   const pathname = usePathname();
@@ -1066,7 +1089,7 @@ export default function FocusPill() {
       style={{ paddingTop: 'calc(var(--mt-safe-top) + 4.25rem)' }}
     >
       <div className="flex gap-1 rounded-full border border-[var(--mt-border)] bg-[var(--mt-surface)] p-1">
-        {SEGMENTS.map(({ href, label, accent }) => {
+        {FOCUS_SEGMENTS.map(({ href, label, accent }) => {
           const active = pathname === href;
           return (
             <Link
