@@ -27,8 +27,13 @@
   --mac-accent-meals: #D9AC80;
   --mac-accent-fitness: #B4D9A0;
   --mac-accent-finance: #A9C4E8;
-  --mac-accent-calendar: #E0A9DB;
-  --mac-accent-timetable: #9BD6E2;
+  /* The two newest accents. Both were first picked on hue separation
+     alone and both missed: #E0A9DB sat delta E 12.7 from dashboard and
+     #9BD6E2 sat delta E 12.4 from countdown, the two closest pairs in
+     the whole palette, despite clearing a 20 deg hue floor. See
+     accents.test.ts -- the guard is now CIE delta E 76, not hue angle. */
+  --mac-accent-calendar: #FFB5F4;  /* min delta E 21.5 (dashboard) */
+  --mac-accent-timetable: #72E2FF; /* min delta E 24.0 (finance) */
 
   --mac-danger: #E07A6B;
   /* Deeper terracotta for light mood only: #E07A6B measures 2.93:1 on

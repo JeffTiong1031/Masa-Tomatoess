@@ -66,3 +66,55 @@ export function lightness(hex: string): number {
   const y = relativeLuminance(hex);
   return y <= 216 / 24389 ? y * (24389 / 27) : Math.cbrt(y) * 116 - 16;
 }
+
+export interface Lab {
+  l: number;
+  a: number;
+  b: number;
+}
+
+/** D65 white point, the reference sRGB is defined against. */
+const D65 = { x: 0.95047, y: 1.0, z: 1.08883 };
+
+/** CIE 1976 L*a*b*. L* is lightness, a* is green-to-red, b* is
+ *  blue-to-yellow. Unlike hue angle it is an approximately uniform
+ *  space, so a distance in it means something to the eye. */
+export function hexToLab(hex: string): Lab {
+  const { r, g, b } = hexToRgb(hex);
+  const toLinear = (channel: number) => {
+    const s = channel / 255;
+    return s <= 0.04045 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+  };
+  const rl = toLinear(r);
+  const gl = toLinear(g);
+  const bl = toLinear(b);
+
+  // sRGB -> CIE XYZ (D65).
+  const x = rl * 0.4124564 + gl * 0.3575761 + bl * 0.1804375;
+  const y = rl * 0.2126729 + gl * 0.7151522 + bl * 0.072175;
+  const z = rl * 0.0193339 + gl * 0.119192 + bl * 0.9503041;
+
+  const f = (t: number) =>
+    t > 216 / 24389 ? Math.cbrt(t) : (t * (24389 / 27) + 16) / 116;
+  const fx = f(x / D65.x);
+  const fy = f(y / D65.y);
+  const fz = f(z / D65.z);
+
+  return { l: 116 * fy - 16, a: 500 * (fx - fy), b: 200 * (fy - fz) };
+}
+
+/** CIE76 colour difference: plain Euclidean distance in L*a*b*.
+ *
+ *  Prefer this to hueDistance when the question is "do these two read as
+ *  the same colour". Hue angle ignores lightness and chroma entirely, so
+ *  two swatches can sit 40 deg apart and still be near-identical to look
+ *  at -- and hue() collapses every achromatic colour to 0, which makes a
+ *  near-grey measure as pure red.
+ *
+ *  Rough scale: ~2.3 is the just-noticeable difference for large flat
+ *  patches side by side; small chips seen apart need considerably more. */
+export function deltaE76(a: string, b: string): number {
+  const x = hexToLab(a);
+  const y = hexToLab(b);
+  return Math.sqrt((x.l - y.l) ** 2 + (x.a - y.a) ** 2 + (x.b - y.b) ** 2);
+}
