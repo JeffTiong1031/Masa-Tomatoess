@@ -36,14 +36,19 @@ export default function ThemeModal() {
 
   return (
     <>
+      {/* fixed, not absolute: the offsets below are written in viewport /
+          safe-area terms, so they only land level with the drawer's
+          hamburger (also fixed) if the viewport is the containing block.
+          Under `absolute` the containing block was <main>, which the Focus
+          pill pushes 122px down the page. */}
       <button
         type="button"
         onClick={() => setIsOpen(true)}
-        className="absolute z-40 min-h-11 min-w-11 inline-flex items-center justify-center text-[var(--mt-text-muted)] hover:text-[var(--mt-text)] bg-[var(--mt-glass)] hover:bg-[var(--mt-glass-strong)] rounded-full backdrop-blur-sm transition-all border border-[var(--mt-border)]"
+        className="fixed z-40 min-h-11 min-w-11 inline-flex items-center justify-center text-[var(--mt-text-muted)] hover:text-[var(--mt-text)] bg-[var(--mt-glass)] hover:bg-[var(--mt-glass-strong)] rounded-full backdrop-blur-sm transition-all border border-[var(--mt-border)]"
         style={{
           top: 'calc(var(--mt-safe-top) + 1.15rem)',
-          // Leave room for the page settings button on the far right
-          right: 'calc(var(--mt-safe-right) + 3.75rem)',
+          // Leave room for the page settings button on the far right (+ gap)
+          right: 'calc(var(--mt-safe-right) + 4.5rem)',
         }}
         title="Theme Manager"
         aria-label="Open theme manager"
