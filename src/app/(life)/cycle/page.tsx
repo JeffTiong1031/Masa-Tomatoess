@@ -35,20 +35,30 @@ export default function CyclePage() {
           </span>
           <SampleChip />
         </div>
-        <div className="grid grid-cols-7 gap-1.5">
-          {DAYS.map((day) => (
-            <div
-              key={day}
-              className="flex aspect-square items-center justify-center rounded-lg text-xs text-[var(--mt-text)]"
-              style={{
-                background: PREDICTED.has(day)
-                  ? 'var(--mt-accent)'
-                  : 'color-mix(in srgb, var(--mt-border) 60%, transparent)',
-              }}
-            >
-              {day}
-            </div>
-          ))}
+        <div
+          className="grid grid-cols-7 gap-1.5"
+          role="grid"
+          aria-label="Your 28-day cycle"
+        >
+          {DAYS.map((day) => {
+            const isPredicted = PREDICTED.has(day);
+            return (
+              <div
+                key={day}
+                role="gridcell"
+                aria-label={`Day ${day}${isPredicted ? ', predicted period day' : ''}`}
+                className="flex aspect-square items-center justify-center rounded-lg text-xs text-[var(--mt-text)]"
+                style={{
+                  background: isPredicted
+                    ? 'var(--mt-accent)'
+                    : 'color-mix(in srgb, var(--mt-border) 60%, transparent)',
+                  border: isPredicted ? '2px solid var(--mt-text-muted)' : 'none',
+                }}
+              >
+                {day}
+              </div>
+            );
+          })}
         </div>
       </Card>
 
