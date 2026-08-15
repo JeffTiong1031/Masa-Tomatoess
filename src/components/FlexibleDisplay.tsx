@@ -41,8 +41,14 @@ export default function FlexibleDisplay() {
           : 'Ready';
 
   return (
+    /* Every <p> here is panelled rather than sitting on the page. This
+       route carries the user's wallpaper at full strength now, and the
+       rule that replaced the veil is that nothing puts text straight
+       onto the background. */
     <div className="flex flex-col items-center gap-4 w-full max-w-[20rem]">
-      <p className="text-sm uppercase tracking-[0.2em] text-[var(--mt-text-muted)]">{label}</p>
+      <p className="mt-glass rounded-full px-4 py-1.5 text-sm uppercase tracking-[0.2em] text-[var(--mt-text-muted)]">
+        {label}
+      </p>
 
       <div className="relative flex items-center justify-center w-full aspect-square rounded-[var(--mt-radius-card)] mt-glass shadow-2xl">
         <span
@@ -55,7 +61,7 @@ export default function FlexibleDisplay() {
       </div>
 
       {phase === 'study' && elapsedSeconds > 0 && (
-        <p className="text-sm text-[var(--mt-text-muted)] text-center px-2">
+        <p className="mt-glass rounded-2xl px-4 py-2 text-sm text-[var(--mt-text-muted)] text-center">
           Rest will be{' '}
           <span className="text-[var(--mt-text)] tabular-nums">
             {formatTime(predictedRest)}
@@ -65,7 +71,9 @@ export default function FlexibleDisplay() {
       )}
 
       {phase === 'rest' && (
-        <p className="text-sm text-[var(--mt-text-muted)]">Rest countdown · ratio /{restRatio}</p>
+        <p className="mt-glass rounded-2xl px-4 py-2 text-sm text-[var(--mt-text-muted)]">
+          Rest countdown · ratio /{restRatio}
+        </p>
       )}
     </div>
   );

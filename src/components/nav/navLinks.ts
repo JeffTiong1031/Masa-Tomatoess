@@ -1,5 +1,6 @@
 import {
   Home,
+  GraduationCap,
   Timer,
   HeartPulse,
   CalendarClock,
@@ -19,56 +20,55 @@ export interface NavLink {
   accent: AccentName;
 }
 
-export interface NavGroup {
-  title: string | null;
-  links: NavLink[];
-}
-
-export const NAV_GROUPS: NavGroup[] = [
-  {
-    title: null,
-    links: [
-      { href: '/', label: 'Home', icon: Home, accent: 'dashboard' },
-      { href: '/timer', label: 'Focus', icon: Timer, accent: 'timer' },
-    ],
-  },
-  {
-    title: 'Life',
-    links: [
-      { href: '/calendar', label: 'Calendar', icon: CalendarDays, accent: 'calendar' },
-      { href: '/timetable', label: 'Timetable', icon: LayoutList, accent: 'timetable' },
-      { href: '/cycle', label: 'Period', icon: HeartPulse, accent: 'cycle' },
-      { href: '/countdown', label: 'Countdown', icon: CalendarClock, accent: 'countdown' },
-      { href: '/meals', label: 'Meals', icon: UtensilsCrossed, accent: 'meals' },
-      { href: '/fitness', label: 'Fitness', icon: Dumbbell, accent: 'fitness' },
-      { href: '/finance', label: 'Finance', icon: Wallet, accent: 'finance' },
-    ],
-  },
+/** The menu, as one flat list. There are deliberately no group headings:
+ *  Study sits alongside Period, Countdown, Meals, Fitness and Finance as
+ *  a peer, and splitting them under a "Life" heading made Study read as
+ *  a different KIND of thing than the rest of the app.
+ *
+ *  Calendar and Timetable are absent on purpose -- they moved inside
+ *  Study and are reached from its own panel (STUDY_PANEL below), not
+ *  from here. */
+export const ALL_LINKS: NavLink[] = [
+  { href: '/', label: 'Home', icon: Home, accent: 'dashboard' },
+  { href: '/study', label: 'Study', icon: GraduationCap, accent: 'timer' },
+  { href: '/cycle', label: 'Period', icon: HeartPulse, accent: 'cycle' },
+  { href: '/countdown', label: 'Countdown', icon: CalendarClock, accent: 'countdown' },
+  { href: '/meals', label: 'Meals', icon: UtensilsCrossed, accent: 'meals' },
+  { href: '/fitness', label: 'Fitness', icon: Dumbbell, accent: 'fitness' },
+  { href: '/finance', label: 'Finance', icon: Wallet, accent: 'finance' },
 ];
 
-export const ALL_LINKS: NavLink[] = NAV_GROUPS.flatMap((g) => g.links);
+/** Bottom-bar slots on mobile, outside Study. Inside Study the section's
+ *  own panel takes the bottom edge instead -- see StudyPanel. */
+export const BOTTOM_BAR_HREFS = ['/', '/study', '/cycle'];
 
-/** Bottom-bar slots on mobile: the app's three top-level sections. */
-export const BOTTOM_BAR_HREFS = ['/timer', '/calendar', '/timetable'];
+/** Study's lower panel: the three things you can be doing in a study
+ *  session. Focus is the entry point to the timer widgets, which have a
+ *  second level of their own (FOCUS_SEGMENTS). */
+export const STUDY_PANEL: NavLink[] = [
+  { href: '/study/timer', label: 'Focus', icon: Timer, accent: 'timer' },
+  { href: '/study/calendar', label: 'Calendar', icon: CalendarDays, accent: 'calendar' },
+  { href: '/study/timetable', label: 'Timeline', icon: LayoutList, accent: 'timetable' },
+];
 
-/** The three widgets reachable from inside Focus, in pill order.
+/** The three widgets behind Study's Focus tab, in pill order.
  *
- *  The labels here are deliberately NOT the NavLink labels above:
- *  ALL_LINKS calls /timer "Focus", because that is what the drawer and
- *  bottom bar need to say. The pill needs to call the same route
- *  "Timer". Both lists live in this one file so they cannot drift. */
+ *  The labels are deliberately NOT the panel's: STUDY_PANEL calls
+ *  /study/timer "Focus", because that is what the section tab means.
+ *  The pill needs to call the same route "Timer". Both lists live in
+ *  this one file so they cannot drift. */
 export const FOCUS_SEGMENTS: {
   href: string;
   label: string;
   accent: AccentName;
 }[] = [
-  { href: '/timer', label: 'Timer', accent: 'timer' },
-  { href: '/flexible', label: 'Flexible', accent: 'flexible' },
-  { href: '/dashboard', label: 'Dashboard', accent: 'dashboard' },
+  { href: '/study/timer', label: 'Timer', accent: 'timer' },
+  { href: '/study/flexible', label: 'Flexible', accent: 'flexible' },
+  { href: '/study/dashboard', label: 'Dashboard', accent: 'dashboard' },
 ];
 
 /** Just the hrefs, for active-state checks. Derived, so the pill and the
- *  bottom bar can never disagree about what counts as Focus. */
+ *  panel can never disagree about what counts as Focus. */
 export const FOCUS_HREFS = FOCUS_SEGMENTS.map((segment) => segment.href);
 
 export function isActiveHref(pathname: string, href: string): boolean {
@@ -77,21 +77,24 @@ export function isActiveHref(pathname: string, href: string): boolean {
     : pathname === href || pathname.startsWith(`${href}/`);
 }
 
-/** True anywhere inside Focus. The bottom-bar Focus slot points at
- *  /timer but must light up on /flexible and /dashboard too. */
+/** Anywhere inside Study, including /study itself. */
+export function isStudyRoute(pathname: string): boolean {
+  return isActiveHref(pathname, '/study');
+}
+
+/** True on the three timer widgets, which are the only Study routes that
+ *  wear the Focus pill. /study/calendar and /study/timetable are inside
+ *  Study but outside Focus, and must not show it. */
 export function isFocusRoute(pathname: string): boolean {
   return FOCUS_HREFS.some((href) => isActiveHref(pathname, href));
 }
 
-/** Whether a NavLink from ALL_LINKS should read as the current page.
+/* There is deliberately no isNavLinkActive() here any more.
  *
- *  Every consumer of ALL_LINKS -- the bottom bar, the drawer, and
- *  anything added later -- must call THIS, not isActiveHref. /timer is
- *  the entry point for a whole section, so it stays lit on /flexible and
- *  /dashboard; a plain isActiveHref(pathname, '/timer') leaves it dark
- *  there, and that mistake builds, lints and type-checks cleanly. */
-export function isNavLinkActive(pathname: string, href: string): boolean {
-  return href === '/timer'
-    ? isFocusRoute(pathname)
-    : isActiveHref(pathname, href);
-}
+ * It existed because /timer, /flexible and /dashboard were three
+ * unrelated top-level routes, so lighting the section entry required a
+ * hand-written special case that every consumer had to remember to call
+ * -- and NavDrawer forgot, leaving no active indicator at all above
+ * 768px. Nesting them under /study makes the URL express the same fact,
+ * so plain isActiveHref(pathname, '/study') now lights Study on every
+ * one of its children. The special case is not simplified, it is gone. */

@@ -72,8 +72,12 @@ export default function Leaderboard() {
           Leaderboard
         </h2>
 
+        {/* 5%, not 12%. The unselected tabs are --mt-text-muted, and on
+            a 12% cocoa tint that measured 4.29:1 -- under AA. The tint
+            compounded too: the selected tab laid another 12% on top of
+            this one. */}
         <div
-          className="flex flex-wrap bg-[color-mix(in_srgb,var(--mt-text)_12%,transparent)] p-1 rounded-xl"
+          className="flex flex-wrap bg-[color-mix(in_srgb,var(--mt-text)_5%,transparent)] p-1 rounded-xl"
           role="tablist"
           aria-label="Leaderboard timeframe"
         >
@@ -123,7 +127,7 @@ export default function Leaderboard() {
             return (
               <div
                 key={user.userName}
-                className="relative bg-[color-mix(in_srgb,var(--mt-text)_12%,transparent)] rounded-2xl p-4 overflow-hidden border border-[var(--mt-border)] flex items-center justify-between gap-3"
+                className="relative bg-[color-mix(in_srgb,var(--mt-text)_5%,transparent)] rounded-2xl p-4 overflow-hidden border border-[var(--mt-border)] flex items-center justify-between gap-3"
               >
                 <div
                   className="absolute left-0 top-0 bottom-0 bg-[color-mix(in_srgb,var(--mt-accent)_10%,transparent)] z-0 transition-all duration-1000 ease-out"

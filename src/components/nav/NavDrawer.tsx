@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Menu, X } from 'lucide-react';
-import { NAV_GROUPS, isNavLinkActive } from './navLinks';
+import { ALL_LINKS, isActiveHref } from './navLinks';
 import { accentVar } from '@/components/ui/PageShell';
 
 export default function NavDrawer() {
@@ -20,7 +20,7 @@ export default function NavDrawer() {
     triggerRef.current?.focus();
   }, []);
 
-  // Close on route change. Five of nine routes are drawer-only, so a
+  // Close on route change. Most destinations are drawer-only, so a
   // drawer left open over the destination would be a dead end. Adjusted
   // during render (React's sanctioned pattern for resetting state in
   // response to a changed value) rather than in an effect, since an
@@ -139,48 +139,43 @@ export default function NavDrawer() {
               </button>
             </div>
 
-            <nav className="flex-1 px-3">
-              {NAV_GROUPS.map((group, i) => (
-                <div key={group.title ?? `group-${i}`} className="mb-3">
-                  {group.title && (
-                    <div className="px-2 py-2 text-[11px] font-semibold uppercase tracking-wider text-[var(--mt-text-subtle)]">
-                      {group.title}
-                    </div>
-                  )}
-                  {group.links.map(({ href, label, icon: Icon, accent }) => {
-                    const active = isNavLinkActive(pathname, href);
-                    return (
-                      <Link
-                        key={href}
-                        href={href}
-                        aria-current={active ? 'page' : undefined}
-                        className={`mb-0.5 flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm transition-colors ${
-                          active
-                            ? 'font-semibold text-[var(--mt-text)]'
-                            : 'text-[var(--mt-text-muted)]'
-                        }`}
-                        style={
-                          active
-                            ? {
-                                background: `color-mix(in srgb, ${accentVar(accent)} 30%, transparent)`,
-                              }
-                            : undefined
-                        }
-                      >
-                        <span
-                          className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
-                          style={{
-                            background: `color-mix(in srgb, ${accentVar(accent)} 45%, transparent)`,
-                          }}
-                        >
-                          <Icon size={17} strokeWidth={1.9} aria-hidden />
-                        </span>
-                        {label}
-                      </Link>
-                    );
-                  })}
-                </div>
-              ))}
+            {/* One flat list, no group headings. Study is a peer of
+                Period, Countdown, Meals, Fitness and Finance, and a
+                "Life" heading over everything-but-Study made Study read
+                as a different kind of thing than the rest of the app. */}
+            <nav className="flex-1 px-3 pb-3">
+              {ALL_LINKS.map(({ href, label, icon: Icon, accent }) => {
+                const active = isActiveHref(pathname, href);
+                return (
+                  <Link
+                    key={href}
+                    href={href}
+                    aria-current={active ? 'page' : undefined}
+                    className={`mb-0.5 flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm transition-[color,background-color,transform] duration-150 active:scale-[0.98] ${
+                      active
+                        ? 'font-semibold text-[var(--mt-text)]'
+                        : 'text-[var(--mt-text-muted)]'
+                    }`}
+                    style={
+                      active
+                        ? {
+                            background: `color-mix(in srgb, ${accentVar(accent)} 30%, transparent)`,
+                          }
+                        : undefined
+                    }
+                  >
+                    <span
+                      className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
+                      style={{
+                        background: `color-mix(in srgb, ${accentVar(accent)} 45%, transparent)`,
+                      }}
+                    >
+                      <Icon size={17} strokeWidth={1.9} aria-hidden />
+                    </span>
+                    {label}
+                  </Link>
+                );
+              })}
             </nav>
           </div>
         </div>

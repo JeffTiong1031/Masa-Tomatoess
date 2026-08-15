@@ -141,7 +141,11 @@ export default function Dashboard() {
       style={{ ['--mt-accent' as string]: 'var(--mac-accent-dashboard)' }}
     >
       <div className="max-w-5xl mx-auto px-1 sm:px-2 pb-4">
-        <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-8 sm:mb-12">
+        {/* Panelled, not bare. This route carries the user's wallpaper
+            now, and the veil that used to make text-on-photo safe is
+            gone -- so the title and its buttons need a surface of their
+            own, exactly like the cards below them. */}
+        <header className="mt-soft p-5 sm:p-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6 sm:mb-8">
           <div>
             <h1 className="text-3xl sm:text-4xl md:text-5xl font-extralight tracking-tight">
               Analytics
@@ -161,7 +165,13 @@ export default function Dashboard() {
             <button
               type="button"
               onClick={handleClearData}
-              className="min-h-11 flex items-center gap-2 px-5 py-2.5 bg-[color-mix(in_srgb,var(--mt-danger)_10%,transparent)] hover:bg-[color-mix(in_srgb,var(--mt-danger)_20%,transparent)] border border-[color-mix(in_srgb,var(--mt-danger)_20%,transparent)] hover:border-[color-mix(in_srgb,var(--mt-danger)_30%,transparent)] rounded-xl text-sm font-medium text-[var(--mt-danger)] transition-all"
+              /* The fill stays at 5% on hover and the BORDER carries the
+                 feedback instead. Deepening the fill was the obvious
+                 move, but the label is --mt-danger on a --mt-danger
+                 tint, so a darker fill walks the text toward its own
+                 background: 10% already measured 4.32:1, and the old
+                 20% hover was worse. */
+              className="min-h-11 flex items-center gap-2 px-5 py-2.5 bg-[color-mix(in_srgb,var(--mt-danger)_5%,transparent)] border border-[color-mix(in_srgb,var(--mt-danger)_25%,transparent)] hover:border-[color-mix(in_srgb,var(--mt-danger)_55%,transparent)] rounded-xl text-sm font-medium text-[var(--mt-danger)] transition-colors"
               title="Clear History"
             >
               <Trash2 size={16} />
@@ -213,7 +223,7 @@ export default function Dashboard() {
             <ActivityCalendar
               data={heatmapData}
               theme={MACARON_HEATMAP_THEME}
-              colorScheme="dark"
+              colorScheme="light"
               blockSize={width < 640 ? 10 : 12}
               blockMargin={3}
               fontSize={width < 640 ? 11 : 12}

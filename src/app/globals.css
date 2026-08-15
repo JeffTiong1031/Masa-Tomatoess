@@ -55,9 +55,24 @@
      (readable on white/cream), bright shades for dark mood (readable on
      the dark surface). Not "raw macaron" section-accent colours — these
      exist solely to keep gold/bronze recognisable while clearing 4.5:1. */
-  --mac-rank-gold-light: #B45309;   /* 5.02:1 on --mac-white */
+  /* Chart ink. --mac-accent-dashboard (#C4B0E0) is a pastel built to sit
+     BEHIND cocoa text; used as a bar fill on --mac-white it measures
+     1.61:1 and all but vanishes. This is the same hue line taken deep
+     enough to read as data: 9.37:1 on white, and it tops the heatmap
+     ramp in lib/heatmapTheme.ts. Deliberately NOT named --mac-accent-*:
+     it is not a section accent, and accents.test.ts scans that prefix. */
+  --mac-chart-lilac: #513A7B;
+
+  /* The light pair is measured against what the rank text ACTUALLY sits
+     on, which is not the white card: a leaderboard row tints the card,
+     and the progress fill tints it again, landing on rgb(240,238,242).
+     The old #B45309 / #C2410C were picked on --mac-white and read 5.02:1
+     and 5.18:1 there, but only 4.35:1 and 4.49:1 on the real backing --
+     both under AA. These clear it at 4.73:1 and 4.71:1 on the composite,
+     and 5.46:1 / 5.44:1 on plain white. */
+  --mac-rank-gold-light: #AB4F09;   /* 4.73:1 on the row composite */
   --mac-rank-gold-dark: #EAB308;    /* 7.57:1 on dark-mood --mt-surface (#31262E) */
-  --mac-rank-bronze-light: #C2410C; /* 5.18:1 on --mac-white */
+  --mac-rank-bronze-light: #BC3F0C; /* 4.71:1 on the row composite */
   --mac-rank-bronze-dark: #FB923C;  /* 6.41:1 on dark-mood --mt-surface (#31262E) */
 
   /* ---- Layout tokens, mood-independent ---- */
@@ -100,9 +115,19 @@
 
   /* Chrome that renders OUTSIDE the route groups — the bottom bar, the
      drawer — resolves these from :root, so they carry light-mood values
-     here and are NOT legacy aliases. Do not delete them in Task 12. */
-  --mt-glass: color-mix(in srgb, var(--mac-white) 72%, transparent);
-  --mt-glass-strong: color-mix(in srgb, var(--mac-white) 88%, transparent);
+     here and are NOT legacy aliases. Do not delete them in Task 12.
+
+     94% rather than the 72% these started at. Over the cream field the
+     two are visually indistinguishable, but on the wallpapered routes
+     these panels are the ONLY thing standing between text and an
+     arbitrary user photo -- there is no veil dimming the image any
+     more, by request, so the panel carries the whole contrast budget
+     alone. --mt-text-muted is the binding constraint, measured against
+     the worst case of a pure-black wallpaper: 88% gives 4.06:1 and
+     fails AA, 92% gives 4.46:1 and still fails, 94% gives 4.67:1 and
+     clears it. Do not lower these without re-running that sum. */
+  --mt-glass: color-mix(in srgb, var(--mac-white) 94%, transparent);
+  --mt-glass-strong: color-mix(in srgb, var(--mac-white) 97%, transparent);
 
   --background: var(--mt-bg);
   --foreground: var(--mt-text);
@@ -140,8 +165,9 @@ body {
      above for the full rationale. */
   --mt-text-subtle: color-mix(in srgb, var(--mac-cocoa) 70%, transparent);
   --mt-accent-contrast: var(--mac-cocoa);
-  --mt-glass: color-mix(in srgb, var(--mac-white) 72%, transparent);
-  --mt-glass-strong: color-mix(in srgb, var(--mac-white) 88%, transparent);
+  /* See the :root copies for why these are 94/97 and not 72/88. */
+  --mt-glass: color-mix(in srgb, var(--mac-white) 94%, transparent);
+  --mt-glass-strong: color-mix(in srgb, var(--mac-white) 97%, transparent);
   /* 4.96:1 on white / 4.70:1 on cream — see --mac-danger-deep above. */
   --mt-danger: var(--mac-danger-deep);
   --mt-danger-contrast: var(--mac-white);
@@ -190,7 +216,16 @@ body {
 }
 
 /* Light-mood surface. The accent-tinted shadow is what keeps pastel
-   surfaces from reading as washed out; a grey shadow on cream looks dirty. */
+   surfaces from reading as washed out; a grey shadow on cream looks dirty.
+
+   The color-mix stays written out HERE rather than behind a
+   --mt-card-shadow token, and that is load-bearing. A var() nested
+   inside a custom property is substituted where that property is
+   DECLARED, so a token declared on the [data-mood] wrapper would freeze
+   --mt-accent at the wrapper's value -- collapsing every page's tint to
+   the :root default and silently costing /cycle its pink, /meals its
+   amber, and so on. Written directly on .mt-soft it resolves at the
+   card, which inherits the accent PageShell sets on <main>. */
 .mt-soft {
   background: var(--mt-surface);
   border: 1px solid var(--mt-border);
@@ -198,13 +233,37 @@ body {
   box-shadow: 0 8px 24px color-mix(in srgb, var(--mt-accent) 14%, transparent);
 }
 
-.mt-scrim {
-  background: linear-gradient(
-    to bottom,
-    rgba(7, 11, 20, 0.35),
-    rgba(7, 11, 20, 0.55) 45%,
-    rgba(7, 11, 20, 0.72)
-  );
+/* Dark mood drops the tint entirely. That tint exists to stop pastel
+   surfaces washing out against cream; cast against plum the same colour
+   reads as a lilac halo ringing every card, which is the one thing a
+   dark UI must not do. Depth here comes from a shadow darker than the
+   field it falls on, plus the --mt-border edge. */
+[data-mood='dark'] .mt-soft {
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.32);
+}
+
+/* There is deliberately no wallpaper veil.
+ *
+ * There were two, in turn: a dark scrim for the old dark Focus mood,
+ * then a cream one when Study went light. Both dimmed the image to buy
+ * contrast, and both made the wallpaper look washed out, which was the
+ * whole reason to set one. The wallpaper now renders at full strength
+ * and every piece of text sits on a panel instead, so contrast is paid
+ * for locally by whatever the text is actually on.
+ *
+ * The rule this trades into, which the app has to keep: on a
+ * wallpapered route, NOTHING renders text straight onto the background.
+ * Not a heading, not a caption. If it has words, it needs a panel. */
+
+/* Blur is decoration; the contrast budget must survive without it. At
+   these opacities it does, so the fallback only drops the blur and
+   pushes the panel opaque rather than restyling anything. */
+@media (prefers-reduced-transparency: reduce) {
+  .mt-glass {
+    background: var(--mac-white);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
 }
 
 .mt-page-pad,
@@ -234,6 +293,16 @@ body {
   .mt-page-pad,
   .mt-page-pad-focus {
     padding-bottom: calc(var(--mt-safe-bottom) + 2rem);
+  }
+
+  /* ...except inside Study. The rule above drops the nav reservation at
+     768px because AppNav hides there, but StudyPanel is fixed to the
+     bottom edge at EVERY width -- it has to be, since the drawer no
+     longer lists Calendar or Timeline. Without this, desktop Study
+     pages run their last card underneath the panel. */
+  [data-section='study'] .mt-page-pad,
+  [data-section='study'] .mt-page-pad-focus {
+    padding-bottom: calc(var(--mt-safe-bottom) + var(--mt-nav-height) + 1.5rem);
   }
 
   .mt-page-pad {

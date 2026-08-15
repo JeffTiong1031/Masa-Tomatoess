@@ -85,7 +85,7 @@ export default function FlexibleControls() {
           <button
             type="button"
             onClick={reset}
-            className="min-h-11 min-w-11 inline-flex items-center justify-center text-[var(--mt-text-muted)] hover:text-[var(--mt-text)] hover:bg-[color-mix(in_srgb,var(--mt-text)_6%,transparent)] rounded-full transition-all"
+            className="min-h-11 min-w-11 inline-flex items-center justify-center rounded-full mt-glass text-[var(--mt-text-muted)] shadow-[0_4px_14px_rgba(0,0,0,0.10)] hover:text-[var(--mt-text)] transition-[color,transform,box-shadow] duration-150 active:scale-[0.92]"
             title="Reset"
             aria-label="Reset flexible timer"
           >
@@ -107,7 +107,7 @@ export default function FlexibleControls() {
         <button
           type="button"
           onClick={reset}
-          className="min-h-12 min-w-12 inline-flex items-center justify-center text-[var(--mt-text-muted)] hover:text-[var(--mt-text)] hover:bg-[color-mix(in_srgb,var(--mt-text)_6%,transparent)] rounded-full transition-all"
+          className="min-h-12 min-w-12 inline-flex items-center justify-center rounded-full mt-glass text-[var(--mt-text-muted)] shadow-[0_4px_14px_rgba(0,0,0,0.10)] hover:text-[var(--mt-text)] transition-[color,transform,box-shadow] duration-150 active:scale-[0.92]"
           title="Reset"
           aria-label="Reset"
         >
@@ -133,7 +133,7 @@ export default function FlexibleControls() {
         <button
           type="button"
           onClick={reset}
-          className="min-h-12 min-w-12 inline-flex items-center justify-center text-[var(--mt-text-muted)] hover:text-[var(--mt-text)] hover:bg-[color-mix(in_srgb,var(--mt-text)_6%,transparent)] rounded-full transition-all"
+          className="min-h-12 min-w-12 inline-flex items-center justify-center rounded-full mt-glass text-[var(--mt-text-muted)] shadow-[0_4px_14px_rgba(0,0,0,0.10)] hover:text-[var(--mt-text)] transition-[color,transform,box-shadow] duration-150 active:scale-[0.92]"
           title="Reset"
           aria-label="Reset"
         >
@@ -143,7 +143,7 @@ export default function FlexibleControls() {
         <button
           type="button"
           onClick={isActive ? stopStudy : handleStart}
-          className="flex items-center justify-center min-h-20 min-w-20 bg-[var(--mt-accent)] text-[var(--mt-accent-contrast)] rounded-full hover:scale-105 hover:shadow-[0_0_20px_color-mix(in_srgb,var(--mt-accent)_40%,transparent)] transition-all"
+          className="flex items-center justify-center min-h-20 min-w-20 bg-[var(--mt-accent)] text-[var(--mt-accent-contrast)] rounded-full shadow-[0_8px_24px_color-mix(in_srgb,var(--mt-accent)_45%,transparent)] hover:scale-105 transition-[transform,box-shadow] duration-150 active:scale-[0.94]"
           aria-label={isActive ? 'Stop study' : 'Start study'}
         >
           {isActive ? (

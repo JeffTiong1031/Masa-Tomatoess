@@ -24,9 +24,13 @@ const MIN_ADJACENT_CONTRAST = 1.25;
 const MIN_TEXT_CONTRAST = 4.5;
 
 /** A tooltip painted in the card's own colour reads as unpanelled
- *  floating text: a --mac-border-dark edge between two identical greys
- *  measures 1.282:1, which is not an edge. The floor is above that, so
- *  the panel's own fill has to do more work than the rim it replaced. */
+ *  floating text: a border between two identical greys measured 1.282:1
+ *  under the old dark mood, which is not an edge. The floor is above
+ *  that, so the panel's own fill has to do more work than the rim it
+ *  replaced. Light mood clears it by inverting instead of by nudging --
+ *  a cocoa tooltip on a white card measures 13:1 -- but the floor still
+ *  earns its keep, because "make the tooltip a slightly different
+ *  white" is exactly the tempting wrong answer here. */
 const MIN_TOOLTIP_VS_CARD = 1.4;
 
 /** The empty level must be visible against the card it sits on, or the
@@ -37,7 +41,7 @@ const MIN_EMPTY_VS_SURFACE = 1.15;
  *  lumpy: some neighbours jump, others barely move. */
 const MAX_STEP_UNEVENNESS = 1.8;
 
-describe('dark heatmap ramp', () => {
+describe('light heatmap ramp', () => {
   it('has five levels', () => {
     expect(HEATMAP_RAMP).toHaveLength(5);
   });
@@ -61,17 +65,36 @@ describe('dark heatmap ramp', () => {
     ).toBeGreaterThanOrEqual(MIN_EMPTY_VS_SURFACE);
   });
 
-  it('rises monotonically', () => {
+  /* Inverted from the dark ramp, which rose. On a white card more
+     activity has to mean more ink, so lightness falls as the level
+     climbs. A ramp that lightened here would put the busiest day
+     closest to the card colour and the empty days furthest from it. */
+  it('darkens monotonically', () => {
     const ls = HEATMAP_RAMP.map(lightness);
     for (let i = 1; i < ls.length; i += 1) {
-      expect(ls[i]).toBeGreaterThan(ls[i - 1]);
+      expect(ls[i]).toBeLessThan(ls[i - 1]);
     }
   });
 
-  it('tops out on the dashboard accent', () => {
+  it('tops out on the chart lilac', () => {
     expect(HEATMAP_RAMP[HEATMAP_RAMP.length - 1]).toBe(
-      readToken('--mac-accent-dashboard'),
+      readToken('--mac-chart-lilac'),
     );
+  });
+
+  /* The reason --mac-chart-lilac exists at all. The section accent is a
+     pastel meant to sit behind text; as the top of a ramp on white it
+     is nearly invisible, so the ramp is anchored to a deep shade of the
+     same hue instead. If the accent ever became dark enough to use
+     directly, this test is the one that should be deleted first. */
+  it('needs a deeper anchor than the pastel section accent', () => {
+    const accent = readToken('--mac-accent-dashboard');
+    expect(accent).toBeDefined();
+    const accentOnCard = contrastRatio(accent!, HEATMAP_SURFACE);
+    expect(
+      accentOnCard,
+      `--mac-accent-dashboard is ${accentOnCard.toFixed(2)}:1 on the card, which would be usable directly`,
+    ).toBeLessThan(3);
   });
 
   it('steps evenly in perceptual lightness', () => {
@@ -92,12 +115,12 @@ describe('dark heatmap ramp', () => {
  *  chart (and every contrast assertion above) pinned to a colour that is
  *  no longer real. */
 const TOKEN_FOR: Record<keyof typeof CHART_COLORS, string> = {
-  axis: '--mac-shell-muted',
-  border: '--mac-border-dark',
-  surface: '--mac-plum-raised',
-  tooltipBackground: '--mac-plum-elevated',
-  tooltipText: '--mac-shell',
-  bar: '--mac-accent-dashboard',
+  axis: '--mac-cocoa-muted',
+  border: '--mac-border-light',
+  surface: '--mac-white',
+  tooltipBackground: '--mac-cocoa',
+  tooltipText: '--mac-cream',
+  bar: '--mac-chart-lilac',
 };
 
 describe('chart colour drift', () => {
@@ -111,7 +134,7 @@ describe('chart colour drift', () => {
   );
 
   it('keeps HEATMAP_SURFACE on the card token', () => {
-    expect(HEATMAP_SURFACE).toBe(readToken('--mac-plum-raised'));
+    expect(HEATMAP_SURFACE).toBe(readToken('--mac-white'));
   });
 });
 

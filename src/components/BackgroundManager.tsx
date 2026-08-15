@@ -10,10 +10,7 @@ import {
   shouldUseAnimatedBackground,
 } from '@/lib/backgrounds';
 import { loadCustomThemeFile, loadCustomThemeMeta } from '@/lib/backgroundStorage';
-
-/** Routes rendered in the dark focus mood. Photo themes and the scrim
- *  apply only here — they were built for white-on-dark (spec §6.4). */
-const FOCUS_ROUTES = ['/timer', '/flexible'];
+import { backgroundFieldFor } from '@/lib/backgroundField';
 
 function readConnectionFlags() {
   if (typeof navigator === 'undefined') {
@@ -85,11 +82,26 @@ function LiveLoop({ id, animate }: { id: string; animate: boolean }) {
   );
 }
 
+/** The app's default backdrop: cream with two soft accent blobs. Every
+ *  route lands here except the two timing widgets carrying a wallpaper. */
+function PlainField() {
+  return (
+    <div className="fixed inset-0 z-0 overflow-hidden bg-[var(--mac-cream)]">
+      <div
+        className="absolute -left-[15%] -top-[10%] h-[55vh] w-[55vh] rounded-full opacity-40 blur-3xl"
+        style={{ background: 'var(--mac-accent-cycle)' }}
+      />
+      <div
+        className="absolute -bottom-[15%] -right-[10%] h-[60vh] w-[60vh] rounded-full opacity-35 blur-3xl"
+        style={{ background: 'var(--mac-accent-countdown)' }}
+      />
+    </div>
+  );
+}
+
 export default function BackgroundManager() {
   const pathname = usePathname();
-  const isFocusRoute = FOCUS_ROUTES.some(
-    (r) => pathname === r || pathname.startsWith(`${r}/`)
-  );
+  const field = backgroundFieldFor(pathname);
   const { settings } = useTimerStore();
   const [customUrl, setCustomUrl] = useState<string | null>(null);
   const [customKind, setCustomKind] = useState<'image' | 'video'>('image');
@@ -164,29 +176,23 @@ export default function BackgroundManager() {
 
   const preset =
     source.type === 'preset' ? getPresetById(source.id) : undefined;
-  const showScrim = source.type !== 'gradient';
 
-  if (!isFocusRoute) {
-    return (
-      <div className="absolute inset-0 z-0 overflow-hidden bg-[var(--mac-cream)]">
-        <div
-          className="absolute -left-[15%] -top-[10%] h-[55vh] w-[55vh] rounded-full opacity-40 blur-3xl"
-          style={{ background: 'var(--mac-accent-cycle)' }}
-        />
-        <div
-          className="absolute -bottom-[15%] -right-[10%] h-[60vh] w-[60vh] rounded-full opacity-35 blur-3xl"
-          style={{ background: 'var(--mac-accent-countdown)' }}
-        />
-      </div>
-    );
-  }
+  /* "No wallpaper" is not a background of its own any more. It used to
+     paint a dark blue-to-plum gradient, which was the right default
+     under a dark Focus mood and is the wrong one now -- an unveiled
+     dark gradient is precisely the collision the light theme exists to
+     remove. Falling through to the plain field instead means choosing
+     no theme gives you the same cream the rest of the app has. */
+  if (field === 'plain' || source.type === 'gradient') return <PlainField />;
 
+  /* fixed, not absolute. The backdrop used to stretch to the full
+     scroll height of whatever page it sat behind, which was harmless
+     on the viewport-tall timer but zooms the photo hard on a long page
+     like the dashboard. Pinning it to the viewport makes it behave the
+     way a wallpaper is expected to: the content scrolls, the image
+     stays put. */
   return (
-    <div className="absolute inset-0 z-0 overflow-hidden transition-all duration-1000 ease-in-out">
-      {source.type === 'gradient' && (
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-900/30 via-[var(--mac-plum)] to-indigo-950/40" />
-      )}
-
+    <div className="fixed inset-0 z-0 overflow-hidden transition-all duration-1000 ease-in-out">
       {source.type === 'preset' && preset && isLivePresetId(preset.id) && (
         <LiveLoop id={preset.id} animate={animate} />
       )}
@@ -221,11 +227,10 @@ export default function BackgroundManager() {
             poster={undefined}
           />
         ) : (
-          <div className="absolute inset-0 bg-gradient-to-br from-slate-900 to-zinc-950" />
+          /* Reduced-motion / save-data stand-in for the video. */
+          <div className="absolute inset-0 bg-gradient-to-br from-[var(--mac-shell)] to-[var(--mac-accent-flexible)] opacity-70" />
         )
       )}
-
-      {showScrim && <div className="absolute inset-0 mt-scrim pointer-events-none" />}
     </div>
   );
 }

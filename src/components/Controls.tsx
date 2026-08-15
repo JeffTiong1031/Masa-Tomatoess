@@ -36,23 +36,33 @@ export default function Controls() {
 
   return (
     <>
+      {/* Reset and Skip used to be bare icons sitting straight on the
+          wallpaper. That was survivable while Focus was dark and they
+          were white; under the light theme they became cocoa on an
+          arbitrary photo, which is the collision that has to go. Each
+          now rides its own glass disc, so contrast comes from the panel
+          and not from whatever image happens to be underneath.
+
+          Play stays unpanelled on purpose: it carries a solid accent
+          fill, so it is already self-contained, and giving it a disc
+          too would flatten the one element meant to dominate here. */}
       <div className="flex items-center justify-center gap-4 sm:gap-6 mt-8 sm:mt-10">
         <button
           type="button"
           onClick={reset}
-          className="min-h-12 min-w-12 inline-flex items-center justify-center text-[var(--mt-text-muted)] hover:text-[var(--mt-text)] hover:bg-[color-mix(in_srgb,var(--mt-text)_6%,transparent)] rounded-full transition-all"
+          className="min-h-12 min-w-12 inline-flex items-center justify-center rounded-full mt-glass text-[var(--mt-text-muted)] shadow-[0_4px_14px_rgba(0,0,0,0.10)] hover:text-[var(--mt-text)] transition-[color,transform,box-shadow] duration-150 active:scale-[0.92]"
           title="Reset Timer"
           aria-label="Reset timer"
         >
-          <RotateCcw size={24} />
+          <RotateCcw size={22} />
         </button>
 
         <button
           type="button"
           onClick={handlePlayPause}
-          className={`flex items-center justify-center min-h-20 min-w-20 bg-[var(--mt-accent)] text-[var(--mt-accent-contrast)] rounded-full hover:scale-105 hover:shadow-[0_0_20px_color-mix(in_srgb,var(--mt-accent)_40%,transparent)] transition-all ${
+          className={`flex items-center justify-center min-h-20 min-w-20 bg-[var(--mt-accent)] text-[var(--mt-accent-contrast)] rounded-full shadow-[0_8px_24px_color-mix(in_srgb,var(--mt-accent)_45%,transparent)] hover:scale-105 transition-[transform,box-shadow] duration-150 active:scale-[0.94] ${
             isAlarmRinging
-              ? 'mt-pulse-safe animate-pulse ring-4 ring-[var(--mt-danger)] shadow-[0_0_30px_color-mix(in_srgb,var(--mt-danger)_60%,transparent)]'
+              ? 'mt-pulse-safe animate-pulse ring-4 ring-[var(--mt-danger)]'
               : ''
           }`}
           aria-label={isActive ? 'Pause timer' : 'Start timer'}
@@ -67,11 +77,11 @@ export default function Controls() {
         <button
           type="button"
           onClick={skip}
-          className="min-h-12 min-w-12 inline-flex items-center justify-center text-[var(--mt-text-muted)] hover:text-[var(--mt-text)] hover:bg-[color-mix(in_srgb,var(--mt-text)_6%,transparent)] rounded-full transition-all"
+          className="min-h-12 min-w-12 inline-flex items-center justify-center rounded-full mt-glass text-[var(--mt-text-muted)] shadow-[0_4px_14px_rgba(0,0,0,0.10)] hover:text-[var(--mt-text)] transition-[color,transform,box-shadow] duration-150 active:scale-[0.92]"
           title="Skip Session"
           aria-label="Skip session"
         >
-          <SkipForward size={24} />
+          <SkipForward size={22} />
         </button>
       </div>
 
