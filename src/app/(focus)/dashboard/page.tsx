@@ -11,20 +11,16 @@ import { clearUserSessions } from '@/app/actions/clearSessions';
 import { syncSessions } from '@/lib/sync';
 import { buildHeatmapRange, heatmapDaysForWidth } from '@/lib/heatmapRange';
 import { useHasMounted } from '@/hooks/useHasMounted';
+import { HEATMAP_RAMP } from '@/lib/heatmapTheme';
 
-// Five-step lavender ramp. Element 1 is react-activity-calendar's
-// "no activity" level — deliberately subtle, close to the cream page.
-// Elements 2-5 carry the actual gradation and are spaced for real
-// luminance progression (each adjacent pair clears 1.35:1, element 5
-// clears 4.5:1 against cream) while staying in the dashboard accent's
-// lavender family (--mac-accent-dashboard, #C4B0E0, sits near element 3).
 // react-activity-calendar consumes this as a literal theme prop, not CSS
 // custom properties, so hex is correct here. Both keys carry the same
-// ramp — the dashboard is always light mood, and supplying only one key
-// makes the library fall back to its own defaults for the other.
+// ramp: supplying only one key makes the library fall back to its own
+// defaults for the other. The ramp itself lives in lib/heatmapTheme.ts
+// so its five levels can be asserted in tests.
 const MACARON_HEATMAP_THEME = {
-  light: ['#F3EAE2', '#DCC9EC', '#BC9FDC', '#9670C6', '#6E4AA0'],
-  dark: ['#F3EAE2', '#DCC9EC', '#BC9FDC', '#9670C6', '#6E4AA0'],
+  light: [...HEATMAP_RAMP],
+  dark: [...HEATMAP_RAMP],
 };
 
 export default function Dashboard() {
@@ -217,7 +213,7 @@ export default function Dashboard() {
             <ActivityCalendar
               data={heatmapData}
               theme={MACARON_HEATMAP_THEME}
-              colorScheme="light"
+              colorScheme="dark"
               blockSize={width < 640 ? 10 : 12}
               blockMargin={3}
               fontSize={width < 640 ? 11 : 12}
@@ -254,28 +250,28 @@ export default function Dashboard() {
             <BarChart data={weeklyData}>
               <XAxis
                 dataKey="name"
-                stroke="#796763"
+                stroke="#B5A2AC"
                 fontSize={12}
                 tickLine={false}
                 axisLine={false}
               />
               <YAxis
-                stroke="#796763"
+                stroke="#B5A2AC"
                 fontSize={12}
                 tickLine={false}
                 axisLine={false}
                 width={32}
               />
               <Tooltip
-                cursor={{ fill: '#F0E4DA' }}
+                cursor={{ fill: '#453640' }}
                 contentStyle={{
-                  background: '#FFFFFF',
-                  border: '1px solid #F0E4DA',
+                  background: '#31262E',
+                  border: '1px solid #453640',
                   borderRadius: 12,
-                  color: '#3B2E2A',
+                  color: '#F7EFEA',
                 }}
               />
-              <Bar dataKey="minutes" fill="#9670C6" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="minutes" fill="#C4B0E0" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
