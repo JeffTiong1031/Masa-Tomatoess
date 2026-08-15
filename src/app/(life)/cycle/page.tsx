@@ -47,7 +47,7 @@ export default function CyclePage() {
                 key={day}
                 role="listitem"
                 aria-label={`Day ${day}${isPredicted ? ', predicted period day' : ''}`}
-                className="flex aspect-square items-center justify-center rounded-lg text-xs text-[var(--mt-text)]"
+                className="relative flex aspect-square items-center justify-center rounded-lg text-xs text-[var(--mt-text)]"
                 style={{
                   background: isPredicted
                     ? 'var(--mt-accent)'
@@ -56,7 +56,13 @@ export default function CyclePage() {
                 }}
               >
                 {day}
-                {isPredicted && <span style={{ fontSize: '3px', marginLeft: '2px', lineHeight: '1' }}>●</span>}
+                {isPredicted && (
+                  <div
+                    className="absolute top-0.5 right-0.5 h-2 w-2 rounded-full"
+                    style={{ background: 'var(--mt-text)' }}
+                    aria-hidden="true"
+                  />
+                )}
               </div>
             );
           })}
