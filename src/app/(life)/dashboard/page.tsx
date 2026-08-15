@@ -12,6 +12,17 @@ import { syncSessions } from '@/lib/sync';
 import { buildHeatmapRange, heatmapDaysForWidth } from '@/lib/heatmapRange';
 import { useHasMounted } from '@/hooks/useHasMounted';
 
+// Five-step lavender ramp, cream background up to the dashboard accent
+// (--mac-accent-dashboard, #C4B0E0). react-activity-calendar consumes this
+// as a literal theme prop, not CSS custom properties, so hex is correct
+// here. Both keys carry the same ramp — the dashboard is always light
+// mood, and supplying only one key makes the library fall back to its own
+// defaults for the other.
+const MACARON_HEATMAP_THEME = {
+  light: ['#F3EAE2', '#E6DCEF', '#D6C6E7', '#C4B0E0', '#A98CD1'],
+  dark: ['#F3EAE2', '#E6DCEF', '#D6C6E7', '#C4B0E0', '#A98CD1'],
+};
+
 export default function Dashboard() {
   const mounted = useHasMounted();
   const [userName, setUserName] = useState<string | null>(null);
@@ -125,14 +136,17 @@ export default function Dashboard() {
   }
 
   return (
-    <main className="flex-1 text-white overflow-y-auto mt-page-pad">
+    <main
+      className="flex-1 text-[var(--mt-text)] overflow-y-auto mt-page-pad"
+      style={{ ['--mt-accent' as string]: 'var(--mac-accent-dashboard)' }}
+    >
       <div className="max-w-5xl mx-auto px-1 sm:px-2 pb-4">
         <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-8 sm:mb-12">
           <div>
             <h1 className="text-3xl sm:text-4xl md:text-5xl font-extralight tracking-tight">
               Analytics
             </h1>
-            <p className="text-sm text-white/45 mt-1">
+            <p className="text-sm text-[var(--mt-text-muted)] mt-1">
               Your focus history across devices
             </p>
           </div>
@@ -140,14 +154,14 @@ export default function Dashboard() {
             <button
               type="button"
               onClick={handleLogOut}
-              className="min-h-11 px-5 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-sm font-medium text-white/70 hover:text-white transition-all"
+              className="min-h-11 px-5 py-2.5 bg-[color-mix(in_srgb,var(--mt-text)_6%,transparent)] hover:bg-[color-mix(in_srgb,var(--mt-text)_12%,transparent)] border border-[var(--mt-border)] rounded-xl text-sm font-medium text-[var(--mt-text-muted)] hover:text-[var(--mt-text)] transition-all"
             >
               Log Out
             </button>
             <button
               type="button"
               onClick={handleClearData}
-              className="min-h-11 flex items-center gap-2 px-5 py-2.5 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 hover:border-red-500/30 rounded-xl text-sm font-medium text-red-400 hover:text-red-300 transition-all"
+              className="min-h-11 flex items-center gap-2 px-5 py-2.5 bg-[color-mix(in_srgb,var(--mt-danger)_10%,transparent)] hover:bg-[color-mix(in_srgb,var(--mt-danger)_20%,transparent)] border border-[color-mix(in_srgb,var(--mt-danger)_20%,transparent)] hover:border-[color-mix(in_srgb,var(--mt-danger)_30%,transparent)] rounded-xl text-sm font-medium text-[var(--mt-danger)] transition-all"
               title="Clear History"
             >
               <Trash2 size={16} />
@@ -170,7 +184,7 @@ export default function Dashboard() {
             value={
               <>
                 {totalFocusHours}{' '}
-                <span className="text-lg text-white/40 font-normal">hrs</span>
+                <span className="text-lg text-[var(--mt-text-subtle)] font-normal">hrs</span>
               </>
             }
           />
@@ -181,7 +195,7 @@ export default function Dashboard() {
             value={
               <>
                 {heatmapDataMap.get(todayKey) || 0}{' '}
-                <span className="text-lg text-white/40 font-normal">
+                <span className="text-lg text-[var(--mt-text-subtle)] font-normal">
                   sessions
                 </span>
               </>
@@ -192,20 +206,17 @@ export default function Dashboard() {
         <Leaderboard />
 
         <div className="mt-glass shadow-2xl p-5 sm:p-8 rounded-[1.75rem] mb-6 sm:mb-8 overflow-x-auto">
-          <h2 className="text-lg sm:text-xl font-light tracking-wide text-white/90 mb-6">
+          <h2 className="text-lg sm:text-xl font-light tracking-wide text-[var(--mt-text)] mb-6">
             Contribution Heatmap
-            <span className="block sm:inline text-sm text-white/40 sm:ml-2">
+            <span className="block sm:inline text-sm text-[var(--mt-text-subtle)] sm:ml-2">
               Last {heatmapDays} days
             </span>
           </h2>
           <div className="min-w-0">
             <ActivityCalendar
               data={heatmapData}
-              theme={{
-                light: ['#27272a', '#047857', '#059669', '#10b981', '#34d399'],
-                dark: ['#1e293b', '#064e3b', '#065f46', '#047857', '#10b981'],
-              }}
-              colorScheme="dark"
+              theme={MACARON_HEATMAP_THEME}
+              colorScheme="light"
               blockSize={width < 640 ? 10 : 12}
               blockMargin={3}
               fontSize={width < 640 ? 11 : 12}
@@ -235,34 +246,35 @@ export default function Dashboard() {
         </div>
 
         <div className="mt-glass shadow-2xl p-5 sm:p-8 rounded-[1.75rem] h-72 sm:h-[26rem]">
-          <h2 className="text-lg sm:text-xl font-light tracking-wide text-white/90 mb-6">
+          <h2 className="text-lg sm:text-xl font-light tracking-wide text-[var(--mt-text)] mb-6">
             Focus Minutes (Last 7 Days)
           </h2>
           <ResponsiveContainer width="100%" height="85%">
             <BarChart data={weeklyData}>
               <XAxis
                 dataKey="name"
-                stroke="#71717a"
+                stroke="#796763"
                 fontSize={12}
                 tickLine={false}
                 axisLine={false}
               />
               <YAxis
-                stroke="#71717a"
+                stroke="#796763"
                 fontSize={12}
                 tickLine={false}
                 axisLine={false}
                 width={32}
               />
               <Tooltip
-                cursor={{ fill: '#1e293b' }}
+                cursor={{ fill: '#F0E4DA' }}
                 contentStyle={{
-                  backgroundColor: '#121a2a',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  borderRadius: '8px',
+                  background: '#FFFFFF',
+                  border: '1px solid #F0E4DA',
+                  borderRadius: 12,
+                  color: '#3B2E2A',
                 }}
               />
-              <Bar dataKey="minutes" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="minutes" fill="#C4B0E0" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -283,14 +295,14 @@ function StatCard({
   value: React.ReactNode;
 }) {
   return (
-    <div className="mt-glass shadow-2xl p-5 sm:p-6 rounded-[1.5rem] flex items-start gap-4 transition-all hover:bg-white/10">
+    <div className="mt-glass shadow-2xl p-5 sm:p-6 rounded-[1.5rem] flex items-start gap-4 transition-all hover:bg-[color-mix(in_srgb,var(--mt-text)_6%,transparent)]">
       <div
-        className={`p-3 rounded-2xl shadow-inner border border-white/5 ${iconClass}`}
+        className={`p-3 rounded-2xl shadow-inner border border-[var(--mt-border)] ${iconClass}`}
       >
         {icon}
       </div>
       <div>
-        <p className="text-white/60 text-sm font-medium tracking-wide mb-1">
+        <p className="text-[var(--mt-text-muted)] text-sm font-medium tracking-wide mb-1">
           {label}
         </p>
         <p className="text-3xl sm:text-4xl font-light tracking-tight">{value}</p>
