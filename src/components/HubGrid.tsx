@@ -92,11 +92,7 @@ export default function HubGrid() {
               {label}
             </span>
             <span className="text-xs text-[var(--mt-text-muted)]">
-              {INERT.has(href)
-                ? 'Coming soon'
-                : href === '/dashboard'
-                ? `${stats.streakDays}-day streak`
-                : 'Open'}
+              {INERT.has(href) ? 'Coming soon' : 'Open'}
             </span>
           </Link>
         ))}
