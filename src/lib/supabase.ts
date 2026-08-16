@@ -23,7 +23,7 @@ Supabase Schema for timetables (one row per person, replaced whole on save):
 ```sql
 create table timetables (
   user_name  text primary key,
-  entries    jsonb not null default '[]',
+  entries    jsonb not null default '[]' check (jsonb_typeof(entries) = 'array'),
   updated_at timestamptz not null default now()
 );
 

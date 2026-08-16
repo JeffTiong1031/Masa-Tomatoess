@@ -111,8 +111,9 @@ export default function TimetableEditor({
         <div className="flex-1" />
         <button
           type="button"
+          disabled={isSaving}
           onClick={onCancel}
-          className="min-h-11 rounded-xl border border-[var(--mt-border)] px-4 text-sm font-semibold text-[var(--mt-text)]"
+          className="min-h-11 rounded-xl border border-[var(--mt-border)] px-4 text-sm font-semibold text-[var(--mt-text)] disabled:opacity-50"
         >
           Cancel
         </button>

@@ -48,7 +48,7 @@ Numbering continues from the focus-grouping spec (D9–D16 there).
 ```sql
 create table timetables (
   user_name  text primary key,
-  entries    jsonb not null default '[]',
+  entries    jsonb not null default '[]' check (jsonb_typeof(entries) = 'array'),
   updated_at timestamptz not null default now()
 );
 ```

@@ -43,7 +43,7 @@ export default function TimetableBoard() {
     const next: Entries = { Jeff: [], Rachel: [] };
     for (const row of rows) next[row.user_name] = row.entries;
     setEntries(next);
-  }, [setEntries]);
+  }, [setEntries, setFailed]);
 
   useEffect(() => {
     if (!me) return;
@@ -63,10 +63,13 @@ export default function TimetableBoard() {
   const retry = () => {
     setFailed(false);
     setEntries(null);
+    setEditing(false);
+    setSaveError(null);
     load();
   };
 
   const myState = stateFor(me);
+  const partner = partnerOf(me);
 
   const handleSave = async (saved: TimetableEntry[]) => {
     setIsSaving(true);
@@ -131,9 +134,9 @@ export default function TimetableBoard() {
         }
       />
       <TimetablePane
-        name={partnerOf(me)}
+        name={partner}
         isMine={false}
-        state={stateFor(partnerOf(me))}
+        state={stateFor(partner)}
         onRetry={retry}
       />
     </div>

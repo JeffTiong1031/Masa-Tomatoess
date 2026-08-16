@@ -8,7 +8,8 @@ covered by the suite. Run these on a phone, not just a desktop browser.
 
 ## Setup
 
-- [ ] `timetables` exists in Supabase and `select * from timetables;` succeeds
+- [ ] `timetables` exists in Supabase and `select * from timetables;` succeeds in the SQL Editor (this proves the table exists only — the SQL Editor runs as a privileged role and bypasses RLS)
+- [ ] The anon `select` policy actually works: loading `/study/timetable` in the browser reaches a ready or "Nothing planned yet." pane, not the error state
 - [ ] Signed in as Jeff on one device, Rachel on another (or via localStorage)
 
 ## Pane states (D25)

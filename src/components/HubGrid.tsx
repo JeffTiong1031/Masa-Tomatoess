@@ -9,9 +9,9 @@ import { accentVar } from '@/components/ui/PageShell';
 import StatTile from '@/components/ui/StatTile';
 import { useHasMounted } from '@/hooks/useHasMounted';
 
-/** Sections with no data layer yet (spec §7.1). Calendar and Timetable
- *  are still inert, but they are no longer top-level cards here -- both
- *  live inside Study now, behind its own panel. */
+/** Sections with no data layer yet (spec §7.1). Calendar is still inert;
+ *  Timetable is not (it now reads and writes Supabase). Both are no longer
+ *  top-level cards here -- both live inside Study now, behind its own panel. */
 const INERT = new Set([
   '/cycle',
   '/countdown',

@@ -52,6 +52,7 @@ function PaneBody({
   if (state.status === 'loading') {
     return (
       <div className="flex flex-col gap-2" aria-busy>
+        <span className="sr-only">Loading {name}&apos;s timetable</span>
         {[0, 1, 2].map((row) => (
           <div
             key={row}

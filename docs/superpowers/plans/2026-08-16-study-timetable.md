@@ -280,7 +280,7 @@ Supabase Schema for timetables (one row per person, replaced whole on save):
 ```sql
 create table timetables (
   user_name  text primary key,
-  entries    jsonb not null default '[]',
+  entries    jsonb not null default '[]' check (jsonb_typeof(entries) = 'array'),
   updated_at timestamptz not null default now()
 );
 
@@ -316,7 +316,7 @@ Expected: no errors.
 
 Open the Supabase dashboard → SQL Editor, paste everything between the ```sql fences added in Step 1 (the `timetables` block only — `focus_sessions` already exists), and run it.
 
-- [ ] **Step 4: HUMAN STEP — verify the table exists and is readable by the anon role**
+- [ ] **Step 4: HUMAN STEP — verify the table exists, then verify the anon role can read it**
 
 In the same SQL Editor:
 
@@ -324,7 +324,7 @@ In the same SQL Editor:
 select * from timetables;
 ```
 
-Expected: the query succeeds and returns 0 rows. An error here means the table was not created; 0 rows is the correct starting state, because upsert creates each person's row on their first save.
+Expected: the query succeeds and returns 0 rows. An error here means the table was not created; 0 rows is the correct starting state, because upsert creates each person's row on their first save. The SQL Editor runs as a privileged role and bypasses RLS, so this only proves the table exists — it does not prove the anon `select` policy works. Confirm that separately by loading the app in a browser: Task 4's board should reach a ready or empty pane, not the error state.
 
 - [ ] **Step 5: Commit**
 
