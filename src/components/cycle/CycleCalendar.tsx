@@ -14,16 +14,22 @@ function isGuessedPeriod(day: CalendarDay): boolean {
   return day.phase === 'menstrual' && !day.recorded;
 }
 
+function displayPhase(day: CalendarDay): Phase | null {
+  if (day.phase === null) return null;
+  return day.recorded ? 'menstrual' : day.phase;
+}
+
 function runKey(day: CalendarDay): string {
-  return `${day.phase ?? 'none'}|${day.recorded}|${isGuessedPeriod(day)}|${day.inMonth}`;
+  return `${displayPhase(day) ?? 'none'}|${day.recorded}|${isGuessedPeriod(day)}|${day.inMonth}`;
 }
 
 function fillFor(day: CalendarDay): string {
-  if (day.phase === null) return 'transparent';
-  if (!day.inMonth) return phaseFill(day.phase, TINT.outOfMonth);
-  if (day.recorded) return phaseFill(day.phase, TINT.period);
-  if (isGuessedPeriod(day)) return phaseFill(day.phase, TINT.predicted);
-  return phaseFill(day.phase, TINT.phase);
+  const phase = displayPhase(day);
+  if (phase === null) return 'transparent';
+  if (!day.inMonth) return phaseFill(phase, TINT.outOfMonth);
+  if (day.recorded) return phaseFill(phase, TINT.period);
+  if (isGuessedPeriod(day)) return phaseFill(phase, TINT.predicted);
+  return phaseFill(phase, TINT.phase);
 }
 
 function cornerRadius(joinLeft: boolean, joinRight: boolean): string {
@@ -128,9 +134,7 @@ export default function CycleCalendar({
                   {Number(day.date.slice(8))}
                 </span>
               ) : (
-                <span className={day.inMonth ? '' : 'opacity-70'}>
-                  {Number(day.date.slice(8))}
-                </span>
+                <span>{Number(day.date.slice(8))}</span>
               )}
               <span className="flex h-1.5 items-center gap-0.5">
                 {day.phase === 'fertile' && !day.recorded && !day.predicted && (
