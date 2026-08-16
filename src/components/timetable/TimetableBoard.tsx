@@ -23,9 +23,6 @@ export default function TimetableBoard() {
   const [failed, setFailed] = useState(false);
 
   const load = useCallback(async () => {
-    setFailed(false);
-    setEntries(null);
-
     const { data, error } = await supabase
       .from('timetables')
       .select('user_name, entries')
@@ -45,8 +42,9 @@ export default function TimetableBoard() {
 
   useEffect(() => {
     if (!me) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    load();
+    (async () => {
+      await load();
+    })();
   }, [me, load]);
 
   if (!me) return null;
@@ -57,14 +55,20 @@ export default function TimetableBoard() {
     return { status: 'ready', entries: entries[user] };
   };
 
+  const retry = () => {
+    setFailed(false);
+    setEntries(null);
+    load();
+  };
+
   return (
     <div className="mb-4">
-      <TimetablePane name={me} isMine state={stateFor(me)} onRetry={load} />
+      <TimetablePane name={me} isMine state={stateFor(me)} onRetry={retry} />
       <TimetablePane
         name={partnerOf(me)}
         isMine={false}
         state={stateFor(partnerOf(me))}
-        onRetry={load}
+        onRetry={retry}
       />
     </div>
   );
