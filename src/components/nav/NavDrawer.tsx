@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Menu, X } from 'lucide-react';
+import { LogOut, Menu, X } from 'lucide-react';
 import { ALL_LINKS, isActiveHref } from './navLinks';
 import { accentVar } from '@/components/ui/PageShell';
 
@@ -19,6 +19,17 @@ export default function NavDrawer() {
     setOpen(false);
     triggerRef.current?.focus();
   }, []);
+
+  const handleLogOut = () => {
+    if (
+      confirm(
+        'Are you sure you want to log out? You will need the secret password to enter again.'
+      )
+    ) {
+      localStorage.removeItem('user_name');
+      window.location.href = '/';
+    }
+  };
 
   // Close on route change. Most destinations are drawer-only, so a
   // drawer left open over the destination would be a dead end. Adjusted
@@ -177,6 +188,19 @@ export default function NavDrawer() {
                 );
               })}
             </nav>
+
+            <div className="border-t border-[var(--mt-border)] px-3 pt-3">
+              <button
+                type="button"
+                onClick={handleLogOut}
+                className="flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-sm text-[var(--mt-text-muted)] transition-[color,background-color,transform] duration-150 hover:bg-[color-mix(in_srgb,var(--mt-text)_6%,transparent)] hover:text-[var(--mt-text)] active:scale-[0.98]"
+              >
+                <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[color-mix(in_srgb,var(--mt-text)_6%,transparent)]">
+                  <LogOut size={17} strokeWidth={1.9} aria-hidden />
+                </span>
+                Log Out
+              </button>
+            </div>
           </div>
         </div>
       )}

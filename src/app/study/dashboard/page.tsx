@@ -78,17 +78,6 @@ export default function Dashboard() {
     }
   };
 
-  const handleLogOut = () => {
-    if (
-      confirm(
-        'Are you sure you want to log out? You will need the secret password to enter again.'
-      )
-    ) {
-      localStorage.removeItem('user_name');
-      window.location.href = '/';
-    }
-  };
-
   const heatmapDataMap = useMemo(() => {
     const map = new Map<string, number>();
     sessions.forEach((s) => {
@@ -155,13 +144,6 @@ export default function Dashboard() {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
-            <button
-              type="button"
-              onClick={handleLogOut}
-              className="min-h-11 px-5 py-2.5 bg-[color-mix(in_srgb,var(--mt-text)_6%,transparent)] hover:bg-[color-mix(in_srgb,var(--mt-text)_12%,transparent)] border border-[var(--mt-border)] rounded-xl text-sm font-medium text-[var(--mt-text-muted)] hover:text-[var(--mt-text)] transition-all"
-            >
-              Log Out
-            </button>
             <button
               type="button"
               onClick={handleClearData}
