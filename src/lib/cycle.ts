@@ -184,3 +184,47 @@ export function hubCycleLabel(summary: CycleSummary): string {
       return headline.days === 1 ? '1 day late' : `${headline.days} days late`;
   }
 }
+
+export type ValidationError =
+  | 'future-date'
+  | 'end-before-start'
+  | 'start-before-previous'
+  | 'duplicate-start';
+
+export const VALIDATION_MESSAGES: Record<ValidationError, string> = {
+  'future-date': 'That day has not happened yet.',
+  'end-before-start': 'It cannot stop before it started.',
+  'start-before-previous': 'That is earlier than the period already logged.',
+  'duplicate-start': 'That day is already logged.',
+};
+
+export function validateStart(
+  startDate: string,
+  logs: PeriodLog[],
+  today: string,
+  editingId: string | null,
+): ValidationError | null {
+  if (startDate > today) return 'future-date';
+
+  const others = logs.filter((entry) => entry.id !== editingId);
+  if (others.some((entry) => entry.startDate === startDate)) {
+    return 'duplicate-start';
+  }
+
+  const previous = sortLogs(others)[0];
+  if (previous && startDate < previous.startDate) {
+    return 'start-before-previous';
+  }
+
+  return null;
+}
+
+export function validateEnd(
+  endDate: string,
+  startDate: string,
+  today: string,
+): ValidationError | null {
+  if (endDate > today) return 'future-date';
+  if (endDate < startDate) return 'end-before-start';
+  return null;
+}

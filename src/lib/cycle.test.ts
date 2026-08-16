@@ -13,6 +13,9 @@ import {
   sortLogs,
   summarizeCycle,
   type PeriodLog,
+  VALIDATION_MESSAGES,
+  validateEnd,
+  validateStart,
 } from './cycle';
 
 function log(id: string, startDate: string, endDate: string | null = null): PeriodLog {
@@ -341,5 +344,62 @@ describe('hubCycleLabel', () => {
 
   it('names the day of an ongoing period', () => {
     expect(labelFor([log('a', '2026-08-15')], '2026-08-16')).toBe('Day 2 of period');
+  });
+});
+
+describe('validateStart', () => {
+  const logs = [log('a', '2026-07-01'), log('b', '2026-07-29')];
+
+  it('accepts a plausible new start', () => {
+    expect(validateStart('2026-08-26', logs, '2026-08-26', null)).toBeNull();
+  });
+
+  it('rejects a date in the future', () => {
+    expect(validateStart('2026-08-27', logs, '2026-08-26', null)).toBe('future-date');
+  });
+
+  it('accepts today itself', () => {
+    expect(validateStart('2026-08-26', logs, '2026-08-26', null)).toBeNull();
+  });
+
+  it('rejects a duplicate start', () => {
+    expect(validateStart('2026-07-29', logs, '2026-08-26', null)).toBe('duplicate-start');
+  });
+
+  it('rejects a start before the latest logged one', () => {
+    expect(validateStart('2026-07-15', logs, '2026-08-26', null)).toBe('start-before-previous');
+  });
+
+  it('ignores the row being edited when checking for duplicates', () => {
+    expect(validateStart('2026-07-29', logs, '2026-08-26', 'b')).toBeNull();
+  });
+
+  it('compares an edited row against the one before it, not itself', () => {
+    expect(validateStart('2026-06-20', logs, '2026-08-26', 'b')).toBe('start-before-previous');
+    expect(validateStart('2026-07-20', logs, '2026-08-26', 'b')).toBeNull();
+  });
+});
+
+describe('validateEnd', () => {
+  it('accepts an end on or after the start', () => {
+    expect(validateEnd('2026-08-20', '2026-08-16', '2026-08-26')).toBeNull();
+    expect(validateEnd('2026-08-16', '2026-08-16', '2026-08-26')).toBeNull();
+  });
+
+  it('rejects an end before its start', () => {
+    expect(validateEnd('2026-08-15', '2026-08-16', '2026-08-26')).toBe('end-before-start');
+  });
+
+  it('rejects an end in the future', () => {
+    expect(validateEnd('2026-08-27', '2026-08-16', '2026-08-26')).toBe('future-date');
+  });
+});
+
+describe('VALIDATION_MESSAGES', () => {
+  it('has plain-English text for every error', () => {
+    const errors = ['future-date', 'end-before-start', 'start-before-previous', 'duplicate-start'] as const;
+    for (const error of errors) {
+      expect(VALIDATION_MESSAGES[error].length).toBeGreaterThan(0);
+    }
   });
 });
