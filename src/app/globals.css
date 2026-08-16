@@ -41,6 +41,10 @@
      accents.test.ts -- the guard is now CIE delta E 76, not hue angle. */
   --mac-accent-calendar: #FFB5F4;  /* min delta E 21.5 (dashboard) */
   --mac-accent-timetable: #72E2FF; /* min delta E 24.0 (finance) */
+  --mac-cycle-menstrual: #F2A7BE;
+  --mac-cycle-follicular: #A8DCD1;
+  --mac-cycle-fertile: #F0CE87;
+  --mac-cycle-luteal: #C4B0E0;
 
   --mac-danger: #E07A6B;
   /* Deeper terracotta for light mood only: #E07A6B measures 2.93:1 on
@@ -91,6 +95,10 @@
   --mt-surface-raised: var(--mac-white);
   --mt-border: var(--mac-border-light);
   --mt-text: var(--mac-cocoa);
+  --mt-phase-menstrual: var(--mac-cycle-menstrual);
+  --mt-phase-follicular: var(--mac-cycle-follicular);
+  --mt-phase-fertile: var(--mac-cycle-fertile);
+  --mt-phase-luteal: var(--mac-cycle-luteal);
   --mt-text-muted: var(--mac-cocoa-muted);
   /* 5.06:1 on --mac-white / 4.93:1 on --mac-cream — both clear AA's 4.5:1
      for normal text, while staying below --mac-cocoa-muted's 5.34:1/5.06:1
@@ -160,6 +168,10 @@ body {
   --mt-surface-raised: var(--mac-white);
   --mt-border: var(--mac-border-light);
   --mt-text: var(--mac-cocoa);
+  --mt-phase-menstrual: var(--mac-cycle-menstrual);
+  --mt-phase-follicular: var(--mac-cycle-follicular);
+  --mt-phase-fertile: var(--mac-cycle-fertile);
+  --mt-phase-luteal: var(--mac-cycle-luteal);
   --mt-text-muted: var(--mac-cocoa-muted);
   /* 5.06:1 on --mac-white / 4.93:1 on --mac-cream — see the :root token
      above for the full rationale. */
@@ -183,6 +195,10 @@ body {
   --mt-surface-raised: color-mix(in srgb, var(--mac-plum-raised) 80%, var(--mac-shell) 6%);
   --mt-border: var(--mac-border-dark);
   --mt-text: var(--mac-shell);
+  --mt-phase-menstrual: var(--mac-cycle-menstrual);
+  --mt-phase-follicular: var(--mac-cycle-follicular);
+  --mt-phase-fertile: var(--mac-cycle-fertile);
+  --mt-phase-luteal: var(--mac-cycle-luteal);
   --mt-text-muted: var(--mac-shell-muted);
   /* 4.95:1 on dark-mood --mt-surface (#31262E) / 5.32:1 on --mt-bg
      (#241C22) — both clear AA's 4.5:1, while staying below
