@@ -211,9 +211,11 @@ export function validateStart(
     return 'duplicate-start';
   }
 
-  const previous = sortLogs(others)[0];
-  if (previous && startDate < previous.startDate) {
-    return 'start-before-previous';
+  if (editingId === null) {
+    const latest = sortLogs(others)[0];
+    if (latest && startDate < latest.startDate) {
+      return 'start-before-previous';
+    }
   }
 
   return null;

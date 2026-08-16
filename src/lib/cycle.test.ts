@@ -374,9 +374,24 @@ describe('validateStart', () => {
     expect(validateStart('2026-07-29', logs, '2026-08-26', 'b')).toBeNull();
   });
 
-  it('compares an edited row against the one before it, not itself', () => {
-    expect(validateStart('2026-06-20', logs, '2026-08-26', 'b')).toBe('start-before-previous');
+  it('does not impose ordering on an edit, so an earlier date is allowed', () => {
+    expect(validateStart('2026-06-20', logs, '2026-08-26', 'b')).toBeNull();
     expect(validateStart('2026-07-20', logs, '2026-08-26', 'b')).toBeNull();
+  });
+
+  it('accepts an edit to a row that is not the newest', () => {
+    const three = [
+      log('a', '2026-07-01'),
+      log('b', '2026-07-15'),
+      log('c', '2026-07-29'),
+    ];
+    expect(validateStart('2026-07-16', three, '2026-08-26', 'b')).toBeNull();
+    expect(validateStart('2026-06-15', three, '2026-08-26', 'a')).toBeNull();
+  });
+
+  it('still refuses a future date or a duplicate when editing', () => {
+    expect(validateStart('2026-08-27', logs, '2026-08-26', 'b')).toBe('future-date');
+    expect(validateStart('2026-07-01', logs, '2026-08-26', 'b')).toBe('duplicate-start');
   });
 });
 
