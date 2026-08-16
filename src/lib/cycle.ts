@@ -189,13 +189,15 @@ export type ValidationError =
   | 'future-date'
   | 'end-before-start'
   | 'start-before-previous'
-  | 'duplicate-start';
+  | 'duplicate-start'
+  | 'reopen-not-latest';
 
 export const VALIDATION_MESSAGES: Record<ValidationError, string> = {
   'future-date': 'That day has not happened yet.',
   'end-before-start': 'It cannot stop before it started.',
   'start-before-previous': 'That is earlier than the period already logged.',
   'duplicate-start': 'That day is already logged.',
+  'reopen-not-latest': 'Only your most recent period can be marked as still going.',
 };
 
 export function validateStart(
@@ -229,4 +231,11 @@ export function validateEnd(
   if (endDate > today) return 'future-date';
   if (endDate < startDate) return 'end-before-start';
   return null;
+}
+
+export function validateReopen(
+  logs: PeriodLog[],
+  editingId: string,
+): ValidationError | null {
+  return sortLogs(logs)[0].id === editingId ? null : 'reopen-not-latest';
 }

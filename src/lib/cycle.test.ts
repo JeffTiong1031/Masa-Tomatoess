@@ -15,6 +15,7 @@ import {
   type PeriodLog,
   VALIDATION_MESSAGES,
   validateEnd,
+  validateReopen,
   validateStart,
 } from './cycle';
 
@@ -410,9 +411,34 @@ describe('validateEnd', () => {
   });
 });
 
+describe('validateReopen', () => {
+  const logs = [
+    log('a', '2026-07-01', '2026-07-05'),
+    log('b', '2026-08-01', '2026-08-05'),
+  ];
+
+  it('allows the most recent period to be reopened', () => {
+    expect(validateReopen(logs, 'b')).toBeNull();
+  });
+
+  it('refuses to reopen an older period', () => {
+    expect(validateReopen(logs, 'a')).toBe('reopen-not-latest');
+  });
+
+  it('allows reopening when only one period exists', () => {
+    expect(validateReopen([log('a', '2026-08-01', '2026-08-05')], 'a')).toBeNull();
+  });
+});
+
 describe('VALIDATION_MESSAGES', () => {
   it('has plain-English text for every error', () => {
-    const errors = ['future-date', 'end-before-start', 'start-before-previous', 'duplicate-start'] as const;
+    const errors = [
+      'future-date',
+      'end-before-start',
+      'start-before-previous',
+      'duplicate-start',
+      'reopen-not-latest',
+    ] as const;
     for (const error of errors) {
       expect(VALIDATION_MESSAGES[error].length).toBeGreaterThan(0);
     }

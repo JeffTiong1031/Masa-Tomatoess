@@ -9,6 +9,7 @@ import {
   VALIDATION_MESSAGES,
   summarizeCycle,
   validateEnd,
+  validateReopen,
   validateStart,
   type PeriodLog,
 } from '@/lib/cycle';
@@ -124,6 +125,7 @@ export default function CycleBoard() {
 
   const rows = useMemo(() => historyRows(logs), [logs]);
   const openPeriod = rows.find((row) => row.endDate === null) ?? null;
+  const symptomDate = view === 'calendar' ? selectedDate : today;
 
   const closeModal = () => {
     setModal(null);
@@ -139,6 +141,13 @@ export default function CycleBoard() {
     if (startError) {
       setSaveError(VALIDATION_MESSAGES[startError]);
       return;
+    }
+    if (endDate === null && state.editingId !== null) {
+      const reopenError = validateReopen(logs, state.editingId);
+      if (reopenError) {
+        setSaveError(VALIDATION_MESSAGES[reopenError]);
+        return;
+      }
     }
     if (endDate !== null) {
       const endError = validateEnd(endDate, date, today);
@@ -180,7 +189,7 @@ export default function CycleBoard() {
   };
 
   const toggleSymptom = async (symptom: string) => {
-    const current = symptoms[selectedDate] ?? [];
+    const current = symptoms[symptomDate] ?? [];
     const next = current.includes(symptom)
       ? current.filter((item) => item !== symptom)
       : [...current, symptom].sort(
@@ -189,9 +198,9 @@ export default function CycleBoard() {
             SYMPTOMS.findIndex((item) => item === b),
         );
 
-    setSymptoms((all) => ({ ...all, [selectedDate]: next }));
-    const ok = await saveSymptoms(selectedDate, next);
-    if (!ok) setSymptoms((all) => ({ ...all, [selectedDate]: current }));
+    setSymptoms((all) => ({ ...all, [symptomDate]: next }));
+    const ok = await saveSymptoms(symptomDate, next);
+    if (!ok) setSymptoms((all) => ({ ...all, [symptomDate]: current }));
   };
 
   if (!mounted || (!loaded && !failed)) {
@@ -314,8 +323,8 @@ export default function CycleBoard() {
 
       <Card>
         <SymptomChips
-          date={view === 'calendar' ? selectedDate : today}
-          selected={symptoms[view === 'calendar' ? selectedDate : today] ?? []}
+          date={symptomDate}
+          selected={symptoms[symptomDate] ?? []}
           onToggle={toggleSymptom}
         />
       </Card>
