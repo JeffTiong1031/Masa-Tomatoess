@@ -36,11 +36,13 @@ describe('cycle phase tokens', () => {
     }
   });
 
-  it('points every semantic token at its raw hue', () => {
+  it('points every semantic token at its raw hue in every mood block', () => {
+    const blockCount = CSS.split('--mt-surface:').length - 1;
+    expect(blockCount).toBeGreaterThanOrEqual(3);
+
     for (const phase of PHASES) {
-      expect(CSS).toContain(
-        `--mt-phase-${phase}: var(--mac-cycle-${phase})`,
-      );
+      const mapping = `--mt-phase-${phase}: var(--mac-cycle-${phase})`;
+      expect(CSS.split(mapping).length - 1).toBe(blockCount);
     }
   });
 
