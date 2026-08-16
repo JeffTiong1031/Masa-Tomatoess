@@ -7,6 +7,7 @@ import {
   DEFAULT_PERIOD_LENGTH,
   median,
   periodLength,
+  phaseForDay,
   sortLogs,
   type PeriodLog,
 } from './cycle';
@@ -185,5 +186,57 @@ describe('confidenceFor', () => {
     expect(
       confidenceFor([log('a', '2026-01-01'), log('b', '2026-08-01')]),
     ).toBe('default');
+  });
+});
+
+describe('phaseForDay', () => {
+  it('names the four phases of a 28-day cycle with a 5-day period', () => {
+    const at = (day: number) => phaseForDay(day, 28, 5);
+    expect(at(1)).toBe('menstrual');
+    expect(at(5)).toBe('menstrual');
+    expect(at(6)).toBe('follicular');
+    expect(at(10)).toBe('follicular');
+    expect(at(11)).toBe('fertile');
+    expect(at(15)).toBe('fertile');
+    expect(at(16)).toBe('luteal');
+    expect(at(28)).toBe('luteal');
+  });
+
+  it('pushes ovulation later on a long cycle instead of pinning it to day 14', () => {
+    expect(phaseForDay(14, 35, 5)).toBe('follicular');
+    expect(phaseForDay(21, 35, 5)).toBe('fertile');
+  });
+
+  it('pulls ovulation earlier on a short cycle', () => {
+    expect(phaseForDay(7, 21, 5)).toBe('fertile');
+    expect(phaseForDay(14, 21, 5)).toBe('luteal');
+  });
+
+  it('lets the period win when the bands would collide', () => {
+    expect(phaseForDay(6, 21, 6)).toBe('menstrual');
+    expect(phaseForDay(7, 21, 6)).toBe('fertile');
+  });
+
+  it('never overlaps the fertile band with the bleed', () => {
+    for (let cycleLen = 15; cycleLen <= 60; cycleLen += 1) {
+      for (let periodLen = 1; periodLen <= 14; periodLen += 1) {
+        for (let day = 1; day <= periodLen; day += 1) {
+          expect(phaseForDay(day, cycleLen, periodLen)).toBe('menstrual');
+        }
+      }
+    }
+  });
+
+  it('returns luteal for a day past the end of the cycle', () => {
+    expect(phaseForDay(40, 28, 5)).toBe('luteal');
+  });
+
+  it('always returns one of the four phases', () => {
+    const known = new Set(['menstrual', 'follicular', 'fertile', 'luteal']);
+    for (let cycleLen = 15; cycleLen <= 60; cycleLen += 1) {
+      for (let day = 1; day <= cycleLen + 10; day += 1) {
+        expect(known.has(phaseForDay(day, cycleLen, 5))).toBe(true);
+      }
+    }
   });
 });

@@ -89,3 +89,18 @@ export function confidenceFor(logs: PeriodLog[]): Confidence {
   if (gaps === 1) return 'thin';
   return 'learned';
 }
+
+export function phaseForDay(
+  day: number,
+  cycleLen: number,
+  periodLen: number,
+): Phase {
+  const ovulationDay = Math.max(cycleLen - 14, periodLen + 4);
+  const fertileStart = ovulationDay - 3;
+  const fertileEnd = Math.min(ovulationDay + 1, cycleLen);
+
+  if (day <= periodLen) return 'menstrual';
+  if (day >= fertileStart && day <= fertileEnd) return 'fertile';
+  if (day < fertileStart) return 'follicular';
+  return 'luteal';
+}
