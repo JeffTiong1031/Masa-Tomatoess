@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/db/db';
@@ -8,12 +9,15 @@ import { ALL_LINKS } from '@/components/nav/navLinks';
 import { accentVar } from '@/components/ui/PageShell';
 import StatTile from '@/components/ui/StatTile';
 import { useHasMounted } from '@/hooks/useHasMounted';
+import { hubCycleLabel, summarizeCycle, type PeriodLog } from '@/lib/cycle';
+import { todayISO } from '@/lib/cycleDates';
+import { fetchPeriods } from '@/lib/cycleRepo';
 
-/** Sections with no data layer yet (spec §7.1). Calendar is still inert;
- *  Timetable is not (it now reads and writes Supabase). Both are no longer
- *  top-level cards here -- both live inside Study now, behind its own panel. */
+/** Sections with no data layer yet (spec §7.1). Cycle now reads and writes
+ *  Supabase, so it is no longer inert. Calendar is still inert; Timetable
+ *  is not (it now reads and writes Supabase). Both are no longer top-level
+ *  cards here -- both live inside Study now, behind its own panel. */
 const INERT = new Set([
-  '/cycle',
   '/countdown',
   '/meals',
   '/fitness',
@@ -37,6 +41,20 @@ export default function HubGrid() {
   const userName = mounted ? localStorage.getItem('user_name') : null;
   const greeting = mounted ? greetingForHour(new Date().getHours()) : 'Welcome';
   const sessions = useLiveQuery(() => db.sessions.toArray(), [], []);
+  const [cycleLogs, setCycleLogs] = useState<PeriodLog[] | null>(null);
+
+  useEffect(() => {
+    if (!mounted) return;
+    (async () => {
+      const rows = await fetchPeriods();
+      if (rows) setCycleLogs(rows);
+    })();
+  }, [mounted]);
+
+  const cycleLabel =
+    cycleLogs === null
+      ? null
+      : hubCycleLabel(summarizeCycle(cycleLogs, todayISO()));
 
   const stats = computeHubStats(sessions ?? [], new Date());
 
@@ -92,7 +110,11 @@ export default function HubGrid() {
               {label}
             </span>
             <span className="text-xs text-[var(--mt-text-muted)]">
-              {INERT.has(href) ? 'Coming soon' : 'Open'}
+              {INERT.has(href)
+                ? 'Coming soon'
+                : href === '/cycle'
+                  ? (cycleLabel ?? 'Open')
+                  : 'Open'}
             </span>
           </Link>
         ))}
