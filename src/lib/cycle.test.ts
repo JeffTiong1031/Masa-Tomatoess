@@ -1,14 +1,17 @@
 import { describe, expect, it } from 'vitest';
+import { addDays } from './cycleDates';
 import {
   confidenceFor,
   cycleGaps,
   cycleLength,
   DEFAULT_CYCLE_LENGTH,
   DEFAULT_PERIOD_LENGTH,
+  hubCycleLabel,
   median,
   periodLength,
   phaseForDay,
   sortLogs,
+  summarizeCycle,
   type PeriodLog,
 } from './cycle';
 
@@ -238,5 +241,105 @@ describe('phaseForDay', () => {
         expect(known.has(phaseForDay(day, cycleLen, 5))).toBe(true);
       }
     }
+  });
+});
+
+describe('summarizeCycle', () => {
+  it('reports no data when nothing is logged', () => {
+    const summary = summarizeCycle([], '2026-08-16');
+    expect(summary.headline).toEqual({ kind: 'no-data' });
+    expect(summary.phase).toBeNull();
+    expect(summary.dayOfCycle).toBeNull();
+    expect(summary.nextStart).toBeNull();
+    expect(summary.confidence).toBe('none');
+  });
+
+  it('counts days to the next period', () => {
+    const logs = [log('a', '2026-06-27', '2026-07-01'), log('b', '2026-07-25', '2026-07-29')];
+    const summary = summarizeCycle(logs, '2026-08-16');
+    expect(summary.cycleLength).toBe(28);
+    expect(summary.nextStart).toBe('2026-08-22');
+    expect(summary.headline).toEqual({ kind: 'upcoming', days: 6 });
+    expect(summary.dayOfCycle).toBe(23);
+    expect(summary.phase).toBe('luteal');
+  });
+
+  it('says due today on the predicted day', () => {
+    const logs = [log('a', '2026-06-27', '2026-07-01'), log('b', '2026-07-25', '2026-07-29')];
+    expect(summarizeCycle(logs, '2026-08-22').headline).toEqual({ kind: 'due-today' });
+  });
+
+  it('reports lateness as a positive count, never a negative countdown', () => {
+    const logs = [log('a', '2026-06-27', '2026-07-01'), log('b', '2026-07-25', '2026-07-29')];
+    expect(summarizeCycle(logs, '2026-08-25').headline).toEqual({ kind: 'late', days: 3 });
+  });
+
+  it('never produces a negative day count on any date', () => {
+    const logs = [log('a', '2026-06-27', '2026-07-01'), log('b', '2026-07-25', '2026-07-29')];
+    let date = '2026-07-25';
+    for (let i = 0; i < 200; i += 1) {
+      const { headline } = summarizeCycle(logs, date);
+      if (headline.kind === 'upcoming' || headline.kind === 'late') {
+        expect(headline.days).toBeGreaterThan(0);
+      }
+      date = addDays(date, 1);
+    }
+  });
+
+  it('lets a recorded period outrank a late estimate', () => {
+    const logs = [
+      log('a', '2026-06-27', '2026-07-01'),
+      log('b', '2026-07-25', '2026-07-29'),
+      log('c', '2026-08-25', '2026-08-29'),
+    ];
+    const summary = summarizeCycle(logs, '2026-08-27');
+    expect(summary.headline).toEqual({ kind: 'period-day', day: 3 });
+    expect(summary.phase).toBe('menstrual');
+  });
+
+  it('treats an open period as ongoing past its expected length', () => {
+    const logs = [log('a', '2026-07-25', '2026-07-29'), log('b', '2026-08-20')];
+    expect(summarizeCycle(logs, '2026-08-28').headline).toEqual({
+      kind: 'period-day',
+      day: 9,
+    });
+  });
+
+  it('reports the day the period started as day 1', () => {
+    const logs = [log('a', '2026-08-16')];
+    expect(summarizeCycle(logs, '2026-08-16').headline).toEqual({
+      kind: 'period-day',
+      day: 1,
+    });
+  });
+});
+
+describe('hubCycleLabel', () => {
+  const labelFor = (logs: PeriodLog[], today: string) =>
+    hubCycleLabel(summarizeCycle(logs, today));
+
+  it('asks to be set up when empty', () => {
+    expect(labelFor([], '2026-08-16')).toBe('Not set up yet');
+  });
+
+  it('counts down in plural and singular', () => {
+    const logs = [log('a', '2026-06-27', '2026-07-01'), log('b', '2026-07-25', '2026-07-29')];
+    expect(labelFor(logs, '2026-08-16')).toBe('Period in 6 days');
+    expect(labelFor(logs, '2026-08-21')).toBe('Period in 1 day');
+  });
+
+  it('names the day itself', () => {
+    const logs = [log('a', '2026-06-27', '2026-07-01'), log('b', '2026-07-25', '2026-07-29')];
+    expect(labelFor(logs, '2026-08-22')).toBe('Period today');
+  });
+
+  it('names lateness', () => {
+    const logs = [log('a', '2026-06-27', '2026-07-01'), log('b', '2026-07-25', '2026-07-29')];
+    expect(labelFor(logs, '2026-08-23')).toBe('1 day late');
+    expect(labelFor(logs, '2026-08-26')).toBe('4 days late');
+  });
+
+  it('names the day of an ongoing period', () => {
+    expect(labelFor([log('a', '2026-08-15')], '2026-08-16')).toBe('Day 2 of period');
   });
 });

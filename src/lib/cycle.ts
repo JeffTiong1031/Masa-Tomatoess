@@ -1,4 +1,4 @@
-import { diffDays } from './cycleDates';
+import { addDays, diffDays } from './cycleDates';
 
 export interface PeriodLog {
   id: string;
@@ -103,4 +103,84 @@ export function phaseForDay(
   if (day >= fertileStart && day <= fertileEnd) return 'fertile';
   if (day < fertileStart) return 'follicular';
   return 'luteal';
+}
+
+function coveringLog(sorted: PeriodLog[], today: string): PeriodLog | undefined {
+  return sorted.find(
+    (entry) =>
+      today >= entry.startDate &&
+      (entry.endDate === null || today <= entry.endDate),
+  );
+}
+
+function headlineFor(
+  sorted: PeriodLog[],
+  today: string,
+  nextStart: string,
+): Headline {
+  const covering = coveringLog(sorted, today);
+  if (covering) {
+    return { kind: 'period-day', day: diffDays(today, covering.startDate) + 1 };
+  }
+  const days = diffDays(nextStart, today);
+  if (days > 0) return { kind: 'upcoming', days };
+  if (days === 0) return { kind: 'due-today' };
+  return { kind: 'late', days: -days };
+}
+
+export function summarizeCycle(
+  logs: PeriodLog[],
+  today: string,
+): CycleSummary {
+  const sorted = sortLogs(logs);
+  const length = cycleLength(logs);
+  const bleed = periodLength(logs);
+
+  if (sorted.length === 0) {
+    return {
+      headline: { kind: 'no-data' },
+      phase: null,
+      dayOfCycle: null,
+      cycleLength: length,
+      periodLength: bleed,
+      nextStart: null,
+      confidence: 'none',
+    };
+  }
+
+  const latest = sorted[0];
+  const nextStart = addDays(latest.startDate, length);
+  const headline = headlineFor(sorted, today, nextStart);
+  const dayOfCycle = diffDays(today, latest.startDate) + 1;
+
+  return {
+    headline,
+    phase:
+      headline.kind === 'period-day'
+        ? 'menstrual'
+        : phaseForDay(dayOfCycle, length, bleed),
+    dayOfCycle,
+    cycleLength: length,
+    periodLength: bleed,
+    nextStart,
+    confidence: confidenceFor(logs),
+  };
+}
+
+export function hubCycleLabel(summary: CycleSummary): string {
+  const { headline } = summary;
+  switch (headline.kind) {
+    case 'no-data':
+      return 'Not set up yet';
+    case 'period-day':
+      return `Day ${headline.day} of period`;
+    case 'upcoming':
+      return headline.days === 1
+        ? 'Period in 1 day'
+        : `Period in ${headline.days} days`;
+    case 'due-today':
+      return 'Period today';
+    case 'late':
+      return headline.days === 1 ? '1 day late' : `${headline.days} days late`;
+  }
 }
