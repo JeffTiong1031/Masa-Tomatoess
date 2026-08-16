@@ -57,7 +57,7 @@ export default function CycleRing({
   confidence: Confidence;
 }) {
   const arcs = ringArcs(cycleLength, periodLength);
-  const marker = ringPoint(dayOfCycle, cycleLength);
+  const marker = ringPoint(Math.min(dayOfCycle, cycleLength), cycleLength);
   const { value, unit } = headlineParts(headline);
   const note = confidenceNote(confidence);
 
@@ -111,7 +111,9 @@ export default function CycleRing({
       </div>
 
       <p className="mt-4 text-center text-sm text-[var(--mt-text-muted)]">
-        Day {dayOfCycle} of {cycleLength} · expected {formatLongDate(nextStart)}
+        {headline.kind === 'late'
+          ? `Day ${dayOfCycle} · was expected ${formatLongDate(nextStart)}`
+          : `Day ${dayOfCycle} of ${cycleLength} · expected ${formatLongDate(nextStart)}`}
       </p>
       {note && (
         <p className="mt-1 text-center text-xs text-[var(--mt-text-subtle)]">

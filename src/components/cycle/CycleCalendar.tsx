@@ -2,6 +2,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import type { Phase } from '@/lib/cycle';
 import type { CalendarDay } from '@/lib/cycleCalendar';
 import { PHASE_LABELS, PHASE_VAR, TINT, phaseFill } from '@/lib/cycleColors';
+import { fillFor, isGuessedPeriod, runKey } from '@/lib/cycleDisplay';
 import {
   WEEKDAYS_SHORT,
   formatMonthYear,
@@ -9,28 +10,6 @@ import {
 } from '@/lib/cycleDates';
 
 const LEGEND_ORDER: Phase[] = ['menstrual', 'fertile', 'luteal', 'follicular'];
-
-function isGuessedPeriod(day: CalendarDay): boolean {
-  return day.phase === 'menstrual' && !day.recorded;
-}
-
-function displayPhase(day: CalendarDay): Phase | null {
-  if (day.phase === null) return null;
-  return day.recorded ? 'menstrual' : day.phase;
-}
-
-function runKey(day: CalendarDay): string {
-  return `${displayPhase(day) ?? 'none'}|${day.recorded}|${isGuessedPeriod(day)}|${day.inMonth}`;
-}
-
-function fillFor(day: CalendarDay): string {
-  const phase = displayPhase(day);
-  if (phase === null) return 'transparent';
-  if (!day.inMonth) return phaseFill(phase, TINT.outOfMonth);
-  if (day.recorded) return phaseFill(phase, TINT.period);
-  if (isGuessedPeriod(day)) return phaseFill(phase, TINT.predicted);
-  return phaseFill(phase, TINT.phase);
-}
 
 function cornerRadius(joinLeft: boolean, joinRight: boolean): string {
   const left = joinLeft ? '0' : '14px';

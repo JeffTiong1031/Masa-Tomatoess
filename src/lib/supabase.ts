@@ -52,6 +52,10 @@ create table cycle_periods (
     check (end_date is null or end_date >= start_date)
 );
 
+create unique index cycle_periods_one_open
+  on cycle_periods ((end_date is null))
+  where end_date is null;
+
 create table cycle_symptoms (
   date       date primary key,
   symptoms   jsonb not null default '[]'

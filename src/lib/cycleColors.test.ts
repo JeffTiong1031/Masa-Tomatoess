@@ -52,6 +52,12 @@ describe('cycle phase tokens', () => {
       expect(CSS).toContain(`--mt-phase-${phase}:`);
     }
   });
+
+  it('measures the light-mood surface and ink it assumes', () => {
+    expect(readToken('--mac-white')).toBe('#FFFFFF');
+    expect(readToken('--mac-cocoa')).toBe(COCOA);
+    expect(CSS).toContain('--mt-surface: var(--mac-white)');
+  });
 });
 
 describe('cycle phase separation', () => {
@@ -67,7 +73,7 @@ describe('cycle phase separation', () => {
 });
 
 describe('cycle phase contrast', () => {
-  it('keeps day numbers readable on every tint used', () => {
+  it('keeps day numbers readable on every tint used, on the light-mood surface', () => {
     const tints = [TINT.period, TINT.phase, TINT.predicted, TINT.outOfMonth];
     for (const phase of PHASES) {
       const hue = readToken(`--mac-cycle-${phase}`)!;

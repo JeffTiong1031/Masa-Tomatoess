@@ -39,6 +39,10 @@ Run through this on a phone-sized window with the dev server up.
       never a negative number.
 - [ ] Log a period covering today while late; the ring switches to "Day N of
       your period".
+- [ ] While late, the heart marker must NOT sit on the pink period arc — it should
+      rest at the end of the ring, not wrap round to the start.
+- [ ] While late, the line under the ring must read "Day 32 · was expected ..." and
+      never "Day 32 of 28".
 
 ## The two views
 
