@@ -5,7 +5,7 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholde
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-/* 
+/*
 Supabase Schema for focus_sessions:
 
 ```sql
@@ -16,5 +16,26 @@ create table focus_sessions (
   task_name text,
   created_at timestamptz default now()
 );
+```
+
+Supabase Schema for timetables (one row per person, replaced whole on save):
+
+```sql
+create table timetables (
+  user_name  text primary key,
+  entries    jsonb not null default '[]',
+  updated_at timestamptz not null default now()
+);
+
+alter table timetables enable row level security;
+
+create policy "anon reads timetables"
+  on timetables for select to anon using (true);
+
+create policy "anon inserts timetables"
+  on timetables for insert to anon with check (true);
+
+create policy "anon updates timetables"
+  on timetables for update to anon using (true) with check (true);
 ```
 */
