@@ -61,7 +61,6 @@ export default function Modal({
   useEffect(() => {
     if (!open) return;
     previouslyFocused.current = document.activeElement as HTMLElement | null;
-    document.addEventListener('keydown', handleKeyDown);
     const t = window.setTimeout(() => {
       const first = panelRef.current?.querySelector<HTMLElement>(
         'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
@@ -72,9 +71,16 @@ export default function Modal({
     document.body.style.overflow = 'hidden';
     return () => {
       window.clearTimeout(t);
-      document.removeEventListener('keydown', handleKeyDown);
       document.body.style.overflow = prevOverflow;
       previouslyFocused.current?.focus?.();
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
     };
   }, [open, handleKeyDown]);
 
