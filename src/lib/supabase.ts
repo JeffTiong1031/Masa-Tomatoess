@@ -76,4 +76,57 @@ create policy "anon reads cycle_symptoms"
 create policy "anon writes cycle_symptoms"
   on cycle_symptoms for all to anon using (true) with check (true);
 ```
+
+Supabase schema for the calendar (calendar spec §3). Events carry an owner
+because each person's are shown separately; categories do not, because the
+list is shared.
+
+```sql
+create table calendar_categories (
+  id         uuid primary key default gen_random_uuid(),
+  name       text not null unique check (length(trim(name)) > 0),
+  swatch     smallint not null check (swatch between 1 and 8),
+  position   smallint not null default 0,
+  created_at timestamptz not null default now()
+);
+
+create table calendar_events (
+  id          uuid primary key default gen_random_uuid(),
+  owner       text not null check (owner in ('Jeff', 'Rachel')),
+  title       text not null check (length(trim(title)) > 0),
+  date        date not null,
+  end_date    date,
+  start_time  time,
+  end_time    time,
+  notes       text,
+  countdown   boolean not null default false,
+  category_id uuid references calendar_categories (id) on delete set null,
+  created_at  timestamptz not null default now(),
+  updated_at  timestamptz not null default now(),
+
+  constraint calendar_events_end_after_start
+    check (end_date is null or end_date >= date),
+  constraint calendar_events_end_time_needs_start
+    check (end_time is null or start_time is not null),
+  constraint calendar_events_time_order
+    check (end_time is null or end_time > start_time),
+  constraint calendar_events_span_is_all_day
+    check (end_date is null or start_time is null)
+);
+
+create index calendar_events_date_idx on calendar_events (date);
+
+alter table calendar_events enable row level security;
+alter table calendar_categories enable row level security;
+
+create policy "anon reads calendar_events"
+  on calendar_events for select to anon using (true);
+create policy "anon writes calendar_events"
+  on calendar_events for all to anon using (true) with check (true);
+
+create policy "anon reads calendar_categories"
+  on calendar_categories for select to anon using (true);
+create policy "anon writes calendar_categories"
+  on calendar_categories for all to anon using (true) with check (true);
+```
 */
