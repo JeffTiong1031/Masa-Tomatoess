@@ -79,6 +79,15 @@
   --mac-rank-bronze-light: #BC3F0C; /* 4.71:1 on the row composite */
   --mac-rank-bronze-dark: #FB923C;  /* 6.41:1 on dark-mood --mt-surface (#31262E) */
 
+  --mac-tag-1: #B83A3A;
+  --mac-tag-2: #A05A12;
+  --mac-tag-3: #4F7A2A;
+  --mac-tag-4: #17706A;
+  --mac-tag-5: #2C5FA8;
+  --mac-tag-6: #5B3FA0;
+  --mac-tag-7: #A63478;
+  --mac-tag-8: #5A5560;
+
   /* ---- Layout tokens, mood-independent ---- */
   --mt-radius-card: 1.5rem;
   --mt-radius-control: 9999px;
@@ -186,6 +195,14 @@ body {
   --mt-success-contrast: var(--mac-cocoa);
   --mt-rank-gold: var(--mac-rank-gold-light);
   --mt-rank-bronze: var(--mac-rank-bronze-light);
+  --mt-tag-1: var(--mac-tag-1);
+  --mt-tag-2: var(--mac-tag-2);
+  --mt-tag-3: var(--mac-tag-3);
+  --mt-tag-4: var(--mac-tag-4);
+  --mt-tag-5: var(--mac-tag-5);
+  --mt-tag-6: var(--mac-tag-6);
+  --mt-tag-7: var(--mac-tag-7);
+  --mt-tag-8: var(--mac-tag-8);
   --mt-focus: var(--mt-text);
 }
 
@@ -216,6 +233,14 @@ body {
   --mt-success-contrast: var(--mac-plum);
   --mt-rank-gold: var(--mac-rank-gold-dark);
   --mt-rank-bronze: var(--mac-rank-bronze-dark);
+  --mt-tag-1: var(--mac-tag-1);
+  --mt-tag-2: var(--mac-tag-2);
+  --mt-tag-3: var(--mac-tag-3);
+  --mt-tag-4: var(--mac-tag-4);
+  --mt-tag-5: var(--mac-tag-5);
+  --mt-tag-6: var(--mac-tag-6);
+  --mt-tag-7: var(--mac-tag-7);
+  --mt-tag-8: var(--mac-tag-8);
   --mt-focus: var(--mt-text);
 }
 
