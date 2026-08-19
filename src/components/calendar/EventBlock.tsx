@@ -32,7 +32,7 @@ export default function EventBlock({
         background: isOwn
           ? 'color-mix(in srgb, var(--mt-accent) 32%, var(--mt-surface))'
           : 'var(--mt-surface)',
-        border: isOwn ? 'none' : '1.5px solid var(--mt-accent)',
+        border: isOwn ? 'none' : '1.5px solid var(--mt-accent-deep)',
       }}
     >
       <span className="flex items-center gap-2">

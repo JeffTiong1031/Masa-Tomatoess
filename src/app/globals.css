@@ -67,6 +67,13 @@
      it is not a section accent, and accents.test.ts scans that prefix. */
   --mac-chart-lilac: #513A7B;
 
+  /* --mac-accent-calendar (#FFB5F4) is a pastel built to sit BEHIND
+     cocoa text; used as the partner-event outline on --mac-white it
+     measures 1.60:1, nowhere near the 3:1 a non-text mark needs. This is
+     the same hue line at 65% brightness: 3.68:1 on white, 3.48:1 on
+     cream, both clearing AA's non-text minimum. */
+  --mac-accent-calendar-deep: #A6769F;
+
   /* The light pair is measured against what the rank text ACTUALLY sits
      on, which is not the white card: a leaderboard row tints the card,
      and the progress fill tints it again, landing on rgb(240,238,242).
@@ -186,6 +193,7 @@ body {
      above for the full rationale. */
   --mt-text-subtle: color-mix(in srgb, var(--mac-cocoa) 70%, transparent);
   --mt-accent-contrast: var(--mac-cocoa);
+  --mt-accent-deep: var(--mac-accent-calendar-deep);
   /* See the :root copies for why these are 94/97 and not 72/88. */
   --mt-glass: color-mix(in srgb, var(--mac-white) 94%, transparent);
   --mt-glass-strong: color-mix(in srgb, var(--mac-white) 97%, transparent);
@@ -223,6 +231,7 @@ body {
      muted, not the other way around. */
   --mt-text-subtle: color-mix(in srgb, var(--mac-shell) 55%, transparent);
   --mt-accent-contrast: var(--mac-plum);
+  --mt-accent-deep: var(--mac-accent-calendar-deep);
   --mt-glass: color-mix(in srgb, var(--mac-plum) 45%, transparent);
   --mt-glass-strong: color-mix(in srgb, var(--mac-plum) 62%, transparent);
   /* 4.95:1 on #31262E — --mac-danger already clears AA in dark mood. */
