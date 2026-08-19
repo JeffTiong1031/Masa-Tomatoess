@@ -1,23 +1,48 @@
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import type { CalendarEvent } from '@/lib/calendarEvent';
 import { countsByDate, monthDots, weekDates } from '@/lib/calendarViews';
-import { WEEKDAYS_SHORT } from '@/lib/dates';
+import { WEEKDAYS_SHORT, formatMonthYear, monthOf } from '@/lib/dates';
 
 export default function WeekRail({
   selectedDate,
   today,
   events,
   onSelect,
+  onWeek,
 }: {
   selectedDate: string;
   today: string;
   events: CalendarEvent[];
   onSelect: (date: string) => void;
+  onWeek: (step: -1 | 1) => void;
 }) {
   const dates = weekDates(selectedDate);
   const counts = countsByDate(events, dates);
 
   return (
-    <div className="grid grid-cols-7 gap-1">
+    <div>
+      <div className="mb-4 flex items-center justify-between">
+        <button
+          type="button"
+          onClick={() => onWeek(-1)}
+          aria-label="Previous week"
+          className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full text-[var(--mt-text-muted)] hover:text-[var(--mt-text)] hover:bg-[var(--mt-surface)] transition-colors"
+        >
+          <ChevronLeft size={20} aria-hidden />
+        </button>
+        <span className="text-sm font-semibold text-[var(--mt-text)]">
+          {formatMonthYear(monthOf(selectedDate))}
+        </span>
+        <button
+          type="button"
+          onClick={() => onWeek(1)}
+          aria-label="Next week"
+          className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full text-[var(--mt-text-muted)] hover:text-[var(--mt-text)] hover:bg-[var(--mt-surface)] transition-colors"
+        >
+          <ChevronRight size={20} aria-hidden />
+        </button>
+      </div>
+      <div className="grid grid-cols-7 gap-1">
       {dates.map((date, index) => {
         const selected = date === selectedDate;
         const dots = monthDots(counts[date]);
@@ -65,6 +90,7 @@ export default function WeekRail({
           </button>
         );
       })}
+      </div>
     </div>
   );
 }

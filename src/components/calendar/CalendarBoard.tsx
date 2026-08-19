@@ -18,7 +18,7 @@ import {
   updateEvent,
 } from '@/lib/calendarRepo';
 import type { Category, SwatchIndex } from '@/lib/categories';
-import { addMonths, monthOf, todayISO } from '@/lib/dates';
+import { addDays, addMonths, monthOf, todayISO } from '@/lib/dates';
 import { toTiming, type EventDraft } from '@/lib/eventForm';
 import { isUserName, type UserName } from '@/lib/identity';
 import CategoryManager from './CategoryManager';
@@ -29,7 +29,7 @@ import MonthGrid from './MonthGrid';
 import SearchResults from './SearchResults';
 import ViewSwitcher, { type CalendarView } from './ViewSwitcher';
 import WeekRail from './WeekRail';
-import YearHeatmap from './YearHeatmap';
+import YearGrid from './YearGrid';
 
 function blankDraft(date: string): EventDraft {
   return {
@@ -296,7 +296,15 @@ export default function CalendarBoard() {
                 selectedDate={selectedDate}
                 today={today}
                 events={visible}
-                onSelect={setSelectedDate}
+                onSelect={(date) => {
+                  setSelectedDate(date);
+                  setMonth(monthOf(date));
+                }}
+                onWeek={(step) => {
+                  const newDate = addDays(selectedDate, step * 7);
+                  setSelectedDate(newDate);
+                  setMonth(monthOf(newDate));
+                }}
               />
             )}
             {view === 'month' && (
@@ -316,13 +324,14 @@ export default function CalendarBoard() {
             )}
             {view === 'year' && (
               <div className="min-w-0 overflow-x-auto">
-                <YearHeatmap
+                <YearGrid
                   year={Number(selectedDate.slice(0, 4))}
+                  selectedDate={selectedDate}
+                  today={today}
                   events={visible}
                   onSelect={(date) => {
                     setSelectedDate(date);
                     setMonth(monthOf(date));
-                    setView('week');
                   }}
                 />
               </div>
