@@ -1,7 +1,12 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, it, expect } from 'vitest';
-import { CHART_COLORS, HEATMAP_RAMP, HEATMAP_SURFACE } from './heatmapTheme';
+import {
+  CALENDAR_HEATMAP_RAMP,
+  CHART_COLORS,
+  HEATMAP_RAMP,
+  HEATMAP_SURFACE,
+} from './heatmapTheme';
 import { contrastRatio, lightness } from './color';
 
 const CSS = readFileSync(
@@ -164,5 +169,40 @@ describe('chart text contrast (spec §7 criterion 3)', () => {
       ratio,
       `tooltip ${CHART_COLORS.tooltipBackground} is ${ratio.toFixed(3)}:1 against the card ${CHART_COLORS.surface}`,
     ).toBeGreaterThanOrEqual(MIN_TOOLTIP_VS_CARD);
+  });
+});
+
+describe('calendar heatmap ramp', () => {
+  it('has five levels', () => {
+    expect(CALENDAR_HEATMAP_RAMP).toHaveLength(5);
+  });
+
+  it('darkens as activity rises', () => {
+    for (let index = 1; index < CALENDAR_HEATMAP_RAMP.length; index += 1) {
+      expect(lightness(CALENDAR_HEATMAP_RAMP[index])).toBeLessThan(
+        lightness(CALENDAR_HEATMAP_RAMP[index - 1]),
+      );
+    }
+  });
+
+  it('separates adjacent levels', () => {
+    for (let index = 1; index < CALENDAR_HEATMAP_RAMP.length; index += 1) {
+      expect(
+        contrastRatio(
+          CALENDAR_HEATMAP_RAMP[index],
+          CALENDAR_HEATMAP_RAMP[index - 1],
+        ),
+      ).toBeGreaterThanOrEqual(MIN_ADJACENT_CONTRAST);
+    }
+  });
+
+  it('keeps the empty level visible on the card', () => {
+    expect(
+      contrastRatio(CALENDAR_HEATMAP_RAMP[0], HEATMAP_SURFACE),
+    ).toBeGreaterThanOrEqual(MIN_EMPTY_VS_SURFACE);
+  });
+
+  it('is a different ramp from the dashboard', () => {
+    expect(CALENDAR_HEATMAP_RAMP[4]).not.toBe(HEATMAP_RAMP[4]);
   });
 });
