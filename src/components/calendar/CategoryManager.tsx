@@ -92,6 +92,7 @@ export default function CategoryManager({
                   aria-label={`Rename ${category.name}`}
                   onChange={(e) => {
                     setRowError(null);
+                    setConfirmingId(null);
                     setDrafts((all) => ({ ...all, [category.id]: e.target.value }));
                   }}
                   onBlur={() => commitRename(category)}
@@ -141,6 +142,7 @@ export default function CategoryManager({
             onChange={(e) => {
               setName(e.target.value);
               setError(null);
+              setConfirmingId(null);
             }}
             className="min-h-11 w-full rounded-xl border border-[var(--mt-border)] bg-[var(--mt-surface)] px-3 text-sm text-[var(--mt-text)]"
           />
@@ -150,7 +152,10 @@ export default function CategoryManager({
               <button
                 key={option.index}
                 type="button"
-                onClick={() => setSwatch(option.index)}
+                onClick={() => {
+                  setSwatch(option.index);
+                  setConfirmingId(null);
+                }}
                 aria-label={`Colour ${option.index}`}
                 aria-pressed={swatch === option.index}
                 className="h-11 w-11 rounded-full"
