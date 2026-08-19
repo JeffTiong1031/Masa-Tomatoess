@@ -45,11 +45,13 @@ export default function EventModal({
 
   const set = <K extends keyof EventDraft>(key: K, value: EventDraft[K]) => {
     setFieldError(null);
+    setConfirmingDelete(false);
     onChange({ ...draft, [key]: value });
   };
 
   const toggleAllDay = (allDay: boolean) => {
     setFieldError(null);
+    setConfirmingDelete(false);
     onChange(
       allDay
         ? { ...draft, allDay, startTime: '', endTime: '' }
