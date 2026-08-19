@@ -19,7 +19,7 @@ export default function EventBlock({
   onOpen: (event: CalendarEvent) => void;
 }) {
   const description = `${event.title}, ${timeLabel(event)}${
-    isOwn ? '' : ', Rachel’s'
+    isOwn ? '' : `, ${event.owner}’s`
   }`;
 
   return (
