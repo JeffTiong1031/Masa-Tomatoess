@@ -17,7 +17,7 @@ import {
   buildCalendarMonth,
   historyRows,
 } from '@/lib/cycleCalendar';
-import { addMonths, monthOf, todayISO } from '@/lib/cycleDates';
+import { addMonths, monthOf, todayISO } from '@/lib/dates';
 import {
   deletePeriod,
   fetchPeriods,

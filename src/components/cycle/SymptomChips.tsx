@@ -1,5 +1,5 @@
 import { SYMPTOMS } from '@/lib/cycle';
-import { formatShortDate } from '@/lib/cycleDates';
+import { formatShortDate } from '@/lib/dates';
 
 export default function SymptomChips({
   date,

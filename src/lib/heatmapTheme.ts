@@ -50,3 +50,11 @@ export const CHART_COLORS = {
 
 /** --mt-surface under the light mood: the card the heatmap sits on. */
 export const HEATMAP_SURFACE = CHART_COLORS.surface;
+
+export const CALENDAR_HEATMAP_RAMP = [
+  '#F6E9F4',
+  '#E4C0DD',
+  '#C994C0',
+  '#A4669B',
+  '#743C6C',
+] as const;

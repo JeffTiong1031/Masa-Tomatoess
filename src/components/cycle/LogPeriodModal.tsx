@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Modal from '@/components/ui/Modal';
-import { addDays, formatShortDate } from '@/lib/cycleDates';
+import { addDays, formatShortDate } from '@/lib/dates';
 
 export type LogMode = 'start' | 'end' | 'edit';
 

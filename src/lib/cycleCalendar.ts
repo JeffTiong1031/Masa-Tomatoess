@@ -6,7 +6,7 @@ import {
   type PeriodLog,
   type Phase,
 } from './cycle';
-import { addDays, diffDays, monthGridDates, monthOf } from './cycleDates';
+import { addDays, diffDays, monthGridDates, monthOf } from './dates';
 
 const MAX_PROJECTED_CYCLES = 12;
 

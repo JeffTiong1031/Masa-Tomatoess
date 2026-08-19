@@ -10,7 +10,7 @@ import {
   monthOf,
   todayISO,
   WEEKDAYS_SHORT,
-} from './cycleDates';
+} from './dates';
 
 describe('todayISO', () => {
   it('reads local calendar parts, not a UTC timestamp', () => {

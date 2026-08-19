@@ -7,7 +7,7 @@ import {
   WEEKDAYS_SHORT,
   formatMonthYear,
   formatShortDate,
-} from '@/lib/cycleDates';
+} from '@/lib/dates';
 
 const LEGEND_ORDER: Phase[] = ['menstrual', 'fertile', 'luteal', 'follicular'];
 
