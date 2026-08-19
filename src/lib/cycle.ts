@@ -1,4 +1,4 @@
-import { addDays, diffDays } from './cycleDates';
+import { addDays, diffDays } from './dates';
 
 export interface PeriodLog {
   id: string;

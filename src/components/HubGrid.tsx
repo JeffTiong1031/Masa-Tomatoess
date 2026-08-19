@@ -10,7 +10,7 @@ import { accentVar } from '@/components/ui/PageShell';
 import StatTile from '@/components/ui/StatTile';
 import { useHasMounted } from '@/hooks/useHasMounted';
 import { hubCycleLabel, summarizeCycle, type PeriodLog } from '@/lib/cycle';
-import { todayISO } from '@/lib/cycleDates';
+import { todayISO } from '@/lib/dates';
 import { fetchPeriods } from '@/lib/cycleRepo';
 
 /** Sections with no data layer yet (spec §7.1). Cycle now reads and writes

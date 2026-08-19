@@ -1,6 +1,6 @@
 import { Pencil } from 'lucide-react';
 import type { HistoryRow } from '@/lib/cycleCalendar';
-import { formatShortDate } from '@/lib/cycleDates';
+import { formatShortDate } from '@/lib/dates';
 
 const MAX_ROWS = 12;
 

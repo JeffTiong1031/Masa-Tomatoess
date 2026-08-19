@@ -1,6 +1,6 @@
 import type { Confidence, Headline, Phase } from '@/lib/cycle';
 import { PHASE_LABELS, PHASE_VAR, TINT, phaseFill } from '@/lib/cycleColors';
-import { formatLongDate } from '@/lib/cycleDates';
+import { formatLongDate } from '@/lib/dates';
 import { RING_CENTER, RING_RADIUS, ringArcs, ringPoint } from '@/lib/cycleRing';
 
 const LEGEND_ORDER: Phase[] = ['menstrual', 'fertile', 'luteal', 'follicular'];
