@@ -210,10 +210,12 @@ export default function CalendarBoard() {
     name: string,
     swatch: SwatchIndex,
   ) => {
+    const previous = categories;
     setCategories((current) =>
       current.map((item) => (item.id === id ? { ...item, name } : item)),
     );
-    await updateCategory(id, name, swatch);
+    const ok = await updateCategory(id, name, swatch);
+    if (!ok) setCategories(previous);
   };
 
   const handleDeleteCategory = async (id: string) => {
