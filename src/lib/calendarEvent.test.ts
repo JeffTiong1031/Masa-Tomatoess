@@ -92,42 +92,37 @@ describe('occursOn', () => {
 });
 
 describe('timelineHours', () => {
-  it('returns null when nothing is timed', () => {
-    expect(timelineHours([event('1', 'Penang', '2026-08-22', allDay())])).toBeNull();
+  it('returns 8 to 24 when nothing is timed', () => {
+    expect(timelineHours([event('1', 'Penang', '2026-08-22', allDay())])).toEqual({ from: 8, to: 24 });
   });
 
-  it('returns null for an empty day', () => {
-    expect(timelineHours([])).toBeNull();
+  it('returns 8 to 24 for an empty day', () => {
+    expect(timelineHours([])).toEqual({ from: 8, to: 24 });
   });
 
-  it('spans the earliest start to the hour after the latest end', () => {
+  it('spans the earliest start to the hour after the latest end, but keeps 8 to 24 if within range', () => {
     const events = [
       event('1', 'Dentist', '2026-08-25', span('10:00', '11:00')),
       event('2', 'Dinner', '2026-08-25', span('19:30', '21:00')),
     ];
-    expect(timelineHours(events)).toEqual({ from: 10, to: 22 });
+    expect(timelineHours(events)).toEqual({ from: 8, to: 24 });
   });
 
-  it('widens a lone event to the three-hour minimum', () => {
-    const events = [event('1', 'Dentist', '2026-08-25', span('10:00', '11:00'))];
-    expect(timelineHours(events)).toEqual({ from: 10, to: 13 });
+  it('expands before 8am for early events', () => {
+    const events = [event('1', 'Flight', '2026-08-25', span('05:00', '11:00'))];
+    expect(timelineHours(events)).toEqual({ from: 5, to: 24 });
   });
 
   it('counts a moment as one hour long', () => {
-    const events = [event('1', 'Dentist', '2026-08-25', moment('10:00'))];
-    expect(timelineHours(events)).toEqual({ from: 10, to: 13 });
+    const events = [event('1', 'Dentist', '2026-08-25', moment('07:00'))];
+    expect(timelineHours(events)).toEqual({ from: 7, to: 24 });
   });
 
   it('ignores all-day events when picking the range', () => {
     const events = [
       event('1', 'Penang', '2026-08-25', allDay()),
-      event('2', 'Dentist', '2026-08-25', span('10:00', '11:00')),
+      event('2', 'Dentist', '2026-08-25', span('06:00', '11:00')),
     ];
-    expect(timelineHours(events)).toEqual({ from: 10, to: 13 });
-  });
-
-  it('never runs past midnight', () => {
-    const events = [event('1', 'Late', '2026-08-25', span('22:00', '23:30'))];
-    expect(timelineHours(events)).toEqual({ from: 21, to: 24 });
+    expect(timelineHours(events)).toEqual({ from: 6, to: 24 });
   });
 });

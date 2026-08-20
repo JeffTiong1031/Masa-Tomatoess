@@ -3,9 +3,17 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LogOut, Menu, X } from 'lucide-react';
-import { ALL_LINKS, isActiveHref } from './navLinks';
+import { Home, LogOut, Menu, X } from 'lucide-react';
+import { ALL_LINKS, isActiveHref, isHubRoute } from './navLinks';
 import { accentVar } from '@/components/ui/PageShell';
+
+const CHIP_CLASS =
+  'fixed z-[60] inline-flex h-11 w-11 items-center justify-center rounded-full border border-[var(--mt-border)] bg-[var(--mt-surface)] text-[var(--mt-text)] shadow-[0_6px_18px_rgba(0,0,0,0.10)]';
+
+const CHIP_STYLE = {
+  top: 'calc(var(--mt-safe-top) + 1rem)',
+  left: 'calc(var(--mt-safe-left) + 1rem)',
+};
 
 export default function NavDrawer() {
   const [open, setOpen] = useState(false);
@@ -87,22 +95,27 @@ export default function NavDrawer() {
     panelRef.current?.querySelector<HTMLElement>('a[href]')?.focus();
   }, [open]);
 
+  const isHub = isHubRoute(pathname);
+
   return (
     <>
-      <button
-        ref={triggerRef}
-        type="button"
-        onClick={() => setOpen(true)}
-        aria-label="Open menu"
-        aria-expanded={open}
-        className="fixed z-[60] inline-flex h-11 w-11 items-center justify-center rounded-full border border-[var(--mt-border)] bg-[var(--mt-surface)] text-[var(--mt-text)] shadow-[0_6px_18px_rgba(0,0,0,0.10)]"
-        style={{
-          top: 'calc(var(--mt-safe-top) + 1rem)',
-          left: 'calc(var(--mt-safe-left) + 1rem)',
-        }}
-      >
-        <Menu size={20} strokeWidth={1.9} aria-hidden />
-      </button>
+      {isHub ? (
+        <button
+          ref={triggerRef}
+          type="button"
+          onClick={() => setOpen(true)}
+          aria-label="Open menu"
+          aria-expanded={open}
+          className={CHIP_CLASS}
+          style={CHIP_STYLE}
+        >
+          <Menu size={20} strokeWidth={1.9} aria-hidden />
+        </button>
+      ) : (
+        <Link href="/" aria-label="Home" className={CHIP_CLASS} style={CHIP_STYLE}>
+          <Home size={20} strokeWidth={1.9} aria-hidden />
+        </Link>
+      )}
 
       {open && (
         <div className="fixed inset-0 z-[70]">

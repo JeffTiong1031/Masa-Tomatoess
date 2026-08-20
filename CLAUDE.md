@@ -9,6 +9,19 @@ keeps working offline and the leaderboard reconciles later.
 
 Installable as a PWA. Launched locally through `PomodoroOS.vbs`.
 
+## How to explain things
+
+Write for Jeff in plain English. Everyday words first. If a technical
+name cannot be avoided (a file, a page path, a command), say what it
+does in ordinary language, then name it.
+
+- Explain what he will see and do, not the machinery behind it.
+- Do not lead with component names, function names, or CSS tokens unless
+  the question is about those.
+- When a term is needed, define it once in a short clause.
+- Keep the same voice in chat, summaries, and any other writing meant
+  for him. Code itself still follows the conventions below.
+
 ## Core tech stack
 
 | Area | Choice |
