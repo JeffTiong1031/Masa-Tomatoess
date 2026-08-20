@@ -77,6 +77,10 @@ export function isActiveHref(pathname: string, href: string): boolean {
     : pathname === href || pathname.startsWith(`${href}/`);
 }
 
+export function isHubRoute(pathname: string): boolean {
+  return pathname === '/';
+}
+
 /** Anywhere inside Study, including /study itself. */
 export function isStudyRoute(pathname: string): boolean {
   return isActiveHref(pathname, '/study');

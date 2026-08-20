@@ -7,6 +7,7 @@ import {
   STUDY_PANEL,
   isActiveHref,
   isFocusRoute,
+  isHubRoute,
   isStudyRoute,
 } from './navLinks';
 
@@ -105,6 +106,26 @@ describe('study panel', () => {
     expect(FOCUS_SEGMENTS.find((s) => s.href === '/study/timer')?.label).toBe(
       'Timer',
     );
+  });
+});
+
+describe('isHubRoute', () => {
+  it('is true only on /', () => {
+    expect(isHubRoute('/')).toBe(true);
+  });
+
+  it.each([
+    '/study',
+    '/study/timer',
+    '/study/flexible',
+    '/study/dashboard',
+    '/cycle',
+    '/countdown',
+    '/meals',
+    '/fitness',
+    '/finance',
+  ])('is false on %s', (path) => {
+    expect(isHubRoute(path)).toBe(false);
   });
 });
 

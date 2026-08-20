@@ -11,11 +11,13 @@ export default function EventBlock({
   event,
   category,
   isOwn,
+  className,
   onOpen,
 }: {
   event: CalendarEvent;
   category: Category | null;
   isOwn: boolean;
+  className?: string;
   onOpen: (event: CalendarEvent) => void;
 }) {
   const description = `${event.title}, ${timeLabel(event)}${
@@ -27,7 +29,7 @@ export default function EventBlock({
       type="button"
       onClick={() => onOpen(event)}
       aria-label={description}
-      className="flex min-h-11 w-full flex-col items-start justify-center rounded-xl px-3 py-2 text-left"
+      className={`flex min-h-11 w-full flex-col items-start justify-center rounded-xl px-3 py-2 text-left ${className ?? ''}`}
       style={{
         background: isOwn
           ? 'color-mix(in srgb, var(--mt-accent) 32%, var(--mt-surface))'

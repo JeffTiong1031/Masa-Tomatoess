@@ -52,19 +52,17 @@ export function occursOn(event: CalendarEvent, date: string): boolean {
 
 export function timelineHours(
   events: CalendarEvent[],
-): { from: number; to: number } | null {
+): { from: number; to: number } {
   const timed = events.filter((event) => event.timing.kind !== 'allDay');
-  if (timed.length === 0) return null;
+  
+  let from = 8;
+  let to = 24;
 
-  const starts = timed.map((event) => hourOf(startKey(event.timing)));
-  const ends = timed.map((event) => endHourOf(event.timing));
-
-  let from = Math.min(...starts);
-  let to = Math.max(...ends);
-
-  while (to - from < MIN_SPAN_HOURS) {
-    if (to < HOURS_IN_DAY) to += 1;
-    else from -= 1;
+  if (timed.length > 0) {
+    const starts = timed.map((event) => hourOf(startKey(event.timing)));
+    const ends = timed.map((event) => endHourOf(event.timing));
+    from = Math.min(from, ...starts);
+    to = Math.max(to, ...ends);
   }
 
   return { from, to };
