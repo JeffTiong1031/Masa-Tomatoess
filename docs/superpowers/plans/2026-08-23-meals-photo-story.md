@@ -1135,6 +1135,13 @@ export async function uploadPhoto(
 
   if (fullResult.error || thumbResult.error) {
     console.error('Failed to upload photo:', fullResult.error ?? thumbResult.error);
+
+    const orphans = [
+      ...(fullResult.error ? [] : [fullPath]),
+      ...(thumbResult.error ? [] : [thumbPath]),
+    ];
+    if (orphans.length > 0) await bucket.remove(orphans);
+
     return null;
   }
 
@@ -1198,9 +1205,11 @@ export async function deleteMeal(entry: MealEntry): Promise<boolean> {
   }
 
   if (entry.photo) {
-    await supabase.storage
+    const { error: storageError } = await supabase.storage
       .from(BUCKET)
       .remove([entry.photo.fullPath, entry.photo.thumbPath]);
+
+    if (storageError) console.error('Failed to remove meal photos:', storageError);
   }
 
   await markReviewStale(weekStart(entry.date), entry.owner);
