@@ -1957,8 +1957,8 @@ npm install @google/genai
 Create `src/app/api/meals/estimate/route.ts`:
 
 ```ts
-import { GoogleGenAI } from '@google/genai';
-import type { Estimate } from '@/lib/meals';
+import { GoogleGenAI, type Interactions } from '@google/genai';
+import type { Confidence, Estimate, MealSlot } from '@/lib/meals';
 
 const MODEL = 'gemini-3.7-flash';
 
@@ -1987,23 +1987,51 @@ Set confidence to "low" when the image is too dark, too partial, or is not food.
 A low-confidence answer is correct and useful; a confident guess at an
 unreadable photo is not.`;
 
+const SLOTS: MealSlot[] = ['breakfast', 'lunch', 'dinner', 'snack'];
+const CONFIDENCES: Confidence[] = ['high', 'medium', 'low'];
+
+function toEstimate(value: unknown): Estimate | null {
+  if (typeof value !== 'object' || value === null) return null;
+  const candidate = value as Record<string, unknown>;
+
+  const { dish, detail, calories, confidence } = candidate;
+  if (typeof dish !== 'string' || dish.trim() === '') return null;
+  if (typeof detail !== 'string') return null;
+  if (typeof calories !== 'number' || !Number.isFinite(calories) || calories < 0) return null;
+  if (typeof confidence !== 'string' || !CONFIDENCES.includes(confidence as Confidence)) return null;
+
+  return {
+    dish,
+    detail,
+    calories: Math.round(calories),
+    confidence: confidence as Confidence,
+  };
+}
+
 export async function POST(request: Request) {
   const key = process.env.GEMINI_API_KEY;
   if (!key) {
     return Response.json({ error: 'Estimator not configured' }, { status: 503 });
   }
 
-  const { image, text, slot } = await request.json();
-
-  const client = new GoogleGenAI({ apiKey: key });
-  const input = image
-    ? [
-        { type: 'text', text: `${SYSTEM}\n\nThis was eaten as ${slot}.` },
-        { type: 'image', mime_type: 'image/webp', data: image },
-      ]
-    : [{ type: 'text', text: `${SYSTEM}\n\nEaten as ${slot}: ${text}` }];
-
   try {
+    const { image, text, slot } = await request.json();
+
+    if (typeof slot !== 'string' || !SLOTS.includes(slot as MealSlot)) {
+      return Response.json({ error: 'Missing or invalid slot' }, { status: 400 });
+    }
+    if (typeof image !== 'string' && typeof text !== 'string') {
+      return Response.json({ error: 'Provide an image or a description' }, { status: 400 });
+    }
+
+    const client = new GoogleGenAI({ apiKey: key });
+    const input: Interactions.Content[] = image
+      ? [
+          { type: 'text', text: `${SYSTEM}\n\nThis was eaten as ${slot}.` },
+          { type: 'image', mime_type: 'image/webp', data: image },
+        ]
+      : [{ type: 'text', text: `${SYSTEM}\n\nEaten as ${slot}: ${text}` }];
+
     const interaction = await client.interactions.create({
       model: MODEL,
       input,
@@ -2014,7 +2042,16 @@ export async function POST(request: Request) {
       },
     });
 
-    return Response.json(JSON.parse(interaction.output_text) as Estimate);
+    if (!interaction.output_text) {
+      return Response.json({ error: 'Could not estimate' }, { status: 502 });
+    }
+
+    const estimate = toEstimate(JSON.parse(interaction.output_text));
+    if (!estimate) {
+      return Response.json({ error: 'Could not estimate' }, { status: 502 });
+    }
+
+    return Response.json(estimate);
   } catch (err) {
     console.error('Estimate failed:', err);
     return Response.json({ error: 'Could not estimate' }, { status: 502 });
