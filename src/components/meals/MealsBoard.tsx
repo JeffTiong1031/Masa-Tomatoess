@@ -82,20 +82,17 @@ export default function MealsBoard() {
     }
   }, [mounted]);
 
-  useEffect(() => {
-    if (owner === null) return;
-    void fetchReview(weekStart(todayISO()), owner).then(setReview);
-  }, [owner]);
-
   const load = useCallback(async () => {
     const [gridFrom, gridTo] = monthRange(month);
     const yesterday = addDays(mealDate(new Date()), -1);
-    const from = yesterday < gridFrom ? yesterday : gridFrom;
-    const to = yesterday > gridTo ? yesterday : gridTo;
+    const week = weekDates(weekStart(todayISO()));
+    const from = [gridFrom, yesterday, week[0]].reduce((a, b) => (b < a ? b : a));
+    const to = [gridTo, yesterday, week[week.length - 1]].reduce((a, b) => (b > a ? b : a));
     const [meals, sealed] = await Promise.all([fetchMeals(from, to), fetchDays(from, to)]);
     if (meals) setEntries(meals);
     if (sealed) setDays(sealed);
-  }, [month]);
+    if (owner !== null) setReview(await fetchReview(weekStart(todayISO()), owner));
+  }, [month, owner]);
 
   useEffect(() => {
     if (!mounted) return;

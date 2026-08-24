@@ -2726,6 +2726,11 @@ const load = useCallback(async () => {
 }, [month]);
 ```
 
+Task 15 generalises this same min/max again, to a third source: the current calendar
+week, which `WeekCard` and the review always read regardless of which month is browsed.
+Paging to a past month with the chevrons must not starve them of this week's dates. See
+Task 15 Step 2 for the final three-source `load`.
+
 - [ ] **Step 3: Decide when to show it**
 
 In `src/components/meals/MealsBoard.tsx`, add above the return:
@@ -2970,14 +2975,35 @@ const [review, setReview] = useState<MealReview | null>(null);
 const [reviewing, setReviewing] = useState(false);
 ```
 
-Load the stored review whenever the owner is known:
+Fetching the review once, keyed only on `[owner]`, is a trap: `updateMeal`, `insertMeal`
+and `deleteMeal` in `mealRepo.ts` all mark the stored review stale server-side and then
+call `onReload` → `load()`, but a `load` that never touches `review` leaves the client
+holding a cached `{ stale: false }` — so the "Reviewed" button keeps lying about a review
+that is now stale underneath it, the exact failure Correction 1 exists to prevent, just
+one layer down. There is no separate review effect. Instead, `load` (from Task 13, further
+widened here) fetches `review` itself, so every existing caller of `onReload` — edit,
+delete, gap-fill insert, seal — picks up the refresh for free:
 
 ```tsx
-useEffect(() => {
-  if (owner === null) return;
-  void fetchReview(weekStart(todayISO()), owner).then(setReview);
-}, [owner]);
+const load = useCallback(async () => {
+  const [gridFrom, gridTo] = monthRange(month);
+  const yesterday = addDays(mealDate(new Date()), -1);
+  const week = weekDates(weekStart(todayISO()));
+  const from = [gridFrom, yesterday, week[0]].reduce((a, b) => (b < a ? b : a));
+  const to = [gridTo, yesterday, week[week.length - 1]].reduce((a, b) => (b > a ? b : a));
+  const [meals, sealed] = await Promise.all([fetchMeals(from, to), fetchDays(from, to)]);
+  if (meals) setEntries(meals);
+  if (sealed) setDays(sealed);
+  if (owner !== null) setReview(await fetchReview(weekStart(todayISO()), owner));
+}, [month, owner]);
 ```
+
+`load` now depends on `owner` as well as `month`, so it gets a new identity the moment
+`owner` resolves from `localStorage` — which re-fires the existing `useEffect(() => {
+load(); }, [mounted, load])` and fetches the review for the first time without a second,
+owner-only effect. `load` does not depend on `entries`, `days` or `review`, so nothing it
+sets can change its own identity; calling it can never re-trigger that effect a second
+time on its own, which is what keeps this from looping.
 
 Add the handler:
 
