@@ -179,6 +179,7 @@ export default function MealsBoard() {
           date={selected}
           entries={entries.filter((entry) => entry.date === selected)}
           onClose={() => setSelected(null)}
+          onReload={load}
         />
       )}
 

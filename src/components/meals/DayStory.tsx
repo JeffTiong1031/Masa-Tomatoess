@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { X } from 'lucide-react';
 import { formatLongDate } from '@/lib/dates';
 import { USERS } from '@/lib/identity';
@@ -7,17 +8,21 @@ import { intakeFor } from '@/lib/mealDay';
 import { storyOrder } from '@/lib/mealStory';
 import { photoUrl } from '@/lib/mealRepo';
 import type { MealEntry } from '@/lib/meals';
+import MealEditor from './MealEditor';
 
 export default function DayStory({
   date,
   entries,
   onClose,
+  onReload,
 }: {
   date: string;
   entries: MealEntry[];
   onClose: () => void;
+  onReload: () => void;
 }) {
   const ordered = storyOrder(entries);
+  const [editing, setEditing] = useState<MealEntry | null>(null);
 
   return (
     <div className="fixed inset-0 z-40 overflow-y-auto bg-[var(--mt-bg)]">
@@ -61,7 +66,11 @@ export default function DayStory({
                 className="w-full rounded-2xl object-cover"
               />
             )}
-            <div className="mt-2">
+            <button
+              type="button"
+              onClick={() => setEditing(entry)}
+              className="mt-2 block min-h-11 w-full text-left"
+            >
               <div className="text-sm font-semibold text-[var(--mt-text)]">
                 {entry.dish}
               </div>
@@ -69,10 +78,20 @@ export default function DayStory({
                 {entry.atTime ?? entry.slot} · {entry.owner} ·{' '}
                 {entry.calories > 0 ? `${entry.calories} kcal` : 'not counted yet'}
               </div>
-            </div>
+            </button>
           </article>
         ))}
       </div>
+
+      {editing && (
+        <MealEditor
+          entry={editing}
+          onDone={() => {
+            setEditing(null);
+            onReload();
+          }}
+        />
+      )}
     </div>
   );
 }
