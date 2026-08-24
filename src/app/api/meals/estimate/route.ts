@@ -1,4 +1,5 @@
 import { GoogleGenAI, type Interactions } from '@google/genai';
+import { isRateLimited } from '@/lib/aiFailure';
 import type { Confidence, Estimate, MealSlot } from '@/lib/meals';
 
 const MODEL = 'gemini-3.7-flash';
@@ -110,6 +111,9 @@ export async function POST(request: Request) {
     return Response.json(estimate);
   } catch (err) {
     console.error('Estimate failed:', err);
+    if (isRateLimited(err)) {
+      return Response.json({ error: 'Out of readings for today' }, { status: 429 });
+    }
     return Response.json({ error: 'Could not estimate' }, { status: 502 });
   }
 }
