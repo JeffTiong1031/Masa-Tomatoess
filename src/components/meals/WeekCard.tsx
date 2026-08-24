@@ -1,7 +1,7 @@
 'use client';
 
 import Card from '@/components/ui/Card';
-import { formatShortDate, todayISO } from '@/lib/dates';
+import { formatShortDate } from '@/lib/dates';
 import { USERS, type UserName } from '@/lib/identity';
 import { sealedDates, weekDates, weekStart, weekTotals } from '@/lib/mealWeek';
 import type { MealDay, MealEntry } from '@/lib/meals';
@@ -10,6 +10,7 @@ export default function WeekCard({
   entries,
   days,
   owner,
+  today,
   onReview,
   reviewLabel,
   reviewDisabled,
@@ -17,11 +18,12 @@ export default function WeekCard({
   entries: MealEntry[];
   days: MealDay[];
   owner: UserName;
+  today: string;
   onReview: () => void;
   reviewLabel: string;
   reviewDisabled: boolean;
 }) {
-  const week = weekDates(weekStart(todayISO()));
+  const week = weekDates(weekStart(today));
   const mine = weekTotals(entries, sealedDates(days, week, owner), owner);
   const peak = Math.max(1, ...Object.values(mine.byDate));
 
@@ -58,7 +60,7 @@ export default function WeekCard({
                 className="w-full rounded-t"
                 style={{
                   height: `${(calories / peak) * 100}%`,
-                  background: 'var(--mt-accent-deep)',
+                  background: 'var(--mt-accent-meals-deep)',
                 }}
               />
             </div>
