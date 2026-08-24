@@ -28,6 +28,9 @@ Set confidence to "low" when the image is too dark, too partial, or is not food.
 A low-confidence answer is correct and useful; a confident guess at an
 unreadable photo is not.`;
 
+const MAX_IMAGE_CHARS = 1_048_576;
+const MAX_TEXT_CHARS = 500;
+
 const SLOTS: MealSlot[] = ['breakfast', 'lunch', 'dinner', 'snack'];
 const CONFIDENCES: Confidence[] = ['high', 'medium', 'low'];
 
@@ -67,6 +70,14 @@ export async function POST(request: Request) {
 
     if (!hasImage && !hasText) {
       return Response.json({ error: 'Provide an image or a description' }, { status: 400 });
+    }
+
+    if (hasImage && image.length > MAX_IMAGE_CHARS) {
+      return Response.json({ error: 'Image too large' }, { status: 413 });
+    }
+
+    if (hasText && text.length > MAX_TEXT_CHARS) {
+      return Response.json({ error: 'Description too long' }, { status: 413 });
     }
 
     const client = new GoogleGenAI({ apiKey: key });

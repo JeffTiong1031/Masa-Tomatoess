@@ -17,6 +17,8 @@ weight, or make any claim about health.
 
 Write under 150 words in plain prose. No headings, no bullet points.`;
 
+const MAX_MEALS = 50;
+
 interface ReviewMeal {
   date: string;
   slot: string;
@@ -45,7 +47,15 @@ export async function POST(request: Request) {
   try {
     const { meals, sealedCount } = await request.json();
 
-    if (!Array.isArray(meals) || meals.length === 0 || !meals.every(isReviewMeal)) {
+    if (!Array.isArray(meals) || meals.length === 0) {
+      return Response.json({ error: 'Missing or invalid meals' }, { status: 400 });
+    }
+
+    if (meals.length > MAX_MEALS) {
+      return Response.json({ error: 'Too many meals' }, { status: 413 });
+    }
+
+    if (!meals.every(isReviewMeal)) {
       return Response.json({ error: 'Missing or invalid meals' }, { status: 400 });
     }
 
