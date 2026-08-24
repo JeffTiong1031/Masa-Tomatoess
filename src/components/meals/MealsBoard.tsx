@@ -7,6 +7,11 @@ import { useHasMounted } from '@/hooks/useHasMounted';
 import { addDays, addMonths, formatMonthYear, monthOf } from '@/lib/dates';
 import { isUserName, type UserName } from '@/lib/identity';
 import { foodToday, slotForTime } from '@/lib/mealDay';
+import {
+  aiFailureForStatus,
+  estimateFailureMessage,
+  reviewFailureMessage,
+} from '@/lib/aiFailure';
 import { estimateForBlob } from '@/lib/mealEstimateRequest';
 import { mealFetchRange } from '@/lib/mealRange';
 import { resizeToPair } from '@/lib/mealImage';
@@ -114,12 +119,12 @@ export default function MealsBoard() {
         } else {
           await load();
           const settledEntry = settled[settled.length - 1];
-          const estimate = await estimateForBlob(full, settledEntry.slot);
-          if (estimate) {
-            setConfirming({ entry: settledEntry, estimate });
+          const result = await estimateForBlob(full, settledEntry.slot);
+          if (result.ok) {
+            setConfirming({ entry: settledEntry, estimate: result.estimate });
           } else {
             setNotice({
-              text: 'Photo saved. Open the day to add what it was.',
+              text: estimateFailureMessage(result.failure),
               tone: 'info',
             });
           }
@@ -154,9 +159,15 @@ export default function MealsBoard() {
         const { body } = await response.json();
         await saveReview(start, owner, body);
         setReview(await fetchReview(start, owner));
+      } else {
+        setNotice({
+          text: reviewFailureMessage(aiFailureForStatus(response.status)),
+          tone: 'error',
+        });
       }
     } catch (err) {
       console.error('Review request failed:', err);
+      setNotice({ text: reviewFailureMessage('failed'), tone: 'error' });
     }
 
     setReviewing(false);

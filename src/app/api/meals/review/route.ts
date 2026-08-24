@@ -1,4 +1,5 @@
 import { GoogleGenAI } from '@google/genai';
+import { isRateLimited } from '@/lib/aiFailure';
 
 const MODEL = 'gemini-3.7-flash';
 
@@ -91,6 +92,9 @@ ${lines}`;
     return Response.json({ body: interaction.output_text });
   } catch (err) {
     console.error('Review failed:', err);
+    if (isRateLimited(err)) {
+      return Response.json({ error: 'Out of readings for today' }, { status: 429 });
+    }
     return Response.json({ error: 'Could not review' }, { status: 502 });
   }
 }

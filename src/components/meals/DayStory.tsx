@@ -5,6 +5,7 @@ import { X } from 'lucide-react';
 import { formatLongDate } from '@/lib/dates';
 import { USERS } from '@/lib/identity';
 import { intakeFor } from '@/lib/mealDay';
+import { retryFailureMessage, type AiFailure } from '@/lib/aiFailure';
 import { estimateForStoredPhoto } from '@/lib/mealEstimateRequest';
 import { storyOrder } from '@/lib/mealStory';
 import { photoUrl } from '@/lib/mealRepo';
@@ -26,7 +27,7 @@ export default function DayStory({
   const ordered = storyOrder(entries);
   const [editing, setEditing] = useState<MealEntry | null>(null);
   const [estimating, setEstimating] = useState<string | null>(null);
-  const [failed, setFailed] = useState<string | null>(null);
+  const [failed, setFailed] = useState<{ id: string; failure: AiFailure } | null>(null);
   const [confirming, setConfirming] = useState<{
     entry: MealEntry;
     estimate: Estimate;
@@ -37,11 +38,11 @@ export default function DayStory({
     setFailed(null);
     const result = await estimateForStoredPhoto(photoUrl(photo.fullPath), entry.slot);
     setEstimating(null);
-    if (result === null) {
-      setFailed(entry.id);
+    if (!result.ok) {
+      setFailed({ id: entry.id, failure: result.failure });
       return;
     }
-    setConfirming({ entry, estimate: result });
+    setConfirming({ entry, estimate: result.estimate });
   }
 
   return (
@@ -114,9 +115,9 @@ export default function DayStory({
                 </button>
               )}
 
-              {failed === entry.id && (
+              {failed?.id === entry.id && (
                 <p className="text-xs text-[var(--mt-danger)]">
-                  Could not read that photo. Tap the caption to type it in.
+                  {retryFailureMessage(failed.failure)}
                 </p>
               )}
             </article>
