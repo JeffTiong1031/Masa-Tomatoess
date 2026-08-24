@@ -10,6 +10,7 @@ import { estimateForStoredPhoto } from '@/lib/mealEstimateRequest';
 import { storyOrder } from '@/lib/mealStory';
 import { deleteMeal, photoUrl } from '@/lib/mealRepo';
 import type { Estimate, MealEntry, MealPhoto } from '@/lib/meals';
+import Modal from '@/components/ui/Modal';
 import ConfirmCard from './ConfirmCard';
 import MealEditor from './MealEditor';
 
@@ -35,6 +36,8 @@ export default function DayStory({
   const [removing, setRemoving] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [removeFailed, setRemoveFailed] = useState<string | null>(null);
+
+  const pendingRemoval = ordered.find((entry) => entry.id === removing) ?? null;
 
   async function remove(entry: MealEntry) {
     setDeleting(entry.id);
@@ -63,7 +66,7 @@ export default function DayStory({
 
   return (
     <div className="fixed inset-0 z-40 overflow-y-auto bg-[var(--mt-bg)]">
-      <header className="sticky top-0 z-10 flex items-start justify-between gap-3 bg-[var(--mt-bg)] px-5 pb-3 pt-5">
+      <header className="sticky top-0 z-10 mx-auto flex max-w-2xl items-start justify-between gap-3 bg-[var(--mt-bg)] pb-3 pl-[calc(var(--mt-safe-left)+4.25rem)] pr-5 pt-5 md:pl-5">
         <div>
           <h2 className="text-lg font-semibold text-[var(--mt-text)]">
             {formatLongDate(date)}
@@ -86,7 +89,7 @@ export default function DayStory({
         </button>
       </header>
 
-      <div className="flex flex-col gap-5 px-5 pb-24">
+      <div className="mx-auto flex max-w-2xl flex-col gap-5 px-5 pb-24">
         {ordered.length === 0 && (
           <p className="text-sm text-[var(--mt-text-muted)]">
             Nothing photographed on this day.
@@ -99,18 +102,18 @@ export default function DayStory({
           return (
             <article key={entry.id}>
               {photo && (
-                <div className="relative">
+                <div className="relative mx-auto w-fit">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={photoUrl(photo.fullPath)}
                     alt={entry.dish}
-                    className="w-full rounded-2xl object-cover"
+                    className="block max-h-[70vh] w-auto max-w-full rounded-2xl"
                   />
                   <button
                     type="button"
                     onClick={() => {
                       setRemoveFailed(null);
-                      setRemoving(removing === entry.id ? null : entry.id);
+                      setRemoving(entry.id);
                     }}
                     aria-label={`Delete ${entry.dish}`}
                     className="absolute right-2 top-2 flex h-11 w-11 items-center justify-center rounded-full shadow-md"
@@ -148,43 +151,6 @@ export default function DayStory({
                 </button>
               )}
 
-              {removing === entry.id && (
-                <div
-                  className="mt-2 rounded-xl p-3"
-                  style={{ background: 'var(--mt-surface)' }}
-                >
-                  <p className="text-sm font-semibold text-[var(--mt-text)]">
-                    Delete this meal and its photo?
-                  </p>
-                  <p className="mt-1 text-xs text-[var(--mt-text-muted)]">
-                    This cannot be undone.
-                  </p>
-                  {removeFailed === entry.id && (
-                    <p className="mt-1 text-xs text-[var(--mt-danger)]">
-                      That did not go through. Try again.
-                    </p>
-                  )}
-                  <div className="mt-2 grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => remove(entry)}
-                      disabled={deleting !== null}
-                      className="min-h-11 rounded-xl text-sm font-semibold text-[var(--mt-danger)] disabled:opacity-50"
-                    >
-                      {deleting === entry.id ? 'Deleting…' : 'Delete'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setRemoving(null)}
-                      disabled={deleting !== null}
-                      className="min-h-11 rounded-xl text-sm font-semibold text-[var(--mt-text-muted)] disabled:opacity-50"
-                    >
-                      Keep
-                    </button>
-                  </div>
-                </div>
-              )}
-
               {failed?.id === entry.id && (
                 <p className="text-xs text-[var(--mt-danger)]">
                   {retryFailureMessage(failed.failure)}
@@ -204,6 +170,46 @@ export default function DayStory({
           }}
         />
       )}
+
+      <Modal
+        open={pendingRemoval !== null}
+        onClose={() => setRemoving(null)}
+        title="Delete this meal?"
+        maxWidthClass="max-w-sm"
+        footer={
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => setRemoving(null)}
+              disabled={deleting !== null}
+              className="min-h-11 rounded-xl text-sm font-semibold text-[var(--mt-text-muted)] disabled:opacity-50"
+            >
+              Keep
+            </button>
+            <button
+              type="button"
+              onClick={() => pendingRemoval && remove(pendingRemoval)}
+              disabled={deleting !== null}
+              className="min-h-11 rounded-xl text-sm font-semibold disabled:opacity-50"
+              style={{
+                background: 'var(--mt-danger)',
+                color: 'var(--mt-danger-contrast)',
+              }}
+            >
+              {deleting === null ? 'Delete' : 'Deleting…'}
+            </button>
+          </div>
+        }
+      >
+        <p className="text-sm text-[var(--mt-text)]">
+          {pendingRemoval?.dish} and its photo will be removed for good.
+        </p>
+        {removeFailed !== null && (
+          <p className="mt-2 text-sm text-[var(--mt-danger)]">
+            That did not go through. Try again.
+          </p>
+        )}
+      </Modal>
 
       {confirming && (
         <ConfirmCard
