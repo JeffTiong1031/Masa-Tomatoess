@@ -3,6 +3,7 @@ import {
   PORTION_LARGER,
   PORTION_SMALLER,
   needsManualEntry,
+  readCalories,
   scaleForPortion,
 } from './mealEstimate';
 
@@ -35,6 +36,30 @@ describe('scaleForPortion', () => {
 
   it('keeps zero at zero', () => {
     expect(scaleForPortion(0, 'larger')).toBe(0);
+  });
+});
+
+describe('readCalories', () => {
+  it('reads a plain number', () => {
+    expect(readCalories('620')).toBe(620);
+  });
+
+  it('rejects an empty field instead of reading it as zero', () => {
+    expect(readCalories('')).toBeNull();
+    expect(readCalories('   ')).toBeNull();
+  });
+
+  it('rejects text instead of reading it as NaN', () => {
+    expect(readCalories('abc')).toBeNull();
+  });
+
+  it('rejects zero and negatives', () => {
+    expect(readCalories('0')).toBeNull();
+    expect(readCalories('-200')).toBeNull();
+  });
+
+  it('rounds a fractional entry', () => {
+    expect(readCalories('620.6')).toBe(621);
   });
 });
 

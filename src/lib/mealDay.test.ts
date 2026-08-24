@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   dayTotal,
+  foodToday,
   intakeFor,
   isComplete,
   mealDate,
@@ -53,6 +54,29 @@ describe('mealDate', () => {
 
   it('files late evening under the current day', () => {
     expect(mealDate(at(23, 30))).toBe('2026-08-23');
+  });
+});
+
+describe('foodToday', () => {
+  it('still reads as yesterday at 1am', () => {
+    expect(foodToday(at(1))).toBe('2026-08-22');
+  });
+
+  it('keeps 3:59am on the previous day', () => {
+    expect(foodToday(at(3, 59))).toBe('2026-08-22');
+  });
+
+  it('rolls over at 4am exactly', () => {
+    expect(foodToday(at(4))).toBe('2026-08-23');
+  });
+
+  it('matches the calendar date through the rest of the day', () => {
+    expect(foodToday(at(12))).toBe('2026-08-23');
+    expect(foodToday(at(23, 59))).toBe('2026-08-23');
+  });
+
+  it('crosses a month boundary backwards', () => {
+    expect(foodToday(new Date(2026, 8, 1, 2))).toBe('2026-08-31');
   });
 });
 

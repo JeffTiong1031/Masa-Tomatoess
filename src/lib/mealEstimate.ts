@@ -16,3 +16,9 @@ export function scaleForPortion(calories: number, portion: Portion): number {
 export function needsManualEntry(confidence: Confidence): boolean {
   return confidence === 'low';
 }
+
+export function readCalories(value: string): number | null {
+  const parsed = Number(value.trim());
+  if (value.trim() === '' || !Number.isFinite(parsed) || parsed <= 0) return null;
+  return Math.round(parsed);
+}

@@ -3,6 +3,19 @@ export const THUMB_MAX_EDGE = 200;
 
 const WEBP_QUALITY = 0.82;
 
+const BASE64_CHUNK = 0x8000;
+
+export function toBase64(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+
+  for (let offset = 0; offset < bytes.length; offset += BASE64_CHUNK) {
+    binary += String.fromCharCode(...bytes.subarray(offset, offset + BASE64_CHUNK));
+  }
+
+  return btoa(binary);
+}
+
 export function fitWithin(
   width: number,
   height: number,

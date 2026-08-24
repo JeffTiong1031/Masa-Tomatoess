@@ -12,6 +12,10 @@ export function mealDate(at: Date): string {
   return todayISO(new Date(at.getTime() - DAY_BOUNDARY_HOUR * MS_PER_HOUR));
 }
 
+export function foodToday(now: Date = new Date()): string {
+  return mealDate(now);
+}
+
 export function slotForTime(at: Date): MealSlot {
   const hour = at.getHours();
   if (hour >= 4 && hour < 11) return 'breakfast';
