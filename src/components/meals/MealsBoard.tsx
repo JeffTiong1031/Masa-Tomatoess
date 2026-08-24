@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import Card from '@/components/ui/Card';
 import { useHasMounted } from '@/hooks/useHasMounted';
 import {
   addDays,
@@ -15,13 +16,15 @@ import { isUserName, type UserName } from '@/lib/identity';
 import { mealDate, slotForTime } from '@/lib/mealDay';
 import { resizeToPair } from '@/lib/mealImage';
 import { queueMeal, syncPendingMeals } from '@/lib/mealQueue';
-import { fetchDays, fetchMeals } from '@/lib/mealRepo';
-import type { Estimate, MealDay, MealEntry } from '@/lib/meals';
+import { fetchDays, fetchMeals, fetchReview, saveReview } from '@/lib/mealRepo';
+import { sealedDates, weekDates, weekStart } from '@/lib/mealWeek';
+import type { Estimate, MealDay, MealEntry, MealReview } from '@/lib/meals';
 import CameraButton from './CameraButton';
 import ConfirmCard from './ConfirmCard';
 import DayStory from './DayStory';
 import MealMonthGrid from './MealMonthGrid';
 import UnfinishedDayCard from './UnfinishedDayCard';
+import WeekCard from './WeekCard';
 
 function monthRange(month: string): [string, string] {
   const grid = monthGridDates(month);
@@ -68,6 +71,8 @@ export default function MealsBoard() {
   const [confirming, setConfirming] = useState<{ entry: MealEntry; estimate: Estimate } | null>(
     null,
   );
+  const [review, setReview] = useState<MealReview | null>(null);
+  const [reviewing, setReviewing] = useState(false);
 
   useEffect(() => {
     if (!mounted) return;
@@ -76,6 +81,11 @@ export default function MealsBoard() {
       queueMicrotask(() => setOwner(stored));
     }
   }, [mounted]);
+
+  useEffect(() => {
+    if (owner === null) return;
+    void fetchReview(weekStart(todayISO()), owner).then(setReview);
+  }, [owner]);
 
   const load = useCallback(async () => {
     const [gridFrom, gridTo] = monthRange(month);
@@ -137,6 +147,44 @@ export default function MealsBoard() {
     [owner, load],
   );
 
+  const runReview = useCallback(async () => {
+    if (owner === null || reviewing) return;
+    if (review && !review.stale) return;
+
+    setReviewing(true);
+    const week = weekDates(weekStart(todayISO()));
+    const sealed = sealedDates(days, week, owner);
+    const meals = entries
+      .filter((entry) => entry.owner === owner && sealed.includes(entry.date))
+      .map(({ date, slot, dish, calories }) => ({ date, slot, dish, calories }));
+
+    try {
+      const response = await fetch('/api/meals/review', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ meals, sealedCount: sealed.length }),
+      });
+      if (response.ok) {
+        const { body } = await response.json();
+        await saveReview(weekStart(todayISO()), owner, body);
+        setReview(await fetchReview(weekStart(todayISO()), owner));
+      }
+    } catch (err) {
+      console.error('Review request failed:', err);
+    }
+
+    setReviewing(false);
+  }, [owner, reviewing, review, days, entries]);
+
+  const reviewLabel = reviewing
+    ? 'Reading your week…'
+    : review?.stale
+      ? 'Refresh'
+      : review
+        ? 'Reviewed'
+        : 'Review my week';
+  const reviewDisabled = reviewing || (review !== null && !review.stale);
+
   const now = mounted ? new Date() : null;
   const yesterday = now === null ? null : addDays(mealDate(now), -1);
   const yesterdaySealed =
@@ -158,6 +206,28 @@ export default function MealsBoard() {
           entries={entries.filter((entry) => entry.date === yesterday && entry.owner === owner)}
           onReload={load}
         />
+      )}
+
+      {owner && (
+        <WeekCard
+          entries={entries}
+          days={days}
+          owner={owner}
+          onReview={runReview}
+          reviewLabel={reviewLabel}
+          reviewDisabled={reviewDisabled}
+        />
+      )}
+
+      {review && (
+        <Card className="mb-4">
+          <p className="whitespace-pre-wrap text-sm text-[var(--mt-text)]">{review.body}</p>
+          {review.stale && (
+            <p className="mt-2 text-xs text-[var(--mt-text-muted)]">
+              Out of date — a meal changed since this was written.
+            </p>
+          )}
+        </Card>
       )}
 
       <div className="mb-3 flex items-center justify-between">
