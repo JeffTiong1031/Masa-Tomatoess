@@ -1,7 +1,6 @@
 import { GoogleGenAI } from '@google/genai';
 import { isRateLimited } from '@/lib/aiFailure';
-
-const MODEL = 'gemini-3.7-flash';
+import { GEMINI_MODEL } from '@/lib/gemini';
 
 const SYSTEM = `You are reviewing one person's week of meals in Malaysia.
 
@@ -81,7 +80,7 @@ ${lines}`;
 
     const client = new GoogleGenAI({ apiKey: key });
     const interaction = await client.interactions.create({
-      model: MODEL,
+      model: GEMINI_MODEL,
       input: prompt,
     });
 
