@@ -16,6 +16,7 @@ import { queueMeal, syncPendingMeals } from '@/lib/mealQueue';
 import { fetchMeals } from '@/lib/mealRepo';
 import type { MealEntry } from '@/lib/meals';
 import CameraButton from './CameraButton';
+import DayStory from './DayStory';
 import MealMonthGrid from './MealMonthGrid';
 
 function monthRange(month: string): [string, string] {
@@ -134,6 +135,14 @@ export default function MealsBoard() {
       )}
 
       <CameraButton onCapture={capture} />
+
+      {selected && (
+        <DayStory
+          date={selected}
+          entries={entries.filter((entry) => entry.date === selected)}
+          onClose={() => setSelected(null)}
+        />
+      )}
     </>
   );
 }
