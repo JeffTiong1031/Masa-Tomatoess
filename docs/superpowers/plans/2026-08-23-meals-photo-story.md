@@ -2118,6 +2118,9 @@ const PORTION_LABEL: Record<Portion, string> = {
   larger: 'Larger',
 };
 
+const FIELD_CLASS =
+  'min-h-11 w-full rounded-xl border border-[var(--mt-border)] bg-[var(--mt-surface)] px-3 text-sm text-[var(--mt-text)]';
+
 export default function ConfirmCard({
   entry,
   estimate,
@@ -2129,12 +2132,20 @@ export default function ConfirmCard({
 }) {
   const unsure = needsManualEntry(estimate.confidence);
   const [dish, setDish] = useState(unsure ? '' : estimate.dish);
-  const [calories, setCalories] = useState(estimate.calories);
+  const [calories, setCalories] = useState<number | null>(
+    unsure ? null : estimate.calories,
+  );
   const [saving, setSaving] = useState(false);
 
+  const canSave = calories !== null && (!unsure || dish.trim() !== '');
+
   async function save() {
+    if (calories === null) return;
     setSaving(true);
-    await updateMeal(entry.id, { dish: dish.trim() || estimate.dish, calories });
+    await updateMeal(entry.id, {
+      dish: unsure ? dish.trim() : dish.trim() || estimate.dish,
+      calories,
+    });
     setSaving(false);
     onDone();
   }
@@ -2143,9 +2154,17 @@ export default function ConfirmCard({
     <div className="fixed inset-x-0 bottom-0 z-40 p-4">
       <Card>
         {unsure ? (
-          <p className="mb-3 text-sm font-semibold text-[var(--mt-text)]">
-            I can&apos;t tell what this is — what did you eat?
-          </p>
+          <>
+            <p className="mb-3 text-sm font-semibold text-[var(--mt-text)]">
+              I can&apos;t tell what this is — what did you eat?
+            </p>
+            <input
+              value={dish}
+              onChange={(event) => setDish(event.target.value)}
+              placeholder="Dish"
+              className={`mb-3 ${FIELD_CLASS}`}
+            />
+          </>
         ) : (
           <>
             <div className="text-base font-semibold text-[var(--mt-text)]">
@@ -2154,40 +2173,36 @@ export default function ConfirmCard({
             <div className="mb-3 text-xs text-[var(--mt-text-muted)]">
               {estimate.detail}
             </div>
+            <input
+              value={dish}
+              onChange={(event) => setDish(event.target.value)}
+              placeholder="Dish"
+              className={`mb-3 ${FIELD_CLASS}`}
+            />
+            <div className="mb-3 grid grid-cols-3 gap-2">
+              {PORTIONS.map((portion) => (
+                <button
+                  key={portion}
+                  type="button"
+                  onClick={() => setCalories(scaleForPortion(estimate.calories, portion))}
+                  className="min-h-11 rounded-xl text-xs font-semibold text-[var(--mt-text)]"
+                  style={{
+                    background:
+                      'color-mix(in srgb, var(--mt-accent) 30%, transparent)',
+                  }}
+                >
+                  {PORTION_LABEL[portion]}
+                </button>
+              ))}
+            </div>
           </>
-        )}
-
-        <input
-          value={dish}
-          onChange={(event) => setDish(event.target.value)}
-          placeholder="Dish"
-          className="mb-3 min-h-11 w-full rounded-xl border border-[var(--mt-border)] bg-[var(--mt-surface)] px-3 text-sm text-[var(--mt-text)]"
-        />
-
-        {!unsure && (
-          <div className="mb-3 grid grid-cols-3 gap-2">
-            {PORTIONS.map((portion) => (
-              <button
-                key={portion}
-                type="button"
-                onClick={() => setCalories(scaleForPortion(estimate.calories, portion))}
-                className="min-h-11 rounded-xl text-xs font-semibold text-[var(--mt-text)]"
-                style={{
-                  background:
-                    'color-mix(in srgb, var(--mt-accent) 30%, transparent)',
-                }}
-              >
-                {PORTION_LABEL[portion]}
-              </button>
-            ))}
-          </div>
         )}
 
         <div className="mb-3 flex items-center gap-2">
           <input
             type="number"
             inputMode="numeric"
-            value={calories}
+            value={calories ?? ''}
             onChange={(event) => setCalories(Number(event.target.value))}
             className="min-h-11 w-28 rounded-xl border border-[var(--mt-border)] bg-[var(--mt-surface)] px-3 text-sm text-[var(--mt-text)]"
           />
@@ -2197,7 +2212,7 @@ export default function ConfirmCard({
         <button
           type="button"
           onClick={save}
-          disabled={saving}
+          disabled={saving || !canSave}
           className="min-h-11 w-full rounded-xl text-sm font-semibold disabled:opacity-50"
           style={{
             background: 'var(--mt-accent)',

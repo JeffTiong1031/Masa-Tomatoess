@@ -28,12 +28,20 @@ export default function ConfirmCard({
 }) {
   const unsure = needsManualEntry(estimate.confidence);
   const [dish, setDish] = useState(unsure ? '' : estimate.dish);
-  const [calories, setCalories] = useState(estimate.calories);
+  const [calories, setCalories] = useState<number | null>(
+    unsure ? null : estimate.calories,
+  );
   const [saving, setSaving] = useState(false);
 
+  const canSave = calories !== null && (!unsure || dish.trim() !== '');
+
   async function save() {
+    if (calories === null) return;
     setSaving(true);
-    await updateMeal(entry.id, { dish: dish.trim() || estimate.dish, calories });
+    await updateMeal(entry.id, {
+      dish: unsure ? dish.trim() : dish.trim() || estimate.dish,
+      calories,
+    });
     setSaving(false);
     onDone();
   }
@@ -90,7 +98,7 @@ export default function ConfirmCard({
           <input
             type="number"
             inputMode="numeric"
-            value={calories}
+            value={calories ?? ''}
             onChange={(event) => setCalories(Number(event.target.value))}
             className="min-h-11 w-28 rounded-xl border border-[var(--mt-border)] bg-[var(--mt-surface)] px-3 text-sm text-[var(--mt-text)]"
           />
@@ -100,7 +108,7 @@ export default function ConfirmCard({
         <button
           type="button"
           onClick={save}
-          disabled={saving}
+          disabled={saving || !canSave}
           className="min-h-11 w-full rounded-xl text-sm font-semibold disabled:opacity-50"
           style={{
             background: 'var(--mt-accent)',
