@@ -1658,6 +1658,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import {
   addMonths,
   formatMonthYear,
+  monthGridDates,
   monthOf,
   todayISO,
 } from '@/lib/dates';
@@ -1671,8 +1672,18 @@ import CameraButton from './CameraButton';
 import MealMonthGrid from './MealMonthGrid';
 
 function monthRange(month: string): [string, string] {
-  return [`${month}-01`, `${addMonths(month, 1)}-01`];
+  const grid = monthGridDates(month);
+  return [grid[0], grid[grid.length - 1]];
 }
+```
+
+`MealMonthGrid` renders all 42 dates from `monthGridDates(month)` — including up to six
+trailing days of the previous month and several of the next, whenever the month does not
+start on a Monday. A `monthRange` of `${month}-01` to `${addMonths(month, 1)}-01` does not
+cover those squares, so they can never show a photo. Fetch the grid's own span instead of
+reconstructing a narrower one — it is the actual range the page can display.
+
+```tsx
 
 export default function MealsBoard() {
   const [month, setMonth] = useState(() => monthOf(todayISO()));
@@ -2559,7 +2570,17 @@ export default function UnfinishedDayCard({
   onReload: () => void;
 }) {
   const missing = missingSlots(entries);
-  const [slot, setSlot] = useState<MealSlot>(missing[0] ?? 'snack');
+```
+
+Do not initialise `slot` from `missing[0]` in a `useState` that never resyncs. Filing
+one meal shrinks `missing`, and a stored selection left pointing at the slot that was
+just filed silently mis-files the next one — nothing on screen shows it's stale.
+Derive `slot` every render instead, so a choice no longer in `missing` self-corrects
+without an effect:
+
+```tsx
+  const [chosen, setChosen] = useState<MealSlot | null>(null);
+  const slot = chosen !== null && missing.includes(chosen) ? chosen : missing[0] ?? 'snack';
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -2619,7 +2640,7 @@ export default function UnfinishedDayCard({
               <button
                 key={option}
                 type="button"
-                onClick={() => setSlot(option)}
+                onClick={() => setChosen(option)}
                 className="min-h-11 flex-1 rounded-xl text-[11px] font-semibold capitalize text-[var(--mt-text)]"
                 style={{
                   background:
@@ -2687,11 +2708,18 @@ import type { MealDay, MealEntry } from '@/lib/meals';
 const [days, setDays] = useState<MealDay[]>([]);
 ```
 
-and widen `load` to fetch both:
+and widen `load` to fetch both — plus explicitly cover yesterday, which the nudge below
+depends on. Even with Task 8's `monthRange` fixed to the grid's own span, yesterday is
+not always inside it: when a month starts on a Monday, `monthGridDates` starts on the 1st
+itself, so on the 1st of such a month yesterday falls in the previous month, outside the
+grid. Widen with an explicit min/max rather than assuming the grid already covers it:
 
 ```tsx
 const load = useCallback(async () => {
-  const [from, to] = monthRange(month);
+  const [gridFrom, gridTo] = monthRange(month);
+  const yesterday = addDays(mealDate(new Date()), -1);
+  const from = yesterday < gridFrom ? yesterday : gridFrom;
+  const to = yesterday > gridTo ? yesterday : gridTo;
   const [meals, sealed] = await Promise.all([fetchMeals(from, to), fetchDays(from, to)]);
   if (meals) setEntries(meals);
   if (sealed) setDays(sealed);

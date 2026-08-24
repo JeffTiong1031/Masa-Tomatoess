@@ -7,6 +7,7 @@ import {
   addDays,
   addMonths,
   formatMonthYear,
+  monthGridDates,
   monthOf,
   todayISO,
 } from '@/lib/dates';
@@ -23,7 +24,8 @@ import MealMonthGrid from './MealMonthGrid';
 import UnfinishedDayCard from './UnfinishedDayCard';
 
 function monthRange(month: string): [string, string] {
-  return [`${month}-01`, `${addMonths(month, 1)}-01`];
+  const grid = monthGridDates(month);
+  return [grid[0], grid[grid.length - 1]];
 }
 
 function toBase64(buffer: ArrayBuffer): string {
@@ -76,7 +78,10 @@ export default function MealsBoard() {
   }, [mounted]);
 
   const load = useCallback(async () => {
-    const [from, to] = monthRange(month);
+    const [gridFrom, gridTo] = monthRange(month);
+    const yesterday = addDays(mealDate(new Date()), -1);
+    const from = yesterday < gridFrom ? yesterday : gridFrom;
+    const to = yesterday > gridTo ? yesterday : gridTo;
     const [meals, sealed] = await Promise.all([fetchMeals(from, to), fetchDays(from, to)]);
     if (meals) setEntries(meals);
     if (sealed) setDays(sealed);

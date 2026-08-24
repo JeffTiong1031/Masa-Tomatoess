@@ -23,7 +23,8 @@ export default function UnfinishedDayCard({
   onReload: () => void;
 }) {
   const missing = missingSlots(entries);
-  const [slot, setSlot] = useState<MealSlot>(missing[0] ?? 'snack');
+  const [chosen, setChosen] = useState<MealSlot | null>(null);
+  const slot = chosen !== null && missing.includes(chosen) ? chosen : missing[0] ?? 'snack';
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -83,7 +84,7 @@ export default function UnfinishedDayCard({
               <button
                 key={option}
                 type="button"
-                onClick={() => setSlot(option)}
+                onClick={() => setChosen(option)}
                 className="min-h-11 flex-1 rounded-xl text-[11px] font-semibold capitalize text-[var(--mt-text)]"
                 style={{
                   background:
