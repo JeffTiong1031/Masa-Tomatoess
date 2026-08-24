@@ -4,20 +4,16 @@ import { useCallback, useEffect, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import { useHasMounted } from '@/hooks/useHasMounted';
-import {
-  addDays,
-  addMonths,
-  formatMonthYear,
-  monthGridDates,
-  monthOf,
-  todayISO,
-} from '@/lib/dates';
+import { addDays, addMonths, formatMonthYear, monthOf } from '@/lib/dates';
 import { isUserName, type UserName } from '@/lib/identity';
-import { mealDate, slotForTime } from '@/lib/mealDay';
+import { foodToday, slotForTime } from '@/lib/mealDay';
+import { estimateForBlob } from '@/lib/mealEstimateRequest';
+import { mealFetchRange } from '@/lib/mealRange';
 import { resizeToPair } from '@/lib/mealImage';
-import { queueMeal, syncPendingMeals } from '@/lib/mealQueue';
+import { allPending, queueMeal, syncPendingMeals } from '@/lib/mealQueue';
 import { fetchDays, fetchMeals, fetchReview, saveReview } from '@/lib/mealRepo';
 import { sealedDates, weekDates, weekStart } from '@/lib/mealWeek';
+import type { PendingMeal } from '@/db/db';
 import type { Estimate, MealDay, MealEntry, MealReview } from '@/lib/meals';
 import CameraButton from './CameraButton';
 import ConfirmCard from './ConfirmCard';
@@ -26,48 +22,15 @@ import MealMonthGrid from './MealMonthGrid';
 import UnfinishedDayCard from './UnfinishedDayCard';
 import WeekCard from './WeekCard';
 
-function monthRange(month: string): [string, string] {
-  const grid = monthGridDates(month);
-  return [grid[0], grid[grid.length - 1]];
-}
-
-function toBase64(buffer: ArrayBuffer): string {
-  const bytes = new Uint8Array(buffer);
-  const CHUNK = 0x8000;
-  let binary = '';
-
-  for (let offset = 0; offset < bytes.length; offset += CHUNK) {
-    binary += String.fromCharCode(...bytes.subarray(offset, offset + CHUNK));
-  }
-
-  return btoa(binary);
-}
-
-async function estimateFor(entry: MealEntry, full: Blob): Promise<Estimate | null> {
-  const buffer = await full.arrayBuffer();
-  const image = toBase64(buffer);
-
-  try {
-    const response = await fetch('/api/meals/estimate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ image, slot: entry.slot }),
-    });
-    if (!response.ok) return null;
-    return (await response.json()) as Estimate;
-  } catch {
-    return null;
-  }
-}
-
 export default function MealsBoard() {
   const mounted = useHasMounted();
-  const [month, setMonth] = useState(() => monthOf(todayISO()));
+  const [month, setMonth] = useState('');
   const [entries, setEntries] = useState<MealEntry[]>([]);
+  const [pending, setPending] = useState<PendingMeal[]>([]);
   const [days, setDays] = useState<MealDay[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
   const [owner, setOwner] = useState<UserName | null>(null);
-  const [captureError, setCaptureError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<{ text: string; tone: 'error' | 'info' } | null>(null);
   const [confirming, setConfirming] = useState<{ entry: MealEntry; estimate: Estimate } | null>(
     null,
   );
@@ -77,44 +40,55 @@ export default function MealsBoard() {
   useEffect(() => {
     if (!mounted) return;
     const stored = localStorage.getItem('user_name');
-    if (isUserName(stored)) {
-      queueMicrotask(() => setOwner(stored));
-    }
+    queueMicrotask(() => {
+      setMonth(monthOf(foodToday()));
+      if (isUserName(stored)) setOwner(stored);
+    });
   }, [mounted]);
 
+  useEffect(() => {
+    if (notice === null) return;
+    const timer = setTimeout(() => setNotice(null), 6000);
+    return () => clearTimeout(timer);
+  }, [notice]);
+
+  const readQueue = useCallback(async () => {
+    setPending(await allPending());
+  }, []);
+
   const load = useCallback(async () => {
-    const [gridFrom, gridTo] = monthRange(month);
-    const yesterday = addDays(mealDate(new Date()), -1);
-    const week = weekDates(weekStart(todayISO()));
-    const from = [gridFrom, yesterday, week[0]].reduce((a, b) => (b < a ? b : a));
-    const to = [gridTo, yesterday, week[week.length - 1]].reduce((a, b) => (b > a ? b : a));
+    if (month === '') return;
+    const now = foodToday();
+    const [from, to] = mealFetchRange(month, now);
     const [meals, sealed] = await Promise.all([fetchMeals(from, to), fetchDays(from, to)]);
     if (meals) setEntries(meals);
     if (sealed) setDays(sealed);
-    if (owner !== null) setReview(await fetchReview(weekStart(todayISO()), owner));
+    if (owner !== null) setReview(await fetchReview(weekStart(now), owner));
   }, [month, owner]);
 
   useEffect(() => {
     if (!mounted) return;
     queueMicrotask(() => {
       load();
+      readQueue();
     });
-  }, [mounted, load]);
+  }, [mounted, load, readQueue]);
 
   useEffect(() => {
     if (!mounted) return;
     queueMicrotask(() => {
-      syncPendingMeals().then((settled) => {
+      syncPendingMeals().then(async (settled) => {
+        await readQueue();
         if (settled.length > 0) load();
       });
     });
-  }, [mounted, load]);
+  }, [mounted, load, readQueue]);
 
   const capture = useCallback(
     async (file: File) => {
       if (owner === null) return;
 
-      setCaptureError(null);
+      setNotice(null);
 
       try {
         const now = new Date();
@@ -122,26 +96,40 @@ export default function MealsBoard() {
 
         await queueMeal({
           owner,
-          date: mealDate(now),
+          date: foodToday(now),
           atTime: `${now.getHours()}`.padStart(2, '0') + ':' + `${now.getMinutes()}`.padStart(2, '0'),
           slot: slotForTime(now),
           full,
           thumb,
         });
+        await readQueue();
 
         const settled = await syncPendingMeals();
-        if (settled.length > 0) {
+        await readQueue();
+        if (settled.length === 0) {
+          setNotice({
+            text: 'Saved on this phone. It will upload when you are back online.',
+            tone: 'info',
+          });
+        } else {
           await load();
           const settledEntry = settled[settled.length - 1];
-          const estimate = await estimateFor(settledEntry, full);
-          if (estimate) setConfirming({ entry: settledEntry, estimate });
+          const estimate = await estimateForBlob(full, settledEntry.slot);
+          if (estimate) {
+            setConfirming({ entry: settledEntry, estimate });
+          } else {
+            setNotice({
+              text: 'Photo saved. Open the day to add what it was.',
+              tone: 'info',
+            });
+          }
         }
       } catch (err) {
         console.error('Failed to save meal photo:', err);
-        setCaptureError('That photo did not save. Try again.');
+        setNotice({ text: 'That photo did not save. Try again.', tone: 'error' });
       }
     },
-    [owner, load],
+    [owner, load, readQueue],
   );
 
   const runReview = useCallback(async () => {
@@ -149,7 +137,8 @@ export default function MealsBoard() {
     if (review && !review.stale) return;
 
     setReviewing(true);
-    const week = weekDates(weekStart(todayISO()));
+    const start = weekStart(foodToday());
+    const week = weekDates(start);
     const sealed = sealedDates(days, week, owner);
     const meals = entries
       .filter((entry) => entry.owner === owner && sealed.includes(entry.date))
@@ -163,8 +152,8 @@ export default function MealsBoard() {
       });
       if (response.ok) {
         const { body } = await response.json();
-        await saveReview(weekStart(todayISO()), owner, body);
-        setReview(await fetchReview(weekStart(todayISO()), owner));
+        await saveReview(start, owner, body);
+        setReview(await fetchReview(start, owner));
       }
     } catch (err) {
       console.error('Review request failed:', err);
@@ -183,7 +172,8 @@ export default function MealsBoard() {
   const reviewDisabled = reviewing || (review !== null && !review.stale);
 
   const now = mounted ? new Date() : null;
-  const yesterday = now === null ? null : addDays(mealDate(now), -1);
+  const today = now === null ? '' : foodToday(now);
+  const yesterday = today === '' ? null : addDays(today, -1);
   const yesterdaySealed =
     yesterday !== null &&
     days.some((day) => day.date === yesterday && day.owner === owner && day.sealed);
@@ -205,11 +195,12 @@ export default function MealsBoard() {
         />
       )}
 
-      {owner && (
+      {owner && today !== '' && (
         <WeekCard
           entries={entries}
           days={days}
           owner={owner}
+          today={today}
           onReview={runReview}
           reviewLabel={reviewLabel}
           reviewDisabled={reviewDisabled}
@@ -227,45 +218,54 @@ export default function MealsBoard() {
         </Card>
       )}
 
-      <div className="mb-3 flex items-center justify-between">
-        <button
-          type="button"
-          onClick={() => setMonth(addMonths(month, -1))}
-          className="flex h-11 w-11 items-center justify-center rounded-xl text-[var(--mt-text-muted)]"
-          aria-label="Previous month"
-        >
-          <ChevronLeft size={18} />
-        </button>
-        <span className="text-sm font-semibold text-[var(--mt-text)]">
-          {formatMonthYear(month)}
-        </span>
-        <button
-          type="button"
-          onClick={() => setMonth(addMonths(month, 1))}
-          className="flex h-11 w-11 items-center justify-center rounded-xl text-[var(--mt-text-muted)]"
-          aria-label="Next month"
-        >
-          <ChevronRight size={18} />
-        </button>
-      </div>
+      {month !== '' && (
+        <>
+          <div className="mb-3 flex items-center justify-between">
+            <button
+              type="button"
+              onClick={() => setMonth(addMonths(month, -1))}
+              className="flex h-11 w-11 items-center justify-center rounded-xl text-[var(--mt-text-muted)]"
+              aria-label="Previous month"
+            >
+              <ChevronLeft size={18} />
+            </button>
+            <span className="text-sm font-semibold text-[var(--mt-text)]">
+              {formatMonthYear(month)}
+            </span>
+            <button
+              type="button"
+              onClick={() => setMonth(addMonths(month, 1))}
+              className="flex h-11 w-11 items-center justify-center rounded-xl text-[var(--mt-text-muted)]"
+              aria-label="Next month"
+            >
+              <ChevronRight size={18} />
+            </button>
+          </div>
 
-      <MealMonthGrid
-        month={month}
-        entries={entries}
-        selected={selected}
-        onSelect={setSelected}
-      />
+          <MealMonthGrid
+            month={month}
+            entries={entries}
+            pending={pending}
+            today={today}
+            selected={selected}
+            onSelect={setSelected}
+          />
+        </>
+      )}
 
-      {captureError && (
+      {notice && (
         <div
-          role="alert"
+          role={notice.tone === 'error' ? 'alert' : 'status'}
           className="fixed bottom-44 right-5 z-30 max-w-[220px] rounded-xl px-3 py-2 text-xs font-medium shadow-lg"
           style={{
-            background: 'var(--mt-danger)',
-            color: 'var(--mt-danger-contrast)',
+            background: notice.tone === 'error' ? 'var(--mt-danger)' : 'var(--mt-accent)',
+            color:
+              notice.tone === 'error'
+                ? 'var(--mt-danger-contrast)'
+                : 'var(--mt-accent-contrast)',
           }}
         >
-          {captureError}
+          {notice.text}
         </div>
       )}
 
