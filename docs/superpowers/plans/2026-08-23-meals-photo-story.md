@@ -1352,7 +1352,7 @@ git commit -m "feat(meals): add the Supabase repository and record its schema"
 
 **Interfaces:**
 - Consumes: `db` from `src/db/db.ts`; `uploadPhoto`, `insertMeal` from `src/lib/mealRepo.ts`; `MealSlot`, `MealEntry` from `src/lib/meals.ts`.
-- Produces: `PendingMeal` interface; `queueMeal(input: QueuedInput): Promise<number>`, `pendingFor(date: string): Promise<PendingMeal[]>`, `syncPendingMeals(): Promise<MealEntry[]>`.
+- Produces: `PendingMeal` interface; `queueMeal(input: QueuedInput): Promise<number>`, `allPending(): Promise<PendingMeal[]>`, `syncPendingMeals(): Promise<MealEntry[]>`.
 
 A capture writes here first so a photo appears in today's square with no network at all. This mirrors `sessionSync.ts` — local write first, reconcile after.
 
@@ -1421,9 +1421,9 @@ export async function queueMeal(input: QueuedInput): Promise<number> {
   return db.pendingMeals.add({ ...input, createdAt: Date.now() });
 }
 
-export async function pendingFor(date: string): Promise<PendingMeal[]> {
+export async function allPending(): Promise<PendingMeal[]> {
   try {
-    return await db.pendingMeals.where('date').equals(date).toArray();
+    return await db.pendingMeals.toArray();
   } catch (err) {
     console.error('Failed to read pending meals:', err);
     return [];
@@ -2329,7 +2329,7 @@ git commit -m "feat(meals): confirm or correct the estimate before it is counted
 - Consumes: `updateMeal`, `deleteMeal` from `src/lib/mealRepo.ts`; `MealEntry`, `MealSlot` from `src/lib/meals.ts`.
 - Produces: `MealEditor` taking `{ entry, onDone }`.
 
-Editing never re-runs the estimator — the user is overruling it, not asking again. Both `updateMeal` and `deleteMeal` already mark the week's review stale inside the repository, so nothing here needs to.
+Editing never re-runs the estimator — the user is overruling it, not asking again. `insertMeal`, `updateMeal`, `deleteMeal` and `sealDay` all mark the week's review stale inside the repository, so nothing here needs to. Sealing counts: an unsealed day contributes nothing to the week and a sealed one contributes everything, so it is the largest change a week's totals can take.
 
 - [ ] **Step 1: Write the editor**
 
@@ -2789,7 +2789,7 @@ git commit -m "feat(meals): nudge an unfinished day and let it be filled by typi
 - Consumes: `weekStart`, `weekDates`, `sealedDates`, `weekTotals` from `src/lib/mealWeek.ts`; `USERS` from `src/lib/identity.ts`; `todayISO`, `formatShortDate` from `src/lib/dates.ts`.
 - Produces: `WeekCard` taking `{ entries, days, owner, onReview, reviewLabel }`.
 
-The accent is a pastel and fails contrast as ink, so the bars use `--mt-accent-deep`, which already exists in `globals.css` for exactly this. Do not use `--mt-accent` for a bar fill and do not add a new token.
+The accent is a pastel and fails contrast as ink, so the bars need a deeper sibling of the *meals* accent. `--mt-accent-deep` is not it: `globals.css` defines that token once per mood as `var(--mac-accent-calendar-deep)`, a muted purple, so using it on `/meals` renders the bars in the calendar's colour. Add `--mac-accent-meals-deep` beside `--mac-accent-calendar-deep`, wire it to a semantic `--mt-accent-meals-deep` in both mood blocks, and use that for the bar fill. Pin the hue and its contrast in a test, the way `calendarContrast.test.ts` pins the calendar's. Do not use `--mt-accent` for a bar fill.
 
 - [ ] **Step 1: Write the card**
 
@@ -2847,7 +2847,7 @@ export default function WeekCard({
               className="w-full rounded-t"
               style={{
                 height: `${((mine.byDate[date] ?? 0) / peak) * 100}%`,
-                background: 'var(--mt-accent-deep)',
+                background: 'var(--mt-accent-meals-deep)',
               }}
             />
           </div>
@@ -3109,5 +3109,5 @@ Write `docs/superpowers/verification/2026-08-23-meals.md` as the final step, fol
 - Typed gap-fill meal lands on yesterday, not today
 - Sealing removes the card and the day joins the week total
 - Review names real dishes and the right day count
-- Editing a meal marks the review stale
+- Editing a meal marks the review stale, and so does sealing a day
 - No text is rendered directly over any photograph
