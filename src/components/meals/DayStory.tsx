@@ -1,14 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import { X } from 'lucide-react';
+import { Trash2, X } from 'lucide-react';
 import { formatLongDate } from '@/lib/dates';
 import { USERS } from '@/lib/identity';
 import { intakeFor } from '@/lib/mealDay';
 import { retryFailureMessage, type AiFailure } from '@/lib/aiFailure';
 import { estimateForStoredPhoto } from '@/lib/mealEstimateRequest';
 import { storyOrder } from '@/lib/mealStory';
-import { photoUrl } from '@/lib/mealRepo';
+import { deleteMeal, photoUrl } from '@/lib/mealRepo';
 import type { Estimate, MealEntry, MealPhoto } from '@/lib/meals';
 import ConfirmCard from './ConfirmCard';
 import MealEditor from './MealEditor';
@@ -32,6 +32,22 @@ export default function DayStory({
     entry: MealEntry;
     estimate: Estimate;
   } | null>(null);
+  const [removing, setRemoving] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<string | null>(null);
+  const [removeFailed, setRemoveFailed] = useState<string | null>(null);
+
+  async function remove(entry: MealEntry) {
+    setDeleting(entry.id);
+    setRemoveFailed(null);
+    const removed = await deleteMeal(entry);
+    setDeleting(null);
+    if (!removed) {
+      setRemoveFailed(entry.id);
+      return;
+    }
+    setRemoving(null);
+    onReload();
+  }
 
   async function estimate(entry: MealEntry, photo: MealPhoto) {
     setEstimating(entry.id);
@@ -83,12 +99,29 @@ export default function DayStory({
           return (
             <article key={entry.id}>
               {photo && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={photoUrl(photo.fullPath)}
-                  alt={entry.dish}
-                  className="w-full rounded-2xl object-cover"
-                />
+                <div className="relative">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={photoUrl(photo.fullPath)}
+                    alt={entry.dish}
+                    className="w-full rounded-2xl object-cover"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRemoveFailed(null);
+                      setRemoving(removing === entry.id ? null : entry.id);
+                    }}
+                    aria-label={`Delete ${entry.dish}`}
+                    className="absolute right-2 top-2 flex h-11 w-11 items-center justify-center rounded-full shadow-md"
+                    style={{
+                      background: 'var(--mt-surface)',
+                      color: 'var(--mt-danger)',
+                    }}
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                </div>
               )}
               <button
                 type="button"
@@ -113,6 +146,43 @@ export default function DayStory({
                 >
                   {estimating === entry.id ? 'Reading the photo…' : 'Tap to estimate'}
                 </button>
+              )}
+
+              {removing === entry.id && (
+                <div
+                  className="mt-2 rounded-xl p-3"
+                  style={{ background: 'var(--mt-surface)' }}
+                >
+                  <p className="text-sm font-semibold text-[var(--mt-text)]">
+                    Delete this meal and its photo?
+                  </p>
+                  <p className="mt-1 text-xs text-[var(--mt-text-muted)]">
+                    This cannot be undone.
+                  </p>
+                  {removeFailed === entry.id && (
+                    <p className="mt-1 text-xs text-[var(--mt-danger)]">
+                      That did not go through. Try again.
+                    </p>
+                  )}
+                  <div className="mt-2 grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => remove(entry)}
+                      disabled={deleting !== null}
+                      className="min-h-11 rounded-xl text-sm font-semibold text-[var(--mt-danger)] disabled:opacity-50"
+                    >
+                      {deleting === entry.id ? 'Deleting…' : 'Delete'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setRemoving(null)}
+                      disabled={deleting !== null}
+                      className="min-h-11 rounded-xl text-sm font-semibold text-[var(--mt-text-muted)] disabled:opacity-50"
+                    >
+                      Keep
+                    </button>
+                  </div>
+                </div>
               )}
 
               {failed?.id === entry.id && (
