@@ -54,3 +54,15 @@ create policy "anon reads meal_reviews"
   on meal_reviews for select to anon using (true);
 create policy "anon writes meal_reviews"
   on meal_reviews for all to anon using (true) with check (true);
+
+create policy "anon uploads meal photos"
+  on storage.objects for insert to anon
+  with check (bucket_id = 'meal-photos');
+
+create policy "anon reads meal photos"
+  on storage.objects for select to anon
+  using (bucket_id = 'meal-photos');
+
+create policy "anon deletes meal photos"
+  on storage.objects for delete to anon
+  using (bucket_id = 'meal-photos');
