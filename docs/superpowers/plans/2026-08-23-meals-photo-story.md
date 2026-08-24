@@ -2020,12 +2020,16 @@ export async function POST(request: Request) {
     if (typeof slot !== 'string' || !SLOTS.includes(slot as MealSlot)) {
       return Response.json({ error: 'Missing or invalid slot' }, { status: 400 });
     }
-    if (typeof image !== 'string' && typeof text !== 'string') {
+
+    const hasImage = typeof image === 'string' && image.length > 0;
+    const hasText = typeof text === 'string' && text.trim().length > 0;
+
+    if (!hasImage && !hasText) {
       return Response.json({ error: 'Provide an image or a description' }, { status: 400 });
     }
 
     const client = new GoogleGenAI({ apiKey: key });
-    const input: Interactions.Content[] = image
+    const input: Interactions.Content[] = hasImage
       ? [
           { type: 'text', text: `${SYSTEM}\n\nThis was eaten as ${slot}.` },
           { type: 'image', mime_type: 'image/webp', data: image },
