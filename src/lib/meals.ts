@@ -40,7 +40,7 @@ export interface MealReview {
 export interface WeekTotals {
   byDate: Record<string, number>;
   total: number;
-  sealedCount: number;
+  dayCount: number;
 }
 
 export interface Estimate {

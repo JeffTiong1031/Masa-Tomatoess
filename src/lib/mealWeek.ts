@@ -23,11 +23,11 @@ export function sealedDates(
 
 export function weekTotals(
   entries: MealEntry[],
-  sealed: string[],
+  dates: string[],
   owner: UserName,
 ): WeekTotals {
   const byDate: Record<string, number> = {};
-  for (const date of sealed) byDate[date] = 0;
+  for (const date of dates) byDate[date] = 0;
 
   for (const entry of entries) {
     if (entry.owner === owner && entry.date in byDate) {
@@ -35,9 +35,11 @@ export function weekTotals(
     }
   }
 
+  const eaten = Object.values(byDate).filter((value) => value > 0);
+
   return {
     byDate,
-    total: Object.values(byDate).reduce((sum, value) => sum + value, 0),
-    sealedCount: sealed.length,
+    total: eaten.reduce((sum, value) => sum + value, 0),
+    dayCount: eaten.length,
   };
 }

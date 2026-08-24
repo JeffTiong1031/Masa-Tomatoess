@@ -209,7 +209,6 @@ export default function MealsBoard() {
       {owner && today !== '' && (
         <WeekCard
           entries={entries}
-          days={days}
           owner={owner}
           today={today}
           onReview={runReview}
