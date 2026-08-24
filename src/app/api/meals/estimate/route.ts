@@ -1,8 +1,7 @@
 import { GoogleGenAI, type Interactions } from '@google/genai';
 import { isRateLimited } from '@/lib/aiFailure';
+import { GEMINI_MODEL } from '@/lib/gemini';
 import type { Confidence, Estimate, MealSlot } from '@/lib/meals';
-
-const MODEL = 'gemini-3.7-flash';
 
 const SCHEMA = {
   type: 'object',
@@ -90,7 +89,7 @@ export async function POST(request: Request) {
       : [{ type: 'text', text: `${SYSTEM}\n\nEaten as ${slot}: ${text}` }];
 
     const interaction = await client.interactions.create({
-      model: MODEL,
+      model: GEMINI_MODEL,
       input,
       response_format: {
         type: 'text',
