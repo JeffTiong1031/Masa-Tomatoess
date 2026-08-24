@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Card from '@/components/ui/Card';
+import { readCalories } from '@/lib/mealEstimate';
 import { deleteMeal, updateMeal } from '@/lib/mealRepo';
 import type { MealEntry, MealSlot } from '@/lib/meals';
 
@@ -18,21 +19,37 @@ export default function MealEditor({
   onDone: () => void;
 }) {
   const [dish, setDish] = useState(entry.dish);
-  const [calories, setCalories] = useState(entry.calories);
+  const [calories, setCalories] = useState<number | null>(
+    entry.calories > 0 ? entry.calories : null,
+  );
   const [slot, setSlot] = useState(entry.slot);
   const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
+
+  const canSave = dish.trim() !== '' && calories !== null;
 
   async function save() {
+    if (calories === null) return;
     setBusy(true);
-    await updateMeal(entry.id, { dish: dish.trim(), calories, slot });
+    setFailed(false);
+    const saved = await updateMeal(entry.id, { dish: dish.trim(), calories, slot });
     setBusy(false);
+    if (saved === null) {
+      setFailed(true);
+      return;
+    }
     onDone();
   }
 
   async function remove() {
     setBusy(true);
-    await deleteMeal(entry);
+    setFailed(false);
+    const removed = await deleteMeal(entry);
     setBusy(false);
+    if (!removed) {
+      setFailed(true);
+      return;
+    }
     onDone();
   }
 
@@ -69,12 +86,18 @@ export default function MealEditor({
           <input
             type="number"
             inputMode="numeric"
-            value={calories}
-            onChange={(event) => setCalories(Number(event.target.value))}
+            value={calories ?? ''}
+            onChange={(event) => setCalories(readCalories(event.target.value))}
             className="min-h-11 w-28 rounded-xl border border-[var(--mt-border)] bg-[var(--mt-surface)] px-3 text-sm text-[var(--mt-text)]"
           />
           <span className="text-sm text-[var(--mt-text-muted)]">kcal</span>
         </div>
+
+        {failed && (
+          <p className="mb-3 text-xs text-[var(--mt-danger)]">
+            That did not go through. Try again.
+          </p>
+        )}
 
         <div className="grid grid-cols-3 gap-2">
           <button
@@ -96,7 +119,7 @@ export default function MealEditor({
           <button
             type="button"
             onClick={save}
-            disabled={busy}
+            disabled={busy || !canSave}
             className="min-h-11 rounded-xl text-sm font-semibold disabled:opacity-50"
             style={{
               background: 'var(--mt-accent)',

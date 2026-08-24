@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 import Card from '@/components/ui/Card';
-import { needsManualEntry, scaleForPortion } from '@/lib/mealEstimate';
-import { updateMeal } from '@/lib/mealRepo';
+import { needsManualEntry, readCalories, scaleForPortion } from '@/lib/mealEstimate';
+import { deleteMeal, updateMeal } from '@/lib/mealRepo';
 import type { Estimate, MealEntry, Portion } from '@/lib/meals';
 
 const FIELD_CLASS =
@@ -31,18 +31,36 @@ export default function ConfirmCard({
   const [calories, setCalories] = useState<number | null>(
     unsure ? null : estimate.calories,
   );
-  const [saving, setSaving] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
 
   const canSave = calories !== null && (!unsure || dish.trim() !== '');
 
   async function save() {
     if (calories === null) return;
-    setSaving(true);
-    await updateMeal(entry.id, {
+    setBusy(true);
+    setFailed(false);
+    const saved = await updateMeal(entry.id, {
       dish: unsure ? dish.trim() : dish.trim() || estimate.dish,
       calories,
     });
-    setSaving(false);
+    setBusy(false);
+    if (saved === null) {
+      setFailed(true);
+      return;
+    }
+    onDone();
+  }
+
+  async function discard() {
+    setBusy(true);
+    setFailed(false);
+    const removed = await deleteMeal(entry);
+    setBusy(false);
+    if (!removed) {
+      setFailed(true);
+      return;
+    }
     onDone();
   }
 
@@ -99,24 +117,48 @@ export default function ConfirmCard({
             type="number"
             inputMode="numeric"
             value={calories ?? ''}
-            onChange={(event) => setCalories(Number(event.target.value))}
+            onChange={(event) => setCalories(readCalories(event.target.value))}
             className="min-h-11 w-28 rounded-xl border border-[var(--mt-border)] bg-[var(--mt-surface)] px-3 text-sm text-[var(--mt-text)]"
           />
           <span className="text-sm text-[var(--mt-text-muted)]">kcal</span>
         </div>
 
-        <button
-          type="button"
-          onClick={save}
-          disabled={saving || !canSave}
-          className="min-h-11 w-full rounded-xl text-sm font-semibold disabled:opacity-50"
-          style={{
-            background: 'var(--mt-accent)',
-            color: 'var(--mt-accent-contrast)',
-          }}
-        >
-          {saving ? 'Saving…' : 'Save'}
-        </button>
+        {failed && (
+          <p className="mb-3 text-xs text-[var(--mt-danger)]">
+            That did not go through. Try again.
+          </p>
+        )}
+
+        <div className="grid grid-cols-3 gap-2">
+          <button
+            type="button"
+            onClick={discard}
+            disabled={busy}
+            className="min-h-11 rounded-xl text-sm font-semibold text-[var(--mt-danger)] disabled:opacity-50"
+          >
+            Discard
+          </button>
+          <button
+            type="button"
+            onClick={onDone}
+            disabled={busy}
+            className="min-h-11 rounded-xl text-sm font-semibold text-[var(--mt-text-muted)] disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={save}
+            disabled={busy || !canSave}
+            className="min-h-11 rounded-xl text-sm font-semibold disabled:opacity-50"
+            style={{
+              background: 'var(--mt-accent)',
+              color: 'var(--mt-accent-contrast)',
+            }}
+          >
+            {busy ? 'Saving…' : 'Save'}
+          </button>
+        </div>
       </Card>
     </div>
   );

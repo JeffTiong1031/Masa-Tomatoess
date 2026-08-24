@@ -5,9 +5,11 @@ import { X } from 'lucide-react';
 import { formatLongDate } from '@/lib/dates';
 import { USERS } from '@/lib/identity';
 import { intakeFor } from '@/lib/mealDay';
+import { estimateForStoredPhoto } from '@/lib/mealEstimateRequest';
 import { storyOrder } from '@/lib/mealStory';
 import { photoUrl } from '@/lib/mealRepo';
-import type { MealEntry } from '@/lib/meals';
+import type { Estimate, MealEntry, MealPhoto } from '@/lib/meals';
+import ConfirmCard from './ConfirmCard';
 import MealEditor from './MealEditor';
 
 export default function DayStory({
@@ -23,6 +25,24 @@ export default function DayStory({
 }) {
   const ordered = storyOrder(entries);
   const [editing, setEditing] = useState<MealEntry | null>(null);
+  const [estimating, setEstimating] = useState<string | null>(null);
+  const [failed, setFailed] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState<{
+    entry: MealEntry;
+    estimate: Estimate;
+  } | null>(null);
+
+  async function estimate(entry: MealEntry, photo: MealPhoto) {
+    setEstimating(entry.id);
+    setFailed(null);
+    const result = await estimateForStoredPhoto(photoUrl(photo.fullPath), entry.slot);
+    setEstimating(null);
+    if (result === null) {
+      setFailed(entry.id);
+      return;
+    }
+    setConfirming({ entry, estimate: result });
+  }
 
   return (
     <div className="fixed inset-0 z-40 overflow-y-auto bg-[var(--mt-bg)]">
@@ -56,31 +76,52 @@ export default function DayStory({
           </p>
         )}
 
-        {ordered.map((entry) => (
-          <article key={entry.id}>
-            {entry.photo && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={photoUrl(entry.photo.fullPath)}
-                alt={entry.dish}
-                className="w-full rounded-2xl object-cover"
-              />
-            )}
-            <button
-              type="button"
-              onClick={() => setEditing(entry)}
-              className="mt-2 block min-h-11 w-full text-left"
-            >
-              <div className="text-sm font-semibold text-[var(--mt-text)]">
-                {entry.dish}
-              </div>
-              <div className="text-xs text-[var(--mt-text-muted)]">
-                {entry.atTime ?? entry.slot} · {entry.owner} ·{' '}
-                {entry.calories > 0 ? `${entry.calories} kcal` : 'not counted yet'}
-              </div>
-            </button>
-          </article>
-        ))}
+        {ordered.map((entry) => {
+          const photo = entry.photo;
+
+          return (
+            <article key={entry.id}>
+              {photo && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={photoUrl(photo.fullPath)}
+                  alt={entry.dish}
+                  className="w-full rounded-2xl object-cover"
+                />
+              )}
+              <button
+                type="button"
+                onClick={() => setEditing(entry)}
+                className="mt-2 block min-h-11 w-full text-left"
+              >
+                <div className="text-sm font-semibold text-[var(--mt-text)]">
+                  {entry.dish}
+                </div>
+                <div className="text-xs text-[var(--mt-text-muted)]">
+                  {entry.atTime ?? entry.slot} · {entry.owner}
+                  {entry.calories > 0 ? ` · ${entry.calories} kcal` : ''}
+                </div>
+              </button>
+
+              {entry.calories === 0 && photo && (
+                <button
+                  type="button"
+                  onClick={() => estimate(entry, photo)}
+                  disabled={estimating !== null}
+                  className="min-h-11 w-full rounded-xl text-left text-xs font-semibold text-[var(--mt-text)] disabled:opacity-60"
+                >
+                  {estimating === entry.id ? 'Reading the photo…' : 'Tap to estimate'}
+                </button>
+              )}
+
+              {failed === entry.id && (
+                <p className="text-xs text-[var(--mt-danger)]">
+                  Could not read that photo. Tap the caption to type it in.
+                </p>
+              )}
+            </article>
+          );
+        })}
       </div>
 
       {editing && (
@@ -88,6 +129,17 @@ export default function DayStory({
           entry={editing}
           onDone={() => {
             setEditing(null);
+            onReload();
+          }}
+        />
+      )}
+
+      {confirming && (
+        <ConfirmCard
+          entry={confirming.entry}
+          estimate={confirming.estimate}
+          onDone={() => {
+            setConfirming(null);
             onReload();
           }}
         />
