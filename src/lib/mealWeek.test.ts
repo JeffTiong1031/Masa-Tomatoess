@@ -83,19 +83,26 @@ describe('weekTotals', () => {
     entry('2026-08-17', 'Rachel', 400),
   ];
 
-  it('counts only sealed days', () => {
+  it('adds up every date it is given', () => {
     const totals = weekTotals(entries, ['2026-08-17', '2026-08-19'], 'Jeff');
     expect(totals.total).toBe(1800);
   });
 
-  it('excludes the unsealed day entirely', () => {
+  it('leaves out a date it was not given', () => {
     const totals = weekTotals(entries, ['2026-08-17', '2026-08-19'], 'Jeff');
     expect(totals.byDate['2026-08-18']).toBeUndefined();
   });
 
-  it('reports how many days it looked at', () => {
-    const totals = weekTotals(entries, ['2026-08-17', '2026-08-19'], 'Jeff');
-    expect(totals.sealedCount).toBe(2);
+  it('counts a day the moment it has a meal, with nothing to mark finished', () => {
+    const week = weekDates('2026-08-17');
+    const totals = weekTotals(entries, week, 'Jeff');
+    expect(totals.total).toBe(2700);
+    expect(totals.dayCount).toBe(3);
+  });
+
+  it('does not count an empty day towards the day count', () => {
+    const totals = weekTotals(entries, ['2026-08-17', '2026-08-21'], 'Jeff');
+    expect(totals.dayCount).toBe(1);
   });
 
   it('excludes the other person', () => {
@@ -103,13 +110,13 @@ describe('weekTotals', () => {
     expect(totals.total).toBe(400);
   });
 
-  it('gives a sealed day with no meals a zero rather than a gap', () => {
+  it('gives a day with no meals a zero rather than a gap, so its bar draws', () => {
     const totals = weekTotals(entries, ['2026-08-17', '2026-08-21'], 'Jeff');
     expect(totals.byDate['2026-08-21']).toBe(0);
   });
 
-  it('is empty when nothing is sealed', () => {
+  it('is empty when given no dates', () => {
     const totals = weekTotals(entries, [], 'Jeff');
-    expect(totals).toEqual({ byDate: {}, total: 0, sealedCount: 0 });
+    expect(totals).toEqual({ byDate: {}, total: 0, dayCount: 0 });
   });
 });
