@@ -1,5 +1,5 @@
 import { db, type PendingMeal } from '@/db/db';
-import { insertMeal, uploadPhoto } from '@/lib/mealRepo';
+import { deleteMeal, insertMeal, removePhoto, uploadPhoto } from '@/lib/mealRepo';
 import type { UserName } from '@/lib/identity';
 import type { MealEntry, MealSlot } from '@/lib/meals';
 
@@ -16,9 +16,9 @@ export async function queueMeal(input: QueuedInput): Promise<number> {
   return (await db.pendingMeals.add({ ...input, createdAt: Date.now() })) as number;
 }
 
-export async function pendingFor(date: string): Promise<PendingMeal[]> {
+export async function allPending(): Promise<PendingMeal[]> {
   try {
-    return await db.pendingMeals.where('date').equals(date).toArray();
+    return await db.pendingMeals.toArray();
   } catch (err) {
     console.error('Failed to read pending meals:', err);
     return [];
@@ -44,9 +44,22 @@ async function flush(pending: PendingMeal): Promise<MealEntry | null> {
     calories: 0,
     source: 'photo',
   });
-  if (entry === null) return null;
+  if (entry === null) {
+    await removePhoto(photo);
+    return null;
+  }
 
-  await db.pendingMeals.delete(pending.id!);
+  try {
+    await db.pendingMeals.delete(pending.id!);
+  } catch (err) {
+    console.error('Failed to clear a synced meal from the queue:', err);
+    const rolledBack = await deleteMeal(entry);
+    if (!rolledBack) {
+      console.error('Rollback failed; this meal may sync twice:', pending.id);
+    }
+    return null;
+  }
+
   return entry;
 }
 

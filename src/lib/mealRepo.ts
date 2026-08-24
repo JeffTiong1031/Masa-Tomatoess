@@ -127,12 +127,29 @@ export async function uploadPhoto(
       ...(fullResult.error ? [] : [fullPath]),
       ...(thumbResult.error ? [] : [thumbPath]),
     ];
-    if (orphans.length > 0) await bucket.remove(orphans);
+    if (orphans.length > 0) {
+      const { error: cleanupError } = await bucket.remove(orphans);
+      if (cleanupError) {
+        console.error('Failed to remove an orphaned photo:', cleanupError);
+      }
+    }
 
     return null;
   }
 
   return { fullPath, thumbPath };
+}
+
+export async function removePhoto(photo: MealPhoto): Promise<boolean> {
+  const { error } = await supabase.storage
+    .from(BUCKET)
+    .remove([photo.fullPath, photo.thumbPath]);
+
+  if (error) {
+    console.error('Failed to remove meal photos:', error);
+    return false;
+  }
+  return true;
 }
 
 export async function insertMeal(input: MealInput): Promise<MealEntry | null> {
@@ -168,7 +185,11 @@ export async function updateMeal(
 ): Promise<MealEntry | null> {
   const { data, error } = await supabase
     .from('meal_entries')
-    .update({ ...patch, updated_at: new Date().toISOString() })
+    .update({
+      ...patch,
+      ...(patch.dish === undefined ? null : { dish: patch.dish.trim() }),
+      updated_at: new Date().toISOString(),
+    })
     .eq('id', id)
     .select(MEAL_COLUMNS)
     .single();
@@ -191,13 +212,7 @@ export async function deleteMeal(entry: MealEntry): Promise<boolean> {
     return false;
   }
 
-  if (entry.photo) {
-    const { error: storageError } = await supabase.storage
-      .from(BUCKET)
-      .remove([entry.photo.fullPath, entry.photo.thumbPath]);
-
-    if (storageError) console.error('Failed to remove meal photos:', storageError);
-  }
+  if (entry.photo) await removePhoto(entry.photo);
 
   await markReviewStale(weekStart(entry.date), entry.owner);
   return true;
@@ -230,6 +245,8 @@ export async function sealDay(date: string, owner: UserName): Promise<boolean> {
     console.error('Failed to seal day:', error);
     return false;
   }
+
+  await markReviewStale(weekStart(date), owner);
   return true;
 }
 
