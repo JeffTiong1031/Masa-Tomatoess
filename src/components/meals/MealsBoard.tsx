@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useHasMounted } from '@/hooks/useHasMounted';
 import {
+  addDays,
   addMonths,
   formatMonthYear,
   monthOf,
@@ -13,12 +14,13 @@ import { isUserName, type UserName } from '@/lib/identity';
 import { mealDate, slotForTime } from '@/lib/mealDay';
 import { resizeToPair } from '@/lib/mealImage';
 import { queueMeal, syncPendingMeals } from '@/lib/mealQueue';
-import { fetchMeals } from '@/lib/mealRepo';
-import type { Estimate, MealEntry } from '@/lib/meals';
+import { fetchDays, fetchMeals } from '@/lib/mealRepo';
+import type { Estimate, MealDay, MealEntry } from '@/lib/meals';
 import CameraButton from './CameraButton';
 import ConfirmCard from './ConfirmCard';
 import DayStory from './DayStory';
 import MealMonthGrid from './MealMonthGrid';
+import UnfinishedDayCard from './UnfinishedDayCard';
 
 function monthRange(month: string): [string, string] {
   return [`${month}-01`, `${addMonths(month, 1)}-01`];
@@ -57,6 +59,7 @@ export default function MealsBoard() {
   const mounted = useHasMounted();
   const [month, setMonth] = useState(() => monthOf(todayISO()));
   const [entries, setEntries] = useState<MealEntry[]>([]);
+  const [days, setDays] = useState<MealDay[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
   const [owner, setOwner] = useState<UserName | null>(null);
   const [captureError, setCaptureError] = useState<string | null>(null);
@@ -74,8 +77,9 @@ export default function MealsBoard() {
 
   const load = useCallback(async () => {
     const [from, to] = monthRange(month);
-    const meals = await fetchMeals(from, to);
+    const [meals, sealed] = await Promise.all([fetchMeals(from, to), fetchDays(from, to)]);
     if (meals) setEntries(meals);
+    if (sealed) setDays(sealed);
   }, [month]);
 
   useEffect(() => {
@@ -128,8 +132,29 @@ export default function MealsBoard() {
     [owner, load],
   );
 
+  const now = mounted ? new Date() : null;
+  const yesterday = now === null ? null : addDays(mealDate(now), -1);
+  const yesterdaySealed =
+    yesterday !== null &&
+    days.some((day) => day.date === yesterday && day.owner === owner && day.sealed);
+  const nudge =
+    now !== null &&
+    yesterday !== null &&
+    owner !== null &&
+    now.getHours() >= 8 &&
+    !yesterdaySealed;
+
   return (
     <>
+      {nudge && owner && yesterday && (
+        <UnfinishedDayCard
+          date={yesterday}
+          owner={owner}
+          entries={entries.filter((entry) => entry.date === yesterday && entry.owner === owner)}
+          onReload={load}
+        />
+      )}
+
       <div className="mb-3 flex items-center justify-between">
         <button
           type="button"
