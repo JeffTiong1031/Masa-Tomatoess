@@ -135,7 +135,7 @@ src/
     Leaderboard HubGrid Gatekeeper ThemeModal SettingsModal
     nav/
       navLinks.ts           the nav spine; every list and predicate
-      NavDrawer AppNav StudyPanel FocusPill
+      NavDrawer StudyPanel FocusPill
     ui/                     PageShell Card Modal StatTile ComingSoon
   lib/
     color.ts                contrast, L*, Lab, deltaE for palette tests
@@ -167,10 +167,12 @@ consumer forgot to call it. Do not flatten these routes back out.
   elsewhere. `.mt-page-pad-focus` assumes it is above; `.mt-page-pad` carries
   its own hamburger clearance for pages without it.
 - `StudyPanel` renders at every width, because the drawer does not list
-  Calendar or Timeline. `AppNav` returns `null` inside Study so only one bar
-  ever owns the bottom edge.
-- `[data-section='study'] .mt-page-pad` keeps its bottom reservation above
-  768px, where the global rule drops it.
+  Calendar or Timeline. It is the only bottom bar in the app; every other
+  section navigates through the drawer alone. There was once a Home / Study /
+  Period bar on phones and it is gone on purpose -- it floated over page
+  content and duplicated the drawer. Do not bring it back.
+- `[data-section='study'] .mt-page-pad` is the only rule that reserves bottom
+  nav height, because Study is the only section with a fixed bottom bar.
 
 ## Backdrops and contrast
 

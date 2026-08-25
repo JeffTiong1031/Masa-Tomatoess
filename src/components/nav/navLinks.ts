@@ -38,10 +38,6 @@ export const ALL_LINKS: NavLink[] = [
   { href: '/finance', label: 'Finance', icon: Wallet, accent: 'finance' },
 ];
 
-/** Bottom-bar slots on mobile, outside Study. Inside Study the section's
- *  own panel takes the bottom edge instead -- see StudyPanel. */
-export const BOTTOM_BAR_HREFS = ['/', '/study', '/cycle'];
-
 /** Study's lower panel: the three things you can be doing in a study
  *  session. Focus is the entry point to the timer widgets, which have a
  *  second level of their own (FOCUS_SEGMENTS). */

@@ -137,7 +137,7 @@ Masa Tomato follows a **Local-First / Cloud-Backup** architecture:
 - **Icons:** [Lucide React](https://lucide.dev/)
 
 ### Navigation & Install
-- **Drawer + bottom bar:** `src/components/nav/NavDrawer.tsx`, `src/components/nav/AppNav.tsx`, `src/components/nav/navLinks.ts`
+- **Drawer:** `src/components/nav/NavDrawer.tsx`, `src/components/nav/navLinks.ts`
 - **Home-screen install:** `src/app/manifest.ts` (web app manifest) + `src/components/InstallPrompt.tsx`
 
 ### State & Storage (Local-First)

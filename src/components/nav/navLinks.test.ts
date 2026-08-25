@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
   ALL_LINKS,
-  BOTTOM_BAR_HREFS,
   FOCUS_HREFS,
   FOCUS_SEGMENTS,
   STUDY_PANEL,
@@ -63,21 +62,6 @@ describe('menu', () => {
   it('has no duplicate hrefs', () => {
     const hrefs = ALL_LINKS.map((l) => l.href);
     expect(new Set(hrefs).size).toBe(hrefs.length);
-  });
-});
-
-describe('bottom bar', () => {
-  it('has exactly three slots', () => {
-    expect(BOTTOM_BAR_HREFS).toHaveLength(3);
-  });
-
-  it('only references routes that exist in the link table', () => {
-    for (const href of BOTTOM_BAR_HREFS) {
-      expect(
-        ALL_LINKS.some((l) => l.href === href),
-        `${href} is in the bottom bar but not in ALL_LINKS`,
-      ).toBe(true);
-    }
   });
 });
 
