@@ -11,12 +11,14 @@ export default function EventBlock({
   event,
   category,
   isOwn,
+  dense = false,
   className,
   onOpen,
 }: {
   event: CalendarEvent;
   category: Category | null;
   isOwn: boolean;
+  dense?: boolean;
   className?: string;
   onOpen: (event: CalendarEvent) => void;
 }) {
@@ -24,12 +26,16 @@ export default function EventBlock({
     isOwn ? '' : `, ${event.owner}’s`
   }`;
 
+  const shell = dense
+    ? 'flex w-full min-w-0 items-center gap-2 rounded-lg px-2 py-0.5 text-left'
+    : 'flex min-h-11 w-full min-w-0 flex-col items-start justify-start rounded-xl px-3 py-2 text-left';
+
   return (
     <button
       type="button"
       onClick={() => onOpen(event)}
       aria-label={description}
-      className={`flex min-h-11 w-full flex-col items-start justify-center rounded-xl px-3 py-2 text-left ${className ?? ''}`}
+      className={`${shell} ${className ?? ''}`}
       style={{
         background: isOwn
           ? 'color-mix(in srgb, var(--mt-accent) 32%, var(--mt-surface))'
@@ -37,7 +43,7 @@ export default function EventBlock({
         border: isOwn ? 'none' : '1.5px solid var(--mt-accent-deep)',
       }}
     >
-      <span className="flex items-center gap-2">
+      <span className="flex min-w-0 items-center gap-2">
         {category && (
           <span
             className="h-2 w-2 shrink-0 rounded-full"
@@ -45,11 +51,19 @@ export default function EventBlock({
             aria-hidden
           />
         )}
-        <span className="text-sm font-semibold text-[var(--mt-text)]">
+        <span
+          className={`truncate font-semibold text-[var(--mt-text)] ${
+            dense ? 'text-xs leading-5' : 'text-sm'
+          }`}
+        >
           {event.title}
         </span>
       </span>
-      <span className="mt-0.5 text-xs text-[var(--mt-text-muted)]">
+      <span
+        className={`whitespace-nowrap text-[var(--mt-text-muted)] ${
+          dense ? 'ml-auto shrink-0 text-xs leading-5' : 'mt-0.5 text-xs'
+        }`}
+      >
         {timeLabel(event)}
       </span>
     </button>
