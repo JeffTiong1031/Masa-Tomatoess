@@ -8,7 +8,8 @@ export type AccentName =
   | 'fitness'
   | 'finance'
   | 'calendar'
-  | 'timetable';
+  | 'timetable'
+  | 'todo';
 
 /** Resolves to the raw accent token. Set on a wrapper so descendants
  *  inherit it through --mt-accent without prop-drilling. */
