@@ -204,8 +204,9 @@ Timeline.
 
 Measured: minimum ΔE 21.4 against Fitness `#B4D9A0`, minimum hue separation
 22.1°, L\* 81.9, contrast 8.09:1 against `--mac-cocoa` for the icon. It clears
-the ΔE floor by 1.4, the narrowest margin in the palette — recorded here so a
-future retune knows how little room it has.
+the ΔE floor by 1.4 — the narrowest margin of any accent held to the floor,
+though `timer`/`cycle` sit closer still at 21.1 under their grandfathering.
+Recorded here so a future retune knows how little room is left.
 
 `accents.test.ts` gains `todo` in the declared list and in `NEW_ACCENTS`, so it
 is held to both thresholds rather than grandfathered.
