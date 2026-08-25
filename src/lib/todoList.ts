@@ -1,5 +1,5 @@
 import { addDays, weekdayIndex } from './dates';
-import type { Todo, TodoGroup, TodoGroupName } from './todo';
+import type { DoneTodo, Todo, TodoGroup, TodoGroupName } from './todo';
 
 const GROUP_ORDER: TodoGroupName[] = [
   'Overdue',
@@ -66,4 +66,32 @@ export function groupTodos(
     name,
     todos: buckets[name].sort(compareTodos),
   })).filter((group) => group.todos.length > 0);
+}
+
+const COMPLETED_WINDOW_DAYS = 7;
+
+export function completedTodos(todos: Todo[], today: string): DoneTodo[] {
+  const from = addDays(today, -(COMPLETED_WINDOW_DAYS - 1));
+  return todos
+    .filter((todo): todo is DoneTodo => todo.done)
+    .filter((todo) => todo.completedAt.slice(0, 10) >= from)
+    .sort((a, b) => b.completedAt.localeCompare(a.completedAt));
+}
+
+export function nextOverdueAt(
+  todos: Todo[],
+  today: string,
+  now: string,
+): string | null {
+  const upcoming: string[] = [];
+  for (const todo of todos) {
+    if (todo.done || todo.dueDate !== today || todo.dueTime === null) continue;
+    const at = `${todo.dueTime}:00`;
+    if (at > now) upcoming.push(at);
+  }
+  return upcoming.sort()[0] ?? null;
+}
+
+export function msUntil(date: string, time: string, from: Date): number {
+  return new Date(`${date}T${time}`).getTime() - from.getTime();
 }

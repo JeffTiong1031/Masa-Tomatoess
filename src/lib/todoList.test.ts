@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { groupOf, compareTodos, groupTodos, weekEnd } from './todoList';
-import type { OpenTodo, Todo } from './todo';
+import { groupOf, compareTodos, groupTodos, weekEnd, completedTodos, nextOverdueAt, msUntil } from './todoList';
+import type { OpenTodo, Todo, DoneTodo } from './todo';
 
 function open(overrides: Partial<OpenTodo> = {}): OpenTodo {
   return {
@@ -18,6 +18,10 @@ function open(overrides: Partial<OpenTodo> = {}): OpenTodo {
 }
 
 const TODAY = '2026-08-26';
+
+function done(overrides: Partial<DoneTodo> = {}): DoneTodo {
+  return { ...open(), done: true, completedAt: '2026-08-26T10:00:00.000Z', ...overrides };
+}
 
 describe('weekEnd', () => {
   it('returns the Sunday of the given week', () => {
@@ -132,5 +136,56 @@ describe('groupTodos', () => {
       { ...open({ id: 'done', dueDate: TODAY }), done: true, completedAt: '2026-08-26T10:00:00.000Z' },
     ];
     expect(groupTodos(todos, TODAY, '09:00:00')).toEqual([]);
+  });
+});
+
+describe('completedTodos', () => {
+  it('shows the last seven days, newest first', () => {
+    const todos: Todo[] = [
+      done({ id: 'six', completedAt: '2026-08-20T10:00:00.000Z' }),
+      done({ id: 'today', completedAt: '2026-08-26T09:00:00.000Z' }),
+    ];
+    expect(completedTodos(todos, TODAY).map((todo) => todo.id)).toEqual(['today', 'six']);
+  });
+
+  it('excludes anything finished more than seven days ago', () => {
+    const todos: Todo[] = [done({ id: 'eight', completedAt: '2026-08-18T10:00:00.000Z' })];
+    expect(completedTodos(todos, TODAY)).toEqual([]);
+  });
+
+  it('excludes open tasks', () => {
+    expect(completedTodos([open({ id: 'live' })], TODAY)).toEqual([]);
+  });
+});
+
+describe('nextOverdueAt', () => {
+  it('returns the earliest future time among today timed tasks', () => {
+    const todos: Todo[] = [
+      open({ id: 'late', dueDate: TODAY, dueTime: '17:00' }),
+      open({ id: 'soon', dueDate: TODAY, dueTime: '11:30' }),
+    ];
+    expect(nextOverdueAt(todos, TODAY, '09:00:00')).toBe('11:30:00');
+  });
+
+  it('ignores times that have already passed', () => {
+    const todos: Todo[] = [open({ dueDate: TODAY, dueTime: '08:00' })];
+    expect(nextOverdueAt(todos, TODAY, '09:00:00')).toBeNull();
+  });
+
+  it('ignores untimed, undated, other-day and completed tasks', () => {
+    const todos: Todo[] = [
+      open({ dueDate: TODAY }),
+      open({ dueTime: null }),
+      open({ dueDate: '2026-08-27', dueTime: '10:00' }),
+      done({ dueDate: TODAY, dueTime: '23:00' }),
+    ];
+    expect(nextOverdueAt(todos, TODAY, '09:00:00')).toBeNull();
+  });
+});
+
+describe('msUntil', () => {
+  it('measures forward from the given moment in local time', () => {
+    const from = new Date(2026, 7, 26, 13, 59, 30);
+    expect(msUntil('2026-08-26', '14:00:00', from)).toBe(30_000);
   });
 });
