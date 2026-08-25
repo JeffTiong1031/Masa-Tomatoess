@@ -1,6 +1,5 @@
 'use client';
 
-import AppNav from '@/components/nav/AppNav';
 import NavDrawer from '@/components/nav/NavDrawer';
 import BackgroundManager from '@/components/BackgroundManager';
 import AudioPlayer from '@/components/AudioPlayer';
@@ -17,7 +16,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             timer survives navigation between sections. Do not move it. */}
         <TimerEngine />
         <div className="flex flex-1 flex-col">{children}</div>
-        <AppNav />
         <AudioPlayer />
         <AlarmPlayer />
       </div>

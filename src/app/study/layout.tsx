@@ -13,10 +13,9 @@ export default function StudyLayout({
 }) {
   return (
     /* data-section drives the one padding rule Study needs that the rest
-       of the app does not: StudyPanel is fixed to the bottom edge at
-       EVERY width, where AppNav hides above 768px, so these pages have
-       to keep reserving nav height on desktop. See .mt-page-pad in
-       globals.css. */
+       of the app does not: StudyPanel is fixed to the bottom edge, and
+       no other section keeps a bar there, so only these pages reserve
+       nav height. See .mt-page-pad in globals.css. */
     <div
       data-mood="light"
       data-section="study"

@@ -322,7 +322,7 @@ body {
 
 .mt-page-pad,
 .mt-page-pad-focus {
-  padding-bottom: calc(var(--mt-safe-bottom) + var(--mt-nav-height) + 1.5rem);
+  padding-bottom: calc(var(--mt-safe-bottom) + 2rem);
   padding-left: max(1rem, var(--mt-safe-left));
   padding-right: max(1rem, var(--mt-safe-right));
 }
@@ -343,22 +343,17 @@ body {
   padding-top: 1rem;
 }
 
+/* Study only. StudyPanel is fixed to the bottom edge at every width --
+   it has to be, since the drawer does not list Calendar or Timeline.
+   No other section keeps a bar down there, so no other section pays for
+   one. Without this, a Study page runs its last card underneath the
+   panel. */
+[data-section='study'] .mt-page-pad,
+[data-section='study'] .mt-page-pad-focus {
+  padding-bottom: calc(var(--mt-safe-bottom) + var(--mt-nav-height) + 1.5rem);
+}
+
 @media (min-width: 768px) {
-  .mt-page-pad,
-  .mt-page-pad-focus {
-    padding-bottom: calc(var(--mt-safe-bottom) + 2rem);
-  }
-
-  /* ...except inside Study. The rule above drops the nav reservation at
-     768px because AppNav hides there, but StudyPanel is fixed to the
-     bottom edge at EVERY width -- it has to be, since the drawer no
-     longer lists Calendar or Timeline. Without this, desktop Study
-     pages run their last card underneath the panel. */
-  [data-section='study'] .mt-page-pad,
-  [data-section='study'] .mt-page-pad-focus {
-    padding-bottom: calc(var(--mt-safe-bottom) + var(--mt-nav-height) + 1.5rem);
-  }
-
   .mt-page-pad {
     padding-top: calc(var(--mt-chrome-offset) + 4.5rem);
   }

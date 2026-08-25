@@ -18,10 +18,9 @@ import { accentVar } from '@/components/ui/PageShell';
  *  straight onto the background, and that rule is what lets the veil
  *  stay gone.
  *
- *  Renders at every width, unlike AppNav -- the drawer no longer lists
- *  Calendar or Timeline, so hiding this on desktop would strand them.
- *
- *  AppNav steps aside on Study routes rather than stacking above this. */
+ *  Renders at every width, because the drawer does not list Calendar or
+ *  Timeline and hiding this would strand them. It is the app's only
+ *  bottom bar; everywhere else navigation is the drawer alone. */
 export default function StudyPanel() {
   const pathname = usePathname();
 
