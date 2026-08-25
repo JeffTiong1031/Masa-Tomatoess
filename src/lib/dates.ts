@@ -32,6 +32,10 @@ export function todayISO(now: Date = new Date()): string {
   return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
 }
 
+export function timeISO(now: Date = new Date()): string {
+  return `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+}
+
 export function addDays(date: string, days: number): string {
   return fromUtc(toUtc(date) + days * MS_PER_DAY);
 }
