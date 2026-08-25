@@ -155,10 +155,12 @@ export default function DayPanel({
         })}
         <div className="absolute top-0 bottom-0 left-[3.5rem] right-0">
           {positionedTimed.map((pos) => {
+            const durationMin = Math.max(pos.endMin - pos.startMin, 0);
             const topPct = ((pos.startMin - range.from * 60) / totalMinutes) * 100;
-            const heightPct = ((pos.endMin - pos.startMin) / totalMinutes) * 100;
+            const heightPct = (durationMin / totalMinutes) * 100;
             const widthPct = 100 / pos.maxColumns;
             const leftPct = pos.column * widthPct;
+            const dense = durationMin < 45;
 
             return (
               <div
@@ -167,6 +169,7 @@ export default function DayPanel({
                 style={{
                   top: `${topPct}%`,
                   height: `${heightPct}%`,
+                  minHeight: '2rem',
                   left: `${leftPct}%`,
                   width: `${widthPct}%`,
                 }}
@@ -175,8 +178,9 @@ export default function DayPanel({
                   event={pos.event}
                   category={categoryOf(pos.event)}
                   isOwn={pos.event.owner === signedInAs}
+                  dense={dense}
                   onOpen={onOpen}
-                  className="h-full !min-h-0 py-1 overflow-hidden"
+                  className={`h-full !min-h-0 overflow-hidden ${dense ? '' : 'py-1'}`}
                 />
               </div>
             );
