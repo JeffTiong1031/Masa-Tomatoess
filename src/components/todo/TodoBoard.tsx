@@ -3,10 +3,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import { todayISO, timeISO } from '@/lib/dates';
 import { isUserName, USERS, type UserName } from '@/lib/identity';
-import { fetchTodos } from '@/lib/todoRepo';
-import type { Todo } from '@/lib/todo';
+import { fetchTodos, insertTodo } from '@/lib/todoRepo';
+import type { Todo, TodoDraft } from '@/lib/todo';
 import { useHasMounted } from '@/hooks/useHasMounted';
 import Card from '@/components/ui/Card';
+import TodoComposer from '@/components/todo/TodoComposer';
 
 type BoardStatus = 'loading' | 'ok' | 'missing-table' | 'error';
 
@@ -49,7 +50,21 @@ export default function TodoBoard() {
     load(viewing);
   }, [viewing, load]);
 
-  if (!mounted || viewing === null || clock === null) return null;
+  const handleAdd = useCallback(
+    async (draft: TodoDraft) => {
+      const created = await insertTodo(draft);
+      if (created === null) {
+        setNotice('That task did not save. Try again.');
+        return;
+      }
+      setNotice(null);
+      setViewing(draft.owner);
+      if (draft.owner === viewing) setTodos((current) => [...current, created]);
+    },
+    [viewing],
+  );
+
+  if (!mounted || signedIn === null || viewing === null || clock === null) return null;
 
   if (status === 'missing-table') {
     return (
@@ -87,6 +102,8 @@ export default function TodoBoard() {
           </button>
         ))}
       </div>
+
+      <TodoComposer owner={signedIn} onAdd={handleAdd} />
 
       {notice ? (
         <p role="status" className="text-sm text-[var(--mt-danger)]">
