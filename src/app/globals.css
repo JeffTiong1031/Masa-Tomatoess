@@ -41,7 +41,7 @@
      accents.test.ts -- the guard is now CIE delta E 76, not hue angle. */
   --mac-accent-calendar: #FFB5F4;  /* min delta E 21.5 (dashboard) */
   --mac-accent-timetable: #72E2FF; /* min delta E 24.0 (finance) */
-  --mac-accent-todo: #77E0AA;     /* min delta E 21.4 (fitness) */
+  --mac-accent-todo: #64B880;     /* min delta E 21.5 (fitness), hue 27.3 (countdown) */
   --mac-cycle-menstrual: #F2A7BE;
   --mac-cycle-follicular: #A8DCD1;
   --mac-cycle-fertile: #F0CE87;

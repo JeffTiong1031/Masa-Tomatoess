@@ -94,7 +94,7 @@ describe('accent palette', () => {
   });
 
   it('pins the todo accent to the value the palette search found', () => {
-    expect(readAccents().todo).toBe('#77E0AA');
+    expect(readAccents().todo).toBe('#64B880');
   });
 
   it('leaves the two new accents no worse than the grandfathered pairs', () => {
