@@ -33,20 +33,26 @@ export default function TodoBoard() {
   const viewing: UserName = chosenView ?? signedIn;
   const [todos, setTodos] = useState<Todo[]>([]);
   const [status, setStatus] = useState<BoardStatus>('loading');
+  const [loadedFor, setLoadedFor] = useState<UserName | null>(null);
   const [clock, setClock] = useState<Clock>(() => ({ today: todayISO(), now: timeISO() }));
   const [notice, setNotice] = useState<string | null>(null);
 
+  const displayStatus: BoardStatus = viewing === loadedFor ? status : 'loading';
+
   useEffect(() => {
     let cancelled = false;
-    fetchTodos(viewing).then((result) => {
+    const owner = viewing;
+    fetchTodos(owner).then((result) => {
       if (cancelled) return;
       if (result.status === 'ok') {
         setTodos(result.rows);
         setStatus('ok');
+        setLoadedFor(owner);
         return;
       }
       setTodos([]);
       setStatus(result.status);
+      setLoadedFor(owner);
     });
     return () => {
       cancelled = true;
@@ -69,7 +75,7 @@ export default function TodoBoard() {
 
   if (!mounted) return null;
 
-  if (status === 'missing-table') {
+  if (displayStatus === 'missing-table') {
     return (
       <Card>
         <h2 className="text-base font-semibold text-[var(--mt-text)]">Not set up yet</h2>
@@ -114,11 +120,11 @@ export default function TodoBoard() {
         </p>
       ) : null}
 
-      {status === 'loading' ? (
+      {displayStatus === 'loading' ? (
         <p className="text-sm text-[var(--mt-text-muted)]">Loading…</p>
       ) : null}
 
-      {status === 'error' ? (
+      {displayStatus === 'error' ? (
         <p className="text-sm text-[var(--mt-danger)]">
           Could not reach the database. Check your connection and reload.
         </p>
