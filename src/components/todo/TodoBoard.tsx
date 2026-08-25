@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import { todayISO, timeISO } from '@/lib/dates';
 import { isUserName, USERS, type UserName } from '@/lib/identity';
 import { fetchTodos, insertTodo } from '@/lib/todoRepo';
@@ -16,39 +16,42 @@ interface Clock {
   now: string;
 }
 
+function subscribeStorage(onStoreChange: () => void) {
+  window.addEventListener('storage', onStoreChange);
+  return () => window.removeEventListener('storage', onStoreChange);
+}
+
+function readStoredUser(): string | null {
+  return localStorage.getItem('user_name');
+}
+
 export default function TodoBoard() {
   const mounted = useHasMounted();
-  const [signedIn, setSignedIn] = useState<UserName | null>(null);
-  const [viewing, setViewing] = useState<UserName | null>(null);
+  const storedUser = useSyncExternalStore(subscribeStorage, readStoredUser, () => null);
+  const signedIn: UserName = isUserName(storedUser) ? storedUser : 'Jeff';
+  const [chosenView, setChosenView] = useState<UserName | null>(null);
+  const viewing: UserName = chosenView ?? signedIn;
   const [todos, setTodos] = useState<Todo[]>([]);
   const [status, setStatus] = useState<BoardStatus>('loading');
-  const [clock, setClock] = useState<Clock | null>(null);
+  const [clock, setClock] = useState<Clock>(() => ({ today: todayISO(), now: timeISO() }));
   const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
-    const stored = localStorage.getItem('user_name');
-    const user = isUserName(stored) ? stored : 'Jeff';
-    setSignedIn(user);
-    setViewing(user);
-    setClock({ today: todayISO(), now: timeISO() });
-  }, []);
-
-  const load = useCallback(async (owner: UserName) => {
-    const result = await fetchTodos(owner);
-    if (result.status === 'ok') {
-      setTodos(result.rows);
-      setStatus('ok');
-      return;
-    }
-    setTodos([]);
-    setStatus(result.status);
-  }, []);
-
-  useEffect(() => {
-    if (viewing === null) return;
-    setStatus('loading');
-    load(viewing);
-  }, [viewing, load]);
+    let cancelled = false;
+    fetchTodos(viewing).then((result) => {
+      if (cancelled) return;
+      if (result.status === 'ok') {
+        setTodos(result.rows);
+        setStatus('ok');
+        return;
+      }
+      setTodos([]);
+      setStatus(result.status);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [viewing]);
 
   const handleAdd = useCallback(
     async (draft: TodoDraft) => {
@@ -58,13 +61,13 @@ export default function TodoBoard() {
         return;
       }
       setNotice(null);
-      setViewing(draft.owner);
+      setChosenView(draft.owner);
       if (draft.owner === viewing) setTodos((current) => [...current, created]);
     },
     [viewing],
   );
 
-  if (!mounted || signedIn === null || viewing === null || clock === null) return null;
+  if (!mounted) return null;
 
   if (status === 'missing-table') {
     return (
@@ -90,7 +93,7 @@ export default function TodoBoard() {
           <button
             key={user}
             type="button"
-            onClick={() => setViewing(user)}
+            onClick={() => setChosenView(user)}
             aria-pressed={user === viewing}
             className={`min-h-11 rounded-full px-5 text-sm font-semibold transition-colors ${
               user === viewing
