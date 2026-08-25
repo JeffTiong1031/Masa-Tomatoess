@@ -194,19 +194,32 @@ The timeout is cleared when the rows change and when the board unmounts.
 
 ## 7. Palette
 
-The eleventh accent is jade `#77E0AA`.
+The eleventh accent is green `#64B880`.
 
-Ten accents already occupy the pastel band of the colour wheel. A search across
-sRGB at the palette's own lightness (L\* 70–86) and chroma (19–42) found only
-two hue families still clearing both guards in `accents.test.ts`: this jade and
-a muddy olive. Periwinkle and teal fail the 20° hue floor against Finance and
-Timeline.
+Ten accents already occupy the pastel band of the colour wheel, and both guards
+in `accents.test.ts` bind at once: ΔE ≥ 20 in CIELAB, and ≥ 20° of hue
+separation measured by `color.ts`'s `hue()`, which is **HSL hue off RGB, not the
+Lab hue angle**. Those two metrics disagree sharply in the greens, and the first
+value chosen for this section (`#77E0AA`) was picked against the Lab angle: it
+clears ΔE at 21.4 but sits only 18.2° from Countdown on the metric the test
+actually uses. It fails. Anything measuring hue for this palette must use
+`hueDistance` from `color.ts`.
 
-Measured: minimum ΔE 21.4 against Fitness `#B4D9A0`, minimum hue separation
-22.1°, L\* 81.9, contrast 8.09:1 against `--mac-cocoa` for the icon. It clears
-the ΔE floor by 1.4 — the narrowest margin of any accent held to the floor,
-though `timer`/`cycle` sit closer still at 21.1 under their grandfathering.
-Recorded here so a future retune knows how little room is left.
+Searching sRGB against both real guards leaves almost nothing at the palette's
+own lightness. Green survives only by going deeper: to clear 20° from Countdown
+`#A8DCD1` (hue 167°) and Fitness `#B4D9A0` (hue 99°), the hue must sit near
+120–147°, and every pastel there collides with Fitness in ΔE. Lightness is what
+buys the separation back.
+
+Measured for `#64B880`: minimum ΔE 21.5 against Fitness, minimum hue separation
+27.3° against Countdown, L\* 68.4, contrast 5.41:1 against `--mac-cocoa` for the
+icon. It is the deepest accent in the palette — the others run L\* 71.8 to 84.6
+— so the row of colour chips is no longer one weight. That cost was accepted to
+keep the section green, because green is the tick-mark colour and this is a list
+of things to finish.
+
+The alternative that also passes is an olive `#A4AE5C` (ΔE 22.7, hue 26.7°), at
+much the same lightness. Green was preferred on meaning.
 
 `accents.test.ts` gains `todo` in the declared list and in `NEW_ACCENTS`, so it
 is held to both thresholds rather than grandfathered.
