@@ -21,3 +21,8 @@ export function useMediaQuery(query: string): boolean {
 export function useIsMdUp(): boolean {
   return useMediaQuery('(min-width: 768px)');
 }
+
+/** A finger rather than a mouse, so the device has a camera worth offering. */
+export function useIsTouch(): boolean {
+  return useMediaQuery('(pointer: coarse)');
+}
