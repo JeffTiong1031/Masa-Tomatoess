@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import { todayISO, timeISO } from '@/lib/dates';
 import { isUserName, USERS, type UserName } from '@/lib/identity';
 import { fetchTodos, insertTodo, setTodoDone, updateTodo, deleteTodo } from '@/lib/todoRepo';
-import { completedTodos, groupTodos, msUntil, nextOverdueAt } from '@/lib/todoList';
+import { completedTodos, groupTodos, msUntil, nextOverdueAt, OVERDUE_WAKE_SLACK_MS } from '@/lib/todoList';
 import type { Todo, TodoDraft } from '@/lib/todo';
 import { useHasMounted } from '@/hooks/useHasMounted';
 import Card from '@/components/ui/Card';
@@ -78,7 +78,7 @@ export default function TodoBoard() {
     const at = nextOverdueAt(todos, clock.today, clock.now);
     if (at === null) return;
 
-    const delay = Math.max(msUntil(clock.today, at, new Date()) + 1050, 0);
+    const delay = Math.max(msUntil(clock.today, at, new Date()) + OVERDUE_WAKE_SLACK_MS, 0);
     const timer = window.setTimeout(() => {
       setClock({ today: todayISO(), now: timeISO() });
     }, delay);

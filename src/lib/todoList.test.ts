@@ -1,5 +1,14 @@
 import { describe, it, expect } from 'vitest';
-import { groupOf, compareTodos, groupTodos, weekEnd, completedTodos, nextOverdueAt, msUntil } from './todoList';
+import {
+  groupOf,
+  compareTodos,
+  groupTodos,
+  weekEnd,
+  completedTodos,
+  nextOverdueAt,
+  msUntil,
+  OVERDUE_WAKE_SLACK_MS,
+} from './todoList';
 import type { OpenTodo, Todo, DoneTodo } from './todo';
 
 function open(overrides: Partial<OpenTodo> = {}): OpenTodo {
@@ -180,6 +189,18 @@ describe('nextOverdueAt', () => {
       done({ dueDate: TODAY, dueTime: '23:00' }),
     ];
     expect(nextOverdueAt(todos, TODAY, '09:00:00')).toBeNull();
+  });
+
+  it('stops treating a task as upcoming at the exact whole second it is due, before groupOf turns it overdue', () => {
+    const task = open({ dueDate: TODAY, dueTime: '14:00' });
+    expect(groupOf(task, TODAY, '14:00:00')).toBe('Today');
+    expect(nextOverdueAt([task], TODAY, '14:00:00')).toBeNull();
+  });
+});
+
+describe('OVERDUE_WAKE_SLACK_MS', () => {
+  it('clears the whole-second window where a task is still Today but no longer upcoming', () => {
+    expect(OVERDUE_WAKE_SLACK_MS).toBeGreaterThan(1000);
   });
 });
 

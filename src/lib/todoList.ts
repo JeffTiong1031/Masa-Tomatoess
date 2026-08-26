@@ -95,3 +95,5 @@ export function nextOverdueAt(
 export function msUntil(date: string, time: string, from: Date): number {
   return new Date(`${date}T${time}`).getTime() - from.getTime();
 }
+
+export const OVERDUE_WAKE_SLACK_MS = 1050;
