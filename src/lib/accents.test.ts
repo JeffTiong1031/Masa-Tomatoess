@@ -24,7 +24,7 @@ function readAccents(): Record<string, string> {
  *  eye and are grandfathered — flexible/meals sit 11 deg and delta E
  *  17.2 apart, and dashboard/finance delta E 17.8, both of which would
  *  fail the thresholds below. */
-const NEW_ACCENTS = ['calendar', 'timetable'];
+const NEW_ACCENTS = ['calendar', 'timetable', 'todo'];
 
 /** The real guard. Below roughly this, two accent chips read as the same
  *  colour at icon size — which is what Timetable and Countdown did at
@@ -44,7 +44,7 @@ const MIN_DELTA_E = 20;
 const MIN_HUE_SEPARATION_DEG = 20;
 
 describe('accent palette', () => {
-  it('declares all ten accents', () => {
+  it('declares all eleven accents', () => {
     const accents = readAccents();
     expect(Object.keys(accents).sort()).toEqual([
       'calendar',
@@ -57,6 +57,7 @@ describe('accent palette', () => {
       'meals',
       'timer',
       'timetable',
+      'todo',
     ]);
   });
 
@@ -92,9 +93,13 @@ describe('accent palette', () => {
     }
   });
 
-  it('leaves the two new accents no worse than the grandfathered pairs', () => {
-    // The point of the floor: before this, the two new accents were the
-    // two CLOSEST pairs in the palette -- closer than flexible/meals,
+  it('pins the todo accent to the value the palette search found', () => {
+    expect(readAccents().todo).toBe('#64B880');
+  });
+
+  it('leaves the new accents no worse than the grandfathered pairs', () => {
+    // The point of the floor: before this branch, the two new accents were
+    // the two CLOSEST pairs in the palette -- closer than flexible/meals,
     // the pair the threshold comment itself named as the bad case. The
     // closest pair overall must now be one of the grandfathered ones.
     const accents = readAccents();

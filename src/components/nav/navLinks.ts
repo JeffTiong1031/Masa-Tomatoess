@@ -2,6 +2,7 @@ import {
   Home,
   GraduationCap,
   Timer,
+  ListChecks,
   HeartPulse,
   CalendarClock,
   CalendarDays,
@@ -31,6 +32,7 @@ export interface NavLink {
 export const ALL_LINKS: NavLink[] = [
   { href: '/', label: 'Home', icon: Home, accent: 'dashboard' },
   { href: '/study', label: 'Study', icon: GraduationCap, accent: 'timer' },
+  { href: '/todo', label: 'To-do', icon: ListChecks, accent: 'todo' },
   { href: '/cycle', label: 'Period', icon: HeartPulse, accent: 'cycle' },
   { href: '/countdown', label: 'Countdown', icon: CalendarClock, accent: 'countdown' },
   { href: '/meals', label: 'Meals', icon: UtensilsCrossed, accent: 'meals' },

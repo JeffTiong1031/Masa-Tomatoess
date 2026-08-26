@@ -8,6 +8,7 @@ import {
   formatShortDate,
   monthGridDates,
   monthOf,
+  timeISO,
   todayISO,
   WEEKDAYS_SHORT,
 } from './dates';
@@ -19,6 +20,12 @@ describe('todayISO', () => {
 
   it('pads single-digit months and days', () => {
     expect(todayISO(new Date(2026, 0, 5, 23, 59))).toBe('2026-01-05');
+  });
+});
+
+describe('timeISO', () => {
+  it('reads the local wall clock as HH:MM:SS', () => {
+    expect(timeISO(new Date(2026, 7, 26, 9, 5, 3))).toBe('09:05:03');
   });
 });
 

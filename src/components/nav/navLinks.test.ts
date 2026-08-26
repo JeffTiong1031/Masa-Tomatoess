@@ -37,6 +37,7 @@ describe('menu', () => {
     expect(ALL_LINKS.map((l) => l.href)).toEqual([
       '/',
       '/study',
+      '/todo',
       '/cycle',
       '/countdown',
       '/meals',
