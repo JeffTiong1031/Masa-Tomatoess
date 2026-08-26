@@ -7,8 +7,10 @@ import {
   completedTodos,
   nextOverdueAt,
   msUntil,
+  nextWakeDelayMs,
   OVERDUE_WAKE_SLACK_MS,
 } from './todoList';
+import { addDays } from './dates';
 import type { OpenTodo, Todo, DoneTodo } from './todo';
 
 function open(overrides: Partial<OpenTodo> = {}): OpenTodo {
@@ -217,5 +219,30 @@ describe('msUntil', () => {
   it('measures forward from the given moment in local time', () => {
     const from = new Date(2026, 7, 26, 13, 59, 30);
     expect(msUntil('2026-08-26', '14:00:00', from)).toBe(30_000);
+  });
+});
+
+describe('nextWakeDelayMs', () => {
+  it('wakes for an overdue instant when it comes sooner than midnight', () => {
+    const from = new Date(2026, 7, 26, 23, 0, 0);
+    const todos: Todo[] = [open({ dueDate: TODAY, dueTime: '23:10' })];
+    expect(nextWakeDelayMs(todos, TODAY, '23:00:00', from)).toBe(
+      10 * 60_000 + OVERDUE_WAKE_SLACK_MS,
+    );
+  });
+
+  it('wakes at midnight when it comes sooner than any overdue instant', () => {
+    const from = new Date(2026, 7, 26, 23, 0, 0);
+    const todos: Todo[] = [open({ dueDate: addDays(TODAY, 1), dueTime: '09:00' })];
+    expect(nextWakeDelayMs(todos, TODAY, '23:00:00', from)).toBe(
+      60 * 60_000 + OVERDUE_WAKE_SLACK_MS,
+    );
+  });
+
+  it('still schedules a wake at midnight when there are no timed tasks at all', () => {
+    const from = new Date(2026, 7, 26, 23, 0, 0);
+    expect(nextWakeDelayMs([], TODAY, '23:00:00', from)).toBe(
+      60 * 60_000 + OVERDUE_WAKE_SLACK_MS,
+    );
   });
 });

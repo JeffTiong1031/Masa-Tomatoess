@@ -97,3 +97,21 @@ export function msUntil(date: string, time: string, from: Date): number {
 }
 
 export const OVERDUE_WAKE_SLACK_MS = 1050;
+
+export function nextWakeDelayMs(
+  todos: Todo[],
+  today: string,
+  now: string,
+  from: Date,
+): number {
+  const overdueAt = nextOverdueAt(todos, today, now);
+  const overdueDelay =
+    overdueAt === null
+      ? null
+      : Math.max(msUntil(today, overdueAt, from) + OVERDUE_WAKE_SLACK_MS, 0);
+
+  const midnight = new Date(from.getFullYear(), from.getMonth(), from.getDate() + 1);
+  const midnightDelay = Math.max(midnight.getTime() - from.getTime() + OVERDUE_WAKE_SLACK_MS, 0);
+
+  return overdueDelay === null ? midnightDelay : Math.min(overdueDelay, midnightDelay);
+}
