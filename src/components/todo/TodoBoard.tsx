@@ -220,7 +220,7 @@ export default function TodoBoard() {
         </button>
       )}
 
-      {showCompleted ? (
+      {showCompleted && finished.length > 0 ? (
         <TodoGroup
           group={{ name: 'Completed', todos: finished }}
           onToggle={handleToggle}
