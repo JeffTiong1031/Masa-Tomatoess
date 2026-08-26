@@ -40,10 +40,17 @@ export default function TodoBoard() {
   const [notice, setNotice] = useState<string | null>(null);
   const [showCompleted, setShowCompleted] = useState(false);
   const [editing, setEditing] = useState<Todo | null>(null);
+  const [shownFor, setShownFor] = useState<UserName>(viewing);
+
+  if (viewing !== shownFor) {
+    setShownFor(viewing);
+    setShowCompleted(false);
+  }
 
   const displayStatus: BoardStatus = viewing === loadedFor ? status : 'loading';
-  const groups = groupTodos(todos, clock.today, clock.now);
-  const finished = completedTodos(todos, clock.today);
+  const visible = displayStatus === 'ok' ? todos : [];
+  const groups = groupTodos(visible, clock.today, clock.now);
+  const finished = completedTodos(visible, clock.today);
 
   useEffect(() => {
     let cancelled = false;
