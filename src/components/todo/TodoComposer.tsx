@@ -10,13 +10,14 @@ export default function TodoComposer({
   onAdd,
 }: {
   owner: UserName;
-  onAdd: (draft: TodoDraft) => Promise<void>;
+  onAdd: (draft: TodoDraft) => Promise<boolean>;
 }) {
   const [title, setTitle] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [dueTime, setDueTime] = useState('');
   const [priority, setPriority] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [failed, setFailed] = useState(false);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -24,16 +25,21 @@ export default function TodoComposer({
     if (trimmed === '' || saving) return;
 
     setSaving(true);
-    await onAdd({
+    setFailed(false);
+    const added = await onAdd({
       owner,
       title: trimmed,
       dueDate: dueDate === '' ? null : dueDate,
       dueTime: dueDate === '' || dueTime === '' ? null : dueTime,
       priority,
     });
+    setSaving(false);
+    if (!added) {
+      setFailed(true);
+      return;
+    }
     setTitle('');
     setPriority(false);
-    setSaving(false);
   };
 
   return (
@@ -88,6 +94,12 @@ export default function TodoComposer({
           Add
         </button>
       </div>
+
+      {failed ? (
+        <p className="text-xs text-[var(--mt-danger)]">
+          That did not go through. Try again.
+        </p>
+      ) : null}
     </form>
   );
 }

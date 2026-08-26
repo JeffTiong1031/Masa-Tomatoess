@@ -86,19 +86,17 @@ export default function TodoBoard() {
     return () => window.clearTimeout(timer);
   }, [todos, clock]);
 
-  const handleAdd = useCallback(
-    async (draft: TodoDraft) => {
-      const created = await insertTodo(draft);
-      if (created === null) {
-        setNotice('That task did not save. Try again.');
-        return;
-      }
-      setNotice(null);
-      setChosenView(draft.owner);
-      if (draft.owner === viewing) setTodos((current) => [...current, created]);
-    },
-    [viewing],
-  );
+  const handleAdd = useCallback(async (draft: TodoDraft) => {
+    const created = await insertTodo(draft);
+    if (created === null) {
+      setNotice('That task did not save. Try again.');
+      return false;
+    }
+    setNotice(null);
+    setChosenView(draft.owner);
+    setReloadToken((token) => token + 1);
+    return true;
+  }, []);
 
   const handleToggle = useCallback(async (todo: Todo) => {
     const next = !todo.done;
