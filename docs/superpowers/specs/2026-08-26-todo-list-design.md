@@ -86,20 +86,33 @@ todos
   updated_at    timestamptz
 ```
 
-The TypeScript shape lives in `src/lib/todo.ts`:
+The TypeScript shape lives in `src/lib/todo.ts`. A task is either open or done,
+and `completedAt` only exists once `done` is true, so the two are modelled as
+one union rather than a single interface with a field that is sometimes null
+for reasons the type alone cannot explain:
 
 ```ts
-export interface Todo {
+interface TodoBase {
   id: string;
   owner: UserName;
   title: string;
   dueDate: string | null;   // YYYY-MM-DD
   dueTime: string | null;   // HH:MM, null unless dueDate is set
   priority: boolean;
-  done: boolean;
-  completedAt: string | null;
   createdAt: string;
 }
+
+export interface OpenTodo extends TodoBase {
+  done: false;
+  completedAt: null;
+}
+
+export interface DoneTodo extends TodoBase {
+  done: true;
+  completedAt: string;
+}
+
+export type Todo = OpenTodo | DoneTodo;
 ```
 
 ## 4. Grouping and sorting
@@ -181,16 +194,25 @@ type TodoFetch =
 
 `missing-table` is Postgres error `42P01`, surfaced by PostgREST as `PGRST205`.
 
-`TodoBoard.tsx` holds the rows in React state and reloads after add, edit and
-delete. Ticking is the exception: the row leaves state at once and the write
-happens behind it; a failed write puts the row back and shows a notice.
+`TodoBoard.tsx` holds the rows in React state. Adding and editing both reload
+the list from the database — an add snaps the owner toggle back and asks for a
+fresh fetch rather than splicing the new row in locally, which is what keeps a
+task made while the very first load is still in flight from being overwritten
+by that load once it lands. Deleting is cheaper: the removed row is just
+filtered out of state, no round trip needed to know what is left. Ticking is
+the exception to all of it: the row leaves state at once and the write happens
+behind it; a failed write puts the row back and shows a notice.
 
-**The overdue wake-up.** After each render the board finds the earliest instant
-at which a task currently in Today becomes overdue, and sets a single timeout
-for that moment. When it fires, the groups recompute and the task moves. There
-is no polling — nothing runs while nothing is due — and the move is accurate to
-the second, which a per-second interval would burn a render a second to achieve.
-The timeout is cleared when the rows change and when the board unmounts.
+**The overdue wake-up.** After each render the board works out the next
+instant worth waking up for and sets a single timeout for it — whichever comes
+first of a task in Today crossing into Overdue, or the calendar rolling over to
+a new day at local midnight (an installed app can sit open overnight, and
+without this the board keeps yesterday's groups until something else forces a
+refresh). When the timeout fires, the clock updates, the groups recompute, and
+a new wake-up is scheduled for whatever is next. There is no polling — nothing
+runs while nothing is due — and the move is accurate to the second, which a
+per-second interval would burn a render a second to achieve. The timeout is
+cleared when the rows or the clock change and when the board unmounts.
 
 ## 7. Palette
 
@@ -267,6 +289,9 @@ src/components/nav/navLinks.ts         one entry
 src/components/ui/PageShell.tsx        AccentName gains 'todo'
 src/app/globals.css                    --mac-accent-todo
 src/lib/accents.test.ts                eleven accents, todo held to threshold
+src/lib/dates.ts                       gains timeISO, for the clock's now
+src/lib/dates.test.ts                  covers timeISO
+src/lib/supabase.ts                    gains the todos table's DDL block
 ```
 
 ## 10. Testing
@@ -289,8 +314,9 @@ Vitest has no DOM, so everything worth asserting lives in `todoList.ts`.
   finished eight days ago.
 - The next-overdue instant is the earliest future time among Today's timed
   tasks, and null when there are none.
-- `accents.test.ts` pins `--mac-accent-todo` to `#77E0AA` and holds it to
-  ΔE ≥ 20 and hue ≥ 20 against all ten others.
+- `accents.test.ts` pins `--mac-accent-todo` to `#64B880` and holds it to
+  ΔE ≥ 20 and hue ≥ 20 against all ten others — measured at ΔE 21.5 against
+  Fitness and 27.3° of hue against Countdown, its two closest neighbours.
 
 Each test is written to fail against the unbuilt behaviour first.
 
