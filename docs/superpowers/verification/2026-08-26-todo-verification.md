@@ -1,8 +1,7 @@
 # To-do list — verification record
 
 **Date:** 2026-08-26
-**Branch:** `fix/remove-mobile-bottom-bar` (to-do work landed as commits
-`2519b8c`…`4a233a2` on this branch)
+**Branch:** `feat/todo-list` (commits `2519b8c`…`4a233a2`)
 **Spec:** [2026-08-26-todo-list-design.md](../specs/2026-08-26-todo-list-design.md)
 **SQL:** [2026-08-26-todo-setup.sql](../specs/2026-08-26-todo-setup.sql) — already
 run in Supabase; the `todos` table exists.
