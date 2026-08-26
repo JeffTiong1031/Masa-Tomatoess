@@ -13,20 +13,22 @@ export default function TodoEditModal({
 }: {
   todo: Todo;
   onClose: () => void;
-  onSave: (id: string, draft: TodoDraft) => Promise<void>;
-  onDelete: (id: string) => Promise<void>;
+  onSave: (id: string, draft: TodoDraft) => Promise<boolean>;
+  onDelete: (id: string) => Promise<boolean>;
 }) {
   const [title, setTitle] = useState(todo.title);
   const [dueDate, setDueDate] = useState(todo.dueDate ?? '');
   const [dueTime, setDueTime] = useState(todo.dueTime ?? '');
   const [priority, setPriority] = useState(todo.priority);
   const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
 
   const save = async () => {
     const trimmed = title.trim();
     if (trimmed === '' || busy) return;
     setBusy(true);
-    await onSave(todo.id, {
+    setFailed(false);
+    const saved = await onSave(todo.id, {
       owner: todo.owner,
       title: trimmed,
       dueDate: dueDate === '' ? null : dueDate,
@@ -34,13 +36,22 @@ export default function TodoEditModal({
       priority,
     });
     setBusy(false);
+    if (!saved) {
+      setFailed(true);
+      return;
+    }
     onClose();
   };
 
   const remove = async () => {
     setBusy(true);
-    await onDelete(todo.id);
+    setFailed(false);
+    const removed = await onDelete(todo.id);
     setBusy(false);
+    if (!removed) {
+      setFailed(true);
+      return;
+    }
     onClose();
   };
 
@@ -110,6 +121,11 @@ export default function TodoEditModal({
             <Flag size={18} strokeWidth={1.9} aria-hidden />
           </button>
         </div>
+        {failed ? (
+          <p className="text-xs text-[var(--mt-danger)]">
+            That did not go through. Try again.
+          </p>
+        ) : null}
       </div>
     </Modal>
   );

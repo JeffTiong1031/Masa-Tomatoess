@@ -113,20 +113,22 @@ export default function TodoBoard() {
     const saved = await updateTodo(id, draft);
     if (!saved) {
       setNotice('That edit did not save.');
-      return;
+      return false;
     }
     setNotice(null);
     setReloadToken((token) => token + 1);
+    return true;
   }, []);
 
   const handleDelete = useCallback(async (id: string) => {
     const removed = await deleteTodo(id);
     if (!removed) {
       setNotice('That task could not be deleted.');
-      return;
+      return false;
     }
     setNotice(null);
     setTodos((current) => current.filter((todo) => todo.id !== id));
+    return true;
   }, []);
 
   if (!mounted) return null;
