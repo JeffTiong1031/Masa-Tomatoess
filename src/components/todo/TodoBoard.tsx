@@ -3,13 +3,14 @@
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import { todayISO, timeISO } from '@/lib/dates';
 import { isUserName, USERS, type UserName } from '@/lib/identity';
-import { fetchTodos, insertTodo, setTodoDone } from '@/lib/todoRepo';
+import { fetchTodos, insertTodo, setTodoDone, updateTodo, deleteTodo } from '@/lib/todoRepo';
 import { completedTodos, groupTodos } from '@/lib/todoList';
 import type { Todo, TodoDraft } from '@/lib/todo';
 import { useHasMounted } from '@/hooks/useHasMounted';
 import Card from '@/components/ui/Card';
 import TodoComposer from '@/components/todo/TodoComposer';
 import TodoGroup from '@/components/todo/TodoGroup';
+import TodoEditModal from '@/components/todo/TodoEditModal';
 
 type BoardStatus = 'loading' | 'ok' | 'missing-table' | 'error';
 
@@ -41,6 +42,7 @@ export default function TodoBoard() {
   const [showCompleted, setShowCompleted] = useState(false);
   const [editing, setEditing] = useState<Todo | null>(null);
   const [shownFor, setShownFor] = useState<UserName>(viewing);
+  const [reloadToken, setReloadToken] = useState(0);
 
   if (viewing !== shownFor) {
     setShownFor(viewing);
@@ -70,7 +72,7 @@ export default function TodoBoard() {
     return () => {
       cancelled = true;
     };
-  }, [viewing]);
+  }, [viewing, reloadToken]);
 
   const handleAdd = useCallback(
     async (draft: TodoDraft) => {
@@ -105,6 +107,26 @@ export default function TodoBoard() {
 
     setTodos((current) => current.map((row) => (row.id === todo.id ? todo : row)));
     setNotice('That change did not save.');
+  }, []);
+
+  const handleSave = useCallback(async (id: string, draft: TodoDraft) => {
+    const saved = await updateTodo(id, draft);
+    if (!saved) {
+      setNotice('That edit did not save.');
+      return;
+    }
+    setNotice(null);
+    setReloadToken((token) => token + 1);
+  }, []);
+
+  const handleDelete = useCallback(async (id: string) => {
+    const removed = await deleteTodo(id);
+    if (!removed) {
+      setNotice('That task could not be deleted.');
+      return;
+    }
+    setNotice(null);
+    setTodos((current) => current.filter((todo) => todo.id !== id));
   }, []);
 
   if (!mounted) return null;
@@ -196,6 +218,15 @@ export default function TodoBoard() {
           onOpen={setEditing}
         />
       ) : null}
+
+      {editing === null ? null : (
+        <TodoEditModal
+          todo={editing}
+          onClose={() => setEditing(null)}
+          onSave={handleSave}
+          onDelete={handleDelete}
+        />
+      )}
     </div>
   );
 }
