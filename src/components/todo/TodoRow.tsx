@@ -64,8 +64,9 @@ export default function TodoRow({
         <Flag
           size={16}
           strokeWidth={2}
+          role="img"
           aria-label="Important"
-          className="text-[var(--mt-danger)]"
+          className="text-[var(--mt-accent)]"
         />
       ) : null}
     </li>
