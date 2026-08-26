@@ -97,9 +97,9 @@ describe('accent palette', () => {
     expect(readAccents().todo).toBe('#64B880');
   });
 
-  it('leaves the two new accents no worse than the grandfathered pairs', () => {
-    // The point of the floor: before this, the three new accents were the
-    // three CLOSEST pairs in the palette -- closer than flexible/meals,
+  it('leaves the new accents no worse than the grandfathered pairs', () => {
+    // The point of the floor: before this branch, the two new accents were
+    // the two CLOSEST pairs in the palette -- closer than flexible/meals,
     // the pair the threshold comment itself named as the bad case. The
     // closest pair overall must now be one of the grandfathered ones.
     const accents = readAccents();
