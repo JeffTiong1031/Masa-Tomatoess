@@ -3,11 +3,13 @@
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import { todayISO, timeISO } from '@/lib/dates';
 import { isUserName, USERS, type UserName } from '@/lib/identity';
-import { fetchTodos, insertTodo } from '@/lib/todoRepo';
+import { fetchTodos, insertTodo, setTodoDone } from '@/lib/todoRepo';
+import { completedTodos, groupTodos } from '@/lib/todoList';
 import type { Todo, TodoDraft } from '@/lib/todo';
 import { useHasMounted } from '@/hooks/useHasMounted';
 import Card from '@/components/ui/Card';
 import TodoComposer from '@/components/todo/TodoComposer';
+import TodoGroup from '@/components/todo/TodoGroup';
 
 type BoardStatus = 'loading' | 'ok' | 'missing-table' | 'error';
 
@@ -36,8 +38,12 @@ export default function TodoBoard() {
   const [loadedFor, setLoadedFor] = useState<UserName | null>(null);
   const [clock, setClock] = useState<Clock>(() => ({ today: todayISO(), now: timeISO() }));
   const [notice, setNotice] = useState<string | null>(null);
+  const [showCompleted, setShowCompleted] = useState(false);
+  const [editing, setEditing] = useState<Todo | null>(null);
 
   const displayStatus: BoardStatus = viewing === loadedFor ? status : 'loading';
+  const groups = groupTodos(todos, clock.today, clock.now);
+  const finished = completedTodos(todos, clock.today);
 
   useEffect(() => {
     let cancelled = false;
@@ -72,6 +78,27 @@ export default function TodoBoard() {
     },
     [viewing],
   );
+
+  const handleToggle = useCallback(async (todo: Todo) => {
+    const next = !todo.done;
+    const at = new Date().toISOString();
+    setTodos((current) =>
+      current.map((row) =>
+        row.id === todo.id
+          ? next
+            ? { ...row, done: true, completedAt: at }
+            : { ...row, done: false, completedAt: null }
+          : row,
+      ),
+    );
+    setNotice(null);
+
+    const saved = await setTodoDone(todo.id, next);
+    if (saved) return;
+
+    setTodos((current) => current.map((row) => (row.id === todo.id ? todo : row)));
+    setNotice('That change did not save.');
+  }, []);
 
   if (!mounted) return null;
 
@@ -128,6 +155,39 @@ export default function TodoBoard() {
         <p className="text-sm text-[var(--mt-danger)]">
           Could not reach the database. Check your connection and reload.
         </p>
+      ) : null}
+
+      {displayStatus === 'ok' && groups.length === 0 ? (
+        <p className="text-sm text-[var(--mt-text-muted)]">
+          Nothing due. Add a task above.
+        </p>
+      ) : null}
+
+      {groups.map((group) => (
+        <TodoGroup
+          key={group.name}
+          group={group}
+          onToggle={handleToggle}
+          onOpen={setEditing}
+        />
+      ))}
+
+      {finished.length === 0 ? null : (
+        <button
+          type="button"
+          onClick={() => setShowCompleted((current) => !current)}
+          className="min-h-11 text-left text-sm text-[var(--mt-text-muted)] underline"
+        >
+          {showCompleted ? 'Hide completed' : `Show completed (${finished.length})`}
+        </button>
+      )}
+
+      {showCompleted ? (
+        <TodoGroup
+          group={{ name: 'Completed', todos: finished }}
+          onToggle={handleToggle}
+          onOpen={setEditing}
+        />
       ) : null}
     </div>
   );
