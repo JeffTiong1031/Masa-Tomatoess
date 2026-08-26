@@ -165,6 +165,15 @@ describe('completedTodos', () => {
   it('excludes open tasks', () => {
     expect(completedTodos([open({ id: 'live' })], TODAY)).toEqual([]);
   });
+
+  it('includes a task by its local completion date, not the UTC date the timestamp slices to', () => {
+    const boundary = done({
+      id: 'boundary',
+      completedAt: new Date(2026, 7, 20, 3, 0, 0).toISOString(),
+    });
+    expect(boundary.completedAt.slice(0, 10)).toBe('2026-08-19');
+    expect(completedTodos([boundary], TODAY).map((todo) => todo.id)).toEqual(['boundary']);
+  });
 });
 
 describe('nextOverdueAt', () => {

@@ -1,4 +1,4 @@
-import { addDays, weekdayIndex } from './dates';
+import { addDays, todayISO, weekdayIndex } from './dates';
 import type { DoneTodo, Todo, TodoGroup, TodoGroupName } from './todo';
 
 const GROUP_ORDER: TodoGroupName[] = [
@@ -74,7 +74,7 @@ export function completedTodos(todos: Todo[], today: string): DoneTodo[] {
   const from = addDays(today, -(COMPLETED_WINDOW_DAYS - 1));
   return todos
     .filter((todo): todo is DoneTodo => todo.done)
-    .filter((todo) => todo.completedAt.slice(0, 10) >= from)
+    .filter((todo) => todayISO(new Date(todo.completedAt)) >= from)
     .sort((a, b) => b.completedAt.localeCompare(a.completedAt));
 }
 
