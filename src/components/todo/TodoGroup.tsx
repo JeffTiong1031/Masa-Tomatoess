@@ -1,24 +1,39 @@
 'use client';
 
 import TodoRow from './TodoRow';
+import { Trash2 } from 'lucide-react';
 import type { Todo } from '@/lib/todo';
 
 export default function TodoGroup({
   group,
   onToggle,
   onOpen,
+  onDeleteCompleted,
 }: {
   group: { name: string; todos: Todo[] };
   onToggle: (todo: Todo) => void;
   onOpen: (todo: Todo) => void;
+  onDeleteCompleted?: () => void;
 }) {
   return (
     <section className="mt-soft p-4">
-      <h2 className="mb-2 flex items-baseline gap-2 text-sm font-semibold text-[var(--mt-text)]">
-        {group.name}
-        <span className="text-xs font-normal text-[var(--mt-text-muted)]">
-          {group.todos.length}
+      <h2 className="mb-2 flex items-center justify-between gap-2 text-sm font-semibold text-[var(--mt-text)]">
+        <span className="flex items-baseline gap-2">
+          {group.name}
+          <span className="text-xs font-normal text-[var(--mt-text-muted)]">
+            {group.todos.length}
+          </span>
         </span>
+        {onDeleteCompleted ? (
+          <button
+            type="button"
+            onClick={onDeleteCompleted}
+            className="min-h-11 rounded-xl px-3 text-[var(--mt-danger)]"
+            aria-label="Delete all completed tasks"
+          >
+            <Trash2 size={18} strokeWidth={1.9} aria-hidden />
+          </button>
+        ) : null}
       </h2>
       <ul className="grid gap-1">
         {group.todos.map((todo) => (

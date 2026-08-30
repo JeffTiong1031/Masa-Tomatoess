@@ -3,11 +3,19 @@
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import { todayISO, timeISO } from '@/lib/dates';
 import { isUserName, USERS, type UserName } from '@/lib/identity';
-import { fetchTodos, insertTodo, setTodoDone, updateTodo, deleteTodo } from '@/lib/todoRepo';
+import {
+  deleteCompletedTodos,
+  deleteTodo,
+  fetchTodos,
+  insertTodo,
+  setTodoDone,
+  updateTodo,
+} from '@/lib/todoRepo';
 import { completedTodos, groupTodos, nextWakeDelayMs } from '@/lib/todoList';
 import type { Todo, TodoDraft } from '@/lib/todo';
 import { useHasMounted } from '@/hooks/useHasMounted';
 import Card from '@/components/ui/Card';
+import Modal from '@/components/ui/Modal';
 import TodoComposer from '@/components/todo/TodoComposer';
 import TodoGroup from '@/components/todo/TodoGroup';
 import TodoEditModal from '@/components/todo/TodoEditModal';
@@ -40,6 +48,8 @@ export default function TodoBoard() {
   const [clock, setClock] = useState<Clock>(() => ({ today: todayISO(), now: timeISO() }));
   const [notice, setNotice] = useState<string | null>(null);
   const [showCompleted, setShowCompleted] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [deletingCompleted, setDeletingCompleted] = useState(false);
   const [editing, setEditing] = useState<Todo | null>(null);
   const [shownFor, setShownFor] = useState<UserName>(viewing);
   const [reloadToken, setReloadToken] = useState(0);
@@ -138,6 +148,26 @@ export default function TodoBoard() {
     return true;
   }, []);
 
+  const handleDeleteCompleted = useCallback(async () => {
+    setDeletingCompleted(true);
+    const removed = await deleteCompletedTodos(viewing);
+    setDeletingCompleted(false);
+    if (!removed) {
+      setConfirmingDelete(false);
+      setNotice('Those completed tasks could not be deleted.');
+      return;
+    }
+    setNotice(null);
+    setTodos((current) => current.filter((todo) => !todo.done));
+    setShowCompleted(false);
+    setConfirmingDelete(false);
+  }, [viewing]);
+
+  const requestDeleteCompleted = useCallback(() => {
+    setNotice(null);
+    setConfirmingDelete(true);
+  }, []);
+
   if (!mounted) return null;
 
   if (displayStatus === 'missing-table') {
@@ -225,7 +255,42 @@ export default function TodoBoard() {
           group={{ name: 'Completed', todos: finished }}
           onToggle={handleToggle}
           onOpen={setEditing}
+          onDeleteCompleted={requestDeleteCompleted}
         />
+      ) : null}
+
+      {confirmingDelete ? (
+        <Modal
+          open
+          onClose={() => {
+            if (!deletingCompleted) setConfirmingDelete(false);
+          }}
+          title="Delete completed tasks"
+          footer={
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setConfirmingDelete(false)}
+                disabled={deletingCompleted}
+                className="min-h-11 rounded-xl border border-[var(--mt-border)] px-4 text-sm font-semibold text-[var(--mt-text-muted)] disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteCompleted}
+                disabled={deletingCompleted}
+                className="min-h-11 rounded-xl bg-[var(--mt-danger)] px-4 text-sm font-semibold text-[var(--mt-danger-contrast)] disabled:opacity-50"
+              >
+                {deletingCompleted ? 'Deleting…' : 'Delete all'}
+              </button>
+            </div>
+          }
+        >
+          <p className="text-sm text-[var(--mt-text-muted)]">
+            Are you sure you want to delete all completed tasks? This cannot be undone.
+          </p>
+        </Modal>
       ) : null}
 
       {editing === null ? null : (
