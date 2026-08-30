@@ -117,3 +117,17 @@ export async function deleteTodo(id: string): Promise<boolean> {
   }
   return true;
 }
+
+export async function deleteCompletedTodos(owner: UserName): Promise<boolean> {
+  const { error } = await supabase
+    .from('todos')
+    .delete()
+    .eq('owner', owner)
+    .eq('done', true);
+
+  if (error) {
+    console.error('Failed to delete completed todos:', error);
+    return false;
+  }
+  return true;
+}
