@@ -1234,7 +1234,7 @@ git commit -m "feat(assistant): decide when an apply run stops and what the butt
 - Produces:
   - `interface PlannedChange { change: TodoChange; id: string | null; outcome: ChangeOutcome; note: string }`
   - `function reconcileTodoPlan(changes: TodoChange[], map: HandleMap, rows: Todo[]): PlannedChange[]`
-  - `function clashesFor(change: TodoChange, rows: Todo[]): Todo[]`
+  - `function clashesFor(change: TodoChange, rows: Todo[], excludeId: string | null): Todo[]`
 
 **`todoPlan.ts` already imports from `./todo`.** Merge the `Todo` type into that existing import line rather than adding a second one — a duplicate import is a lint error.
 
@@ -1380,13 +1380,20 @@ function sameTitle(a: string, b: string): boolean {
   return a.trim().toLowerCase() === b.trim().toLowerCase();
 }
 
-export function clashesFor(change: TodoChange, rows: Todo[]): Todo[] {
+export function clashesFor(
+  change: TodoChange,
+  rows: Todo[],
+  excludeId: string | null,
+): Todo[] {
   if (!END_STATE_OPS.includes(change.op)) return [];
   if (change.dueDate === '') return [];
 
   return rows.filter(
     (todo) =>
-      !todo.done && todo.dueDate === change.dueDate && sameTitle(todo.title, change.title),
+      todo.id !== excludeId &&
+      !todo.done &&
+      todo.dueDate === change.dueDate &&
+      sameTitle(todo.title, change.title),
   );
 }
 ```
@@ -1747,7 +1754,7 @@ export default function PlanCard({
 
       <ul className="mt-3 space-y-2">
         {planned.map((entry, index) => {
-          const clashes = clashesFor(entry.change, rows);
+          const clashes = clashesFor(entry.change, rows, entry.id);
           return (
             <li key={index} className="text-sm text-[var(--mt-text)]">
               <span className="font-medium">{OP_WORDS[entry.change.op]}</span>{' '}
@@ -2040,7 +2047,7 @@ export default function AssistantSheet({
       outcomes.push(outcome);
 
       if (outcome === 'saved') {
-        const clashes = clashesFor(step.change, live);
+        const clashes = clashesFor(step.change, live, step.id);
         results.push({
           ...step,
           outcome: 'saved',
