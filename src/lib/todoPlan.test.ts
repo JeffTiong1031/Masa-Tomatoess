@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { assignHandles, emptyHandleMap } from './assistantContext';
-import { todoChangeParser, validateTodoPlan, toDraft, type TodoChange } from './todoPlan';
+import { todoChangeParser, validateTodoPlan, toDraft, reconcileTodoPlan, clashesFor, type TodoChange, type PlannedChange } from './todoPlan';
+import type { OpenTodo, Todo } from './todo';
 
 const TODAY = '2026-09-01';
 
@@ -169,5 +170,95 @@ describe('toDraft', () => {
       dueTime: '15:00',
       priority: false,
     });
+  });
+});
+
+function row(overrides: Partial<OpenTodo> = {}): OpenTodo {
+  return {
+    id: 'aaa',
+    owner: 'Jeff',
+    title: 'Dentist',
+    dueDate: '2026-09-12',
+    dueTime: null,
+    priority: false,
+    done: false,
+    completedAt: null,
+    createdAt: '2026-09-01T08:00:00.000Z',
+    ...overrides,
+  };
+}
+
+describe('reconcileTodoPlan', () => {
+  it('resolves a live handle to its id and leaves it pending', () => {
+    const planned = reconcileTodoPlan(
+      [{ op: 'delete', handle: 't1', title: '', dueDate: '', dueTime: '', priority: false }],
+      MAP,
+      [row({ id: 'aaa' })],
+    );
+    expect(planned[0].id).toBe('aaa');
+    expect(planned[0].outcome).toBe('pending');
+  });
+
+  it('marks a change stale when its row has gone', () => {
+    const planned = reconcileTodoPlan(
+      [{ op: 'delete', handle: 't2', title: '', dueDate: '', dueTime: '', priority: false }],
+      MAP,
+      [row({ id: 'aaa' })],
+    );
+    expect(planned[0].outcome).toBe('stale');
+    expect(planned[0].note).toBe('That task was already deleted.');
+  });
+
+  it('leaves an add pending with no id', () => {
+    const planned = reconcileTodoPlan(
+      [{ op: 'add', handle: '', title: 'New', dueDate: '', dueTime: '', priority: false }],
+      MAP,
+      [],
+    );
+    expect(planned[0]).toEqual<PlannedChange>({
+      change: { op: 'add', handle: '', title: 'New', dueDate: '', dueTime: '', priority: false },
+      id: null,
+      outcome: 'pending',
+      note: '',
+    });
+  });
+});
+
+describe('clashesFor', () => {
+  const add = (title: string, dueDate: string): TodoChange => ({
+    op: 'add',
+    handle: '',
+    title,
+    dueDate,
+    dueTime: '',
+    priority: false,
+  });
+
+  it('finds a task with the same title on the same day', () => {
+    const found = clashesFor(add('Dentist', '2026-09-12'), [row()]);
+    expect(found.map((todo) => todo.id)).toEqual(['aaa']);
+  });
+
+  it('ignores case and surrounding spaces', () => {
+    const found = clashesFor(add('  dENTIST ', '2026-09-12'), [row()]);
+    expect(found).toHaveLength(1);
+  });
+
+  it('ignores a different day', () => {
+    expect(clashesFor(add('Dentist', '2026-09-13'), [row()])).toEqual([]);
+  });
+
+  it('ignores an undated add', () => {
+    expect(clashesFor(add('Dentist', ''), [row()])).toEqual([]);
+  });
+
+  it('ignores a completed task', () => {
+    const finished: Todo = { ...row(), done: true, completedAt: '2026-09-01T10:00:00.000Z' };
+    expect(clashesFor(add('Dentist', '2026-09-12'), [finished])).toEqual([]);
+  });
+
+  it('does not flag a delete', () => {
+    const change: TodoChange = { op: 'delete', handle: 't1', title: '', dueDate: '', dueTime: '', priority: false };
+    expect(clashesFor(change, [row()])).toEqual([]);
   });
 });

@@ -1,7 +1,8 @@
 import { idOf, type HandleMap } from './assistantContext';
 import type { ChangeParser, Reason } from './assistantReply';
-import type { TodoDraft } from './todo';
+import type { Todo, TodoDraft } from './todo';
 import type { UserName } from './identity';
+import type { ChangeOutcome } from './assistantRun';
 
 export const YEAR_RANGE = 5;
 
@@ -122,4 +123,46 @@ export function toDraft(change: TodoChange, owner: UserName): TodoDraft {
     dueTime: change.dueTime === '' ? null : change.dueTime,
     priority: change.priority,
   };
+}
+
+export interface PlannedChange {
+  change: TodoChange;
+  id: string | null;
+  outcome: ChangeOutcome;
+  note: string;
+}
+
+export function reconcileTodoPlan(
+  changes: TodoChange[],
+  map: HandleMap,
+  rows: Todo[],
+): PlannedChange[] {
+  const live = new Set(rows.map((todo) => todo.id));
+
+  return changes.map((change) => {
+    if (change.op === 'add') {
+      return { change, id: null, outcome: 'pending', note: '' };
+    }
+
+    const id = idOf(map, change.handle);
+    if (id === null || !live.has(id)) {
+      return { change, id: null, outcome: 'stale', note: 'That task was already deleted.' };
+    }
+
+    return { change, id, outcome: 'pending', note: '' };
+  });
+}
+
+function sameTitle(a: string, b: string): boolean {
+  return a.trim().toLowerCase() === b.trim().toLowerCase();
+}
+
+export function clashesFor(change: TodoChange, rows: Todo[]): Todo[] {
+  if (!END_STATE_OPS.includes(change.op)) return [];
+  if (change.dueDate === '') return [];
+
+  return rows.filter(
+    (todo) =>
+      !todo.done && todo.dueDate === change.dueDate && sameTitle(todo.title, change.title),
+  );
 }
