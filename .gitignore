@@ -43,3 +43,6 @@ next-env.d.ts
 # superdesign temp
 .superdesign/tmp/
 .superpowers/
+
+# Claude Code local worktrees
+.claude/worktrees/
