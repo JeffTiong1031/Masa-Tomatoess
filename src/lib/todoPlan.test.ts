@@ -235,30 +235,59 @@ describe('clashesFor', () => {
   });
 
   it('finds a task with the same title on the same day', () => {
-    const found = clashesFor(add('Dentist', '2026-09-12'), [row()]);
+    const found = clashesFor(add('Dentist', '2026-09-12'), [row()], null);
     expect(found.map((todo) => todo.id)).toEqual(['aaa']);
   });
 
   it('ignores case and surrounding spaces', () => {
-    const found = clashesFor(add('  dENTIST ', '2026-09-12'), [row()]);
+    const found = clashesFor(add('  dENTIST ', '2026-09-12'), [row()], null);
     expect(found).toHaveLength(1);
   });
 
   it('ignores a different day', () => {
-    expect(clashesFor(add('Dentist', '2026-09-13'), [row()])).toEqual([]);
+    expect(clashesFor(add('Dentist', '2026-09-13'), [row()], null)).toEqual([]);
   });
 
   it('ignores an undated add', () => {
-    expect(clashesFor(add('Dentist', ''), [row()])).toEqual([]);
+    expect(clashesFor(add('Dentist', ''), [row()], null)).toEqual([]);
   });
 
   it('ignores a completed task', () => {
     const finished: Todo = { ...row(), done: true, completedAt: '2026-09-01T10:00:00.000Z' };
-    expect(clashesFor(add('Dentist', '2026-09-12'), [finished])).toEqual([]);
+    expect(clashesFor(add('Dentist', '2026-09-12'), [finished], null)).toEqual([]);
   });
 
   it('does not flag a delete', () => {
     const change: TodoChange = { op: 'delete', handle: 't1', title: '', dueDate: '', dueTime: '', priority: false };
-    expect(clashesFor(change, [row()])).toEqual([]);
+    expect(clashesFor(change, [row()], null)).toEqual([]);
+  });
+
+  it('does not flag an edit against the row it targets', () => {
+    const change: TodoChange = {
+      op: 'edit',
+      handle: 't1',
+      title: 'Dentist',
+      dueDate: '2026-09-12',
+      dueTime: '',
+      priority: true,
+    };
+    expect(clashesFor(change, [row({ id: 'aaa' })], 'aaa')).toEqual([]);
+  });
+
+  it('flags an edit that collides with a different task', () => {
+    const change: TodoChange = {
+      op: 'edit',
+      handle: 't1',
+      title: 'Dentist',
+      dueDate: '2026-09-12',
+      dueTime: '',
+      priority: false,
+    };
+    const rows = [row({ id: 'aaa' }), row({ id: 'bbb' })];
+    expect(clashesFor(change, rows, 'aaa').map((t) => t.id)).toEqual(['bbb']);
+  });
+
+  it('still flags an add with no row to exclude', () => {
+    expect(clashesFor(add('Dentist', '2026-09-12'), [row()], null)).toHaveLength(1);
   });
 });

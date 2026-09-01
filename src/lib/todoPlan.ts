@@ -157,12 +157,15 @@ function sameTitle(a: string, b: string): boolean {
   return a.trim().toLowerCase() === b.trim().toLowerCase();
 }
 
-export function clashesFor(change: TodoChange, rows: Todo[]): Todo[] {
+export function clashesFor(change: TodoChange, rows: Todo[], excludeId: string | null): Todo[] {
   if (!END_STATE_OPS.includes(change.op)) return [];
   if (change.dueDate === '') return [];
 
   return rows.filter(
     (todo) =>
-      !todo.done && todo.dueDate === change.dueDate && sameTitle(todo.title, change.title),
+      todo.id !== excludeId &&
+      !todo.done &&
+      todo.dueDate === change.dueDate &&
+      sameTitle(todo.title, change.title),
   );
 }
