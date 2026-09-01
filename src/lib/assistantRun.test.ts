@@ -42,6 +42,11 @@ describe('nextStep', () => {
     const outcomes: StepOutcome[] = Array(UNREACHED_LIMIT).fill('unreached');
     expect(nextStep({ outcomes, elapsedMs: APPLY_BUDGET_MS + 1 })).toBe('stopBudget');
   });
+
+  it('keeps going when three unreached calls are not consecutive', () => {
+    const outcomes: StepOutcome[] = ['unreached', 'failed', 'unreached', 'unreached'];
+    expect(nextStep({ outcomes, elapsedMs: 1000 })).toBe('run');
+  });
 });
 
 describe('buttonStateFor', () => {
