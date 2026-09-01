@@ -30,11 +30,11 @@ export function assignHandles(map: HandleMap, ids: string[]): HandleMap {
 }
 
 export function handleOf(map: HandleMap, id: string): string | null {
-  return map.byId[id] ?? null;
+  return Object.prototype.hasOwnProperty.call(map.byId, id) ? map.byId[id] : null;
 }
 
 export function idOf(map: HandleMap, handle: string): string | null {
-  return map.byHandle[handle] ?? null;
+  return Object.prototype.hasOwnProperty.call(map.byHandle, handle) ? map.byHandle[handle] : null;
 }
 
 export const MAX_TODO_ROWS = 200;

@@ -37,6 +37,13 @@ describe('todoChangeParser', () => {
     });
   });
 
+  it('rejects __proto__ as a handle even though it is an inherited property', () => {
+    expect(parse(raw({ op: 'delete', handle: '__proto__' }))).toEqual({
+      ok: false,
+      reason: { kind: 'unknownHandle', handle: '__proto__' },
+    });
+  });
+
   it('rejects an add with a blank title', () => {
     expect(parse(raw({ title: '   ' }))).toEqual({ ok: false, reason: { kind: 'emptyTitle' } });
   });
@@ -84,6 +91,39 @@ describe('todoChangeParser', () => {
   it('ignores the date fields of a complete', () => {
     const result = parse(raw({ op: 'complete', handle: 't1', title: '', dueDate: 'nonsense' }));
     expect(result.ok).toBe(true);
+  });
+
+  it('rejects an impossible date like February 30', () => {
+    expect(parse(raw({ dueDate: '2026-02-30' }))).toEqual({
+      ok: false,
+      reason: { kind: 'badDate', value: '2026-02-30' },
+    });
+  });
+
+  it('rejects a date with an invalid month', () => {
+    expect(parse(raw({ dueDate: '2026-13-01' }))).toEqual({
+      ok: false,
+      reason: { kind: 'badDate', value: '2026-13-01' },
+    });
+  });
+
+  it('accepts a valid leap day', () => {
+    const result = parse(raw({ dueDate: '2028-02-29' }));
+    expect(result.ok).toBe(true);
+  });
+
+  it('rejects an impossible time like 25:99', () => {
+    expect(parse(raw({ dueDate: '2026-09-12', dueTime: '25:99' }))).toEqual({
+      ok: false,
+      reason: { kind: 'badTime', value: '25:99' },
+    });
+  });
+
+  it('rejects a time with invalid minutes', () => {
+    expect(parse(raw({ dueDate: '2026-09-12', dueTime: '12:60' }))).toEqual({
+      ok: false,
+      reason: { kind: 'badTime', value: '12:60' },
+    });
   });
 });
 

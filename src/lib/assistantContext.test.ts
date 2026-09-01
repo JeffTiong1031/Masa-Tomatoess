@@ -46,6 +46,26 @@ describe('assignHandles', () => {
     expect(idOf(map, 't99')).toBeNull();
   });
 
+  it('returns null for __proto__ even though it is an inherited object property', () => {
+    const map = assignHandles(emptyHandleMap('t'), ['aaa']);
+    expect(idOf(map, '__proto__')).toBeNull();
+  });
+
+  it('returns null for constructor even though it is an inherited function property', () => {
+    const map = assignHandles(emptyHandleMap('t'), ['aaa']);
+    expect(idOf(map, 'constructor')).toBeNull();
+  });
+
+  it('returns null when handleOf is asked for an id with an inherited property name', () => {
+    const map = assignHandles(emptyHandleMap('t'), ['aaa']);
+    expect(handleOf(map, '__proto__')).toBeNull();
+  });
+
+  it('returns null when handleOf is asked for constructor', () => {
+    const map = assignHandles(emptyHandleMap('t'), ['aaa']);
+    expect(handleOf(map, 'constructor')).toBeNull();
+  });
+
   it('uses the prefix it was given', () => {
     const map = assignHandles(emptyHandleMap('e'), ['aaa']);
     expect(handleOf(map, 'aaa')).toBe('e1');
