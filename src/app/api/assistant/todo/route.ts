@@ -2,7 +2,7 @@ import { GoogleGenAI, type Interactions } from '@google/genai';
 import { isRateLimited } from '@/lib/aiFailure';
 import { GEMINI_MODEL } from '@/lib/gemini';
 import { MAX_CHANGES } from '@/lib/assistantReply';
-import { MAX_TODO_ROWS, type TodoSnapshot } from '@/lib/assistantContext';
+import { parseAssistantBody, type Message } from '@/lib/assistantBody';
 
 export const maxDuration = 30;
 
@@ -64,33 +64,6 @@ Friday. Do not ask which category, what time, or whether it is a priority.
 
 A cancelled plan was rejected. Do not offer it again unless asked.`;
 
-const MAX_MESSAGE_CHARS = 1_000;
-
-interface Message {
-  role: 'you' | 'assistant';
-  text: string;
-}
-
-function toSnapshot(value: unknown): TodoSnapshot | null {
-  if (typeof value !== 'object' || value === null) return null;
-  const raw = value as Record<string, unknown>;
-  if (typeof raw.today !== 'string' || typeof raw.weekday !== 'string') return null;
-  if (typeof raw.now !== 'string' || !Array.isArray(raw.rows)) return null;
-  if (raw.rows.length > MAX_TODO_ROWS) return null;
-  return value as TodoSnapshot;
-}
-
-function toHistory(value: unknown): Message[] | null {
-  if (!Array.isArray(value) || value.length === 0) return null;
-  for (const entry of value) {
-    if (typeof entry !== 'object' || entry === null) return null;
-    const raw = entry as Record<string, unknown>;
-    if (raw.role !== 'you' && raw.role !== 'assistant') return null;
-    if (typeof raw.text !== 'string' || raw.text.length > MAX_MESSAGE_CHARS) return null;
-  }
-  return value as Message[];
-}
-
 function transcript(history: Message[]): string {
   return history
     .map((message) => `${message.role === 'you' ? 'Person' : 'You'}: ${message.text}`)
@@ -103,15 +76,20 @@ export async function POST(request: Request) {
     return Response.json({ error: 'Assistant not configured' }, { status: 503 });
   }
 
+  let body: unknown;
   try {
-    const body = await request.json();
-    const snapshot = toSnapshot(body.snapshot);
-    const history = toHistory(body.history);
+    body = await request.json();
+  } catch {
+    return Response.json({ error: 'Bad request' }, { status: 400 });
+  }
 
-    if (snapshot === null || history === null) {
-      return Response.json({ error: 'Bad request' }, { status: 400 });
-    }
+  const parsed = parseAssistantBody(body);
+  if (!parsed.ok) {
+    return Response.json({ error: 'Bad request' }, { status: 400 });
+  }
+  const { snapshot, history } = parsed;
 
+  try {
     const prompt = `${SYSTEM}
 
 Today is ${snapshot.weekday} ${snapshot.today}. The time is ${snapshot.now}.
