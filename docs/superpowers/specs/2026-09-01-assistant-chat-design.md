@@ -101,40 +101,67 @@ the browser maps the name back to an id. The bot never creates a category.
 failure rejects the **whole** reply — there are no half-valid plans.
 
 1. `kind` is one of the four.
-2. A plan holds between 1 and 20 changes.
-3. Every handle in a non-add change exists in this conversation's handle map.
-4. An add has a non-empty title.
-5. Dates are `YYYY-MM-DD`, times are `HH:MM`.
-6. Dates fall within **today plus or minus five years**. This is a typo guard on
-   the number, not the read window: it applies to adds too.
-7. A category name is one we sent, or empty.
-8. No handle appears twice in one plan.
-9. Calendar only: the change passes `validate()` in `eventForm.ts` — the same
-   check the manual event form runs. The bot cannot create an event your own
-   form would reject, and there is no second rulebook to keep in sync.
+2. The shape matches the kind. `answer`, `question` and `refusal` carry `text`
+   and nothing else — `summary` empty, `changes` empty. `plan` carries `summary`
+   and 1 to 20 changes, and `text` empty. A mismatch is rejected, never
+   quietly ignored: an `answer` arriving with five changes means the model was
+   confused about what it was doing, and dropping those changes could throw away
+   what you actually asked for.
+3. A plan holds between 1 and 20 changes.
+4. Every handle in a non-add change exists in this conversation's handle map.
+5. An add has a non-empty title.
+6. **Every** date field is `YYYY-MM-DD` and every time field is `HH:MM` — a
+   to-do's `dueDate`, and an event's `date` **and** `endDate`.
+7. **Every** date field falls within **today plus or minus five years**, end
+   dates included. This is a typo guard on the number, not the read window: it
+   applies to adds too.
+8. A category name is one we sent, or empty.
+9. No handle appears twice in one plan.
+10. Calendar only: the change passes `validate()` in `eventForm.ts` — the same
+    check the manual event form runs. The bot cannot create an event your own
+    form would reject, and there is no second rulebook to keep in sync.
 
 ### Failure wording
 
-`assistantFailure.ts` maps every reason to its own sentence, in the table style
-`aiFailure.ts` already uses, pinned by a test so nothing falls through to a
-generic string.
+**A reason is a tagged union that carries its value, not a bare string.**
+`aiFailure.ts` can use a flat `Record<Reason, string>` because none of its
+messages quote anything. These do, so a lookup table would print a fixed "Sport"
+no matter what the model actually said. Instead:
+
+```ts
+type Reason =
+  | { kind: 'badChangeCount'; count: number }
+  | { kind: 'yearOutOfRange'; year: number; field: 'date' | 'endDate' | 'dueDate' }
+  | { kind: 'unknownCategory'; name: string }
+  | { kind: 'formRejection'; message: string }
+  | ...
+```
+
+`assistantFailureMessage(reason)` builds the sentence from that payload. The
+numbers and names below are **examples of the shape**, filled in from the reply
+being rejected:
 
 | Reason | Message |
 |---|---|
 | unknown kind | The AI answered in a way I couldn't read. Say it again. |
-| bad change count | It tried to make 34 changes at once. Ask for a smaller piece. |
+| shape does not match kind | The AI's answer didn't hold together. Say it again. |
+| bad change count | It tried to make *{count}* changes at once. Ask for a smaller piece. |
 | unknown handle | It pointed at a task that isn't on your list. Say it again. |
 | empty title | It left the name blank. Tell me what to call it. |
 | bad date or time | It gave me a date I couldn't read. Try naming the date plainly. |
-| year out of range | It gave me the year 2087 — that looks like a typo. Say the date again. |
-| unknown category | There's no category called Sport. Pick one you have, or leave it out. |
+| year out of range | It gave me the year *{year}* — that looks like a typo. Say the date again. |
+| unknown category | There's no category called *{name}*. Pick one you have, or leave it out. |
 | duplicate handle | It tried to change the same task twice in one go. Say it again. |
-| form rejection | the message `eventForm.validate()` already returns, word for word |
+| form rejection | *{message}* — the wording `eventForm.validate()` already returns |
 | key missing (503) | The assistant isn't switched on yet. |
 | quota (429) | Out of AI replies for today. Try again tomorrow. |
 | no network | You're offline. The assistant needs a connection — your board still works. |
 | timeout | The AI took too long. Try again. |
 | anything else | Something broke on the way to the AI. Try again in a moment. |
+
+Two tests: every reason produces its own wording and none falls through to the
+generic line, and each carried value actually reaches the sentence — reject a
+category named `Zumba` and assert the message says `Zumba`.
 
 ## The snapshot
 
@@ -142,13 +169,13 @@ generic string.
 
 Rows travel as short handles — `t1`, `e4` — never as database ids. Your Supabase
 ids never leave the machine, the prompt shrinks by roughly 35 characters a row,
-and an invented handle is caught by check 3.
+and an invented handle is caught by check 4.
 
 `assignHandles(previousMap, rows)` is **append-only for the life of the
 conversation**. A row is given a handle the first time it appears in this chat
 and that handle is never reused. Numbers come from a counter, never from array
 position — position-based handles would silently re-point `t3` at a different
-row after a deletion, and check 3 could not see it because `t3` would still
+row after a deletion, and check 4 could not see it because `t3` would still
 exist. A row deleted mid-chat keeps its dead handle, so a plan aimed at it is
 caught as **stale** rather than applied to the wrong row.
 
@@ -254,7 +281,7 @@ Changes in a plan are independent by construction, not by hope:
 
 - An add produces no handle, so the model cannot write "add this, then edit the
   thing I just added". That dependency is unrepresentable.
-- Check 8 forbids the same handle twice, killing "delete t3 then edit t3".
+- Check 9 forbids the same handle twice, killing "delete t3 then edit t3".
 
 So Apply runs every change and hands back one complete report. Stopping at the
 first failure would leave a half-applied plan with a ragged edge.
@@ -284,6 +311,20 @@ Every call gets an `AbortController`.
 
 Every path out of Apply re-enables the button, either as **Try again** or as the
 collapsed "Saved" line. It can never sit grey forever.
+
+The two decisions inside this are pure, and both get tests, because the stuck
+grey button is exactly a "never decided to stop" bug:
+
+- `nextStep({ results, remaining, elapsedMs })` returns `run`, `stopNetwork` or
+  `stopBudget`. Three unreached failures in a row give `stopNetwork`; a spent
+  30s budget gives `stopBudget`; two unreached failures with a database error
+  between them still gives `run`, because the run is not actually dead.
+- `buttonStateFor(outcome)` maps a finished run to what the button becomes. The
+  test walks every member of the outcome union and asserts none of them returns
+  `saving`.
+
+The `AbortController` wiring itself needs a DOM, so it stays on the by-hand
+list.
 
 Closing the sheet mid-Apply does not cancel it. The writes finish, the board
 refetches, and the result lands as a board notice.
@@ -329,8 +370,13 @@ that's outside the months you're looking at."
 Vitest has no DOM here, so every decision lives in `lib/` and is tested there.
 
 - `parseReply` — one test per rejection reason, each asserting the specific
-  reason, plus a happy path per reply kind.
-- the failure table — every reason maps to its own wording, none falls through.
+  reason, plus a happy path per reply kind. Includes an `answer` arriving with
+  changes attached, and a `plan` arriving with stray `text`.
+- the failure table — every reason maps to its own wording, none falls through,
+  and every carried value reaches the sentence it is quoted in.
+- `nextStep` and `buttonStateFor` — the run stops on three unreached failures
+  and on a spent budget, keeps going through a database error, and no finished
+  outcome leaves the button on `saving`.
 - `assignHandles` — three turns with a row deleted in the middle; assert no
   handle ever changes meaning.
 - `buildSnapshot` — to-do keeps all open plus done within 7 days; calendar
@@ -368,7 +414,8 @@ whole shape — route, parse, card, apply, retry — on the simpler half. The
 calendar bot follows, reusing the shared lib and adding `eventForm.validate()`
 and clash checks. Two branches, two pull requests.
 
-## Before any of this runs
+## Dependencies
 
-`@google/genai` is listed in `package.json` but is absent from `node_modules`.
-The meals AI is dead on this machine until `npm install` is run.
+`@google/genai` 2.18.0 is installed and resolves. The meals routes already prove
+the call shape against it: `client.interactions.create` with a `response_format`
+carrying a JSON schema, which is the same shape both assistant routes use.
