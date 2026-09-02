@@ -7,6 +7,7 @@ import {
   clashNoteFor,
   describeChange,
   opWordFor,
+  outsideNoteFor,
   reconcileCalendarPlan,
   toEventDraft,
   toEventInput,
@@ -440,6 +441,26 @@ describe('describeChange', () => {
   it('omits the countdown flag when clear', () => {
     const described = change({ startTime: '09:00', endTime: '10:00', countdown: false });
     expect(describeChange(described)).toBe('Dentist · 2026-09-10 · 09:00–10:00');
+  });
+});
+
+describe('outsideNoteFor', () => {
+  it('says nothing about a delete, which carries no date', () => {
+    expect(outsideNoteFor(change({ op: 'delete', handle: 'e1', date: '' }), '2026-09')).toBe('');
+  });
+
+  it('says nothing when the change has no date at all', () => {
+    expect(outsideNoteFor(change({ date: '' }), '2026-09')).toBe('');
+  });
+
+  it('says nothing when the date falls inside the month on screen', () => {
+    expect(outsideNoteFor(change({ date: '2026-09-14' }), '2026-09')).toBe('');
+  });
+
+  it('names the months, plural, when the date falls outside', () => {
+    expect(outsideNoteFor(change({ date: '2026-12-14' }), '2026-09')).toBe(
+      "that's outside the months you're looking at",
+    );
   });
 });
 

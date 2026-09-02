@@ -1,6 +1,7 @@
 import { idOf, type HandleMap } from './assistantContext';
 import type { ChangeParser, Reason } from './assistantReply';
 import { dateProblem, duplicateHandleIn, timeProblem } from './assistantValidate';
+import { monthOf } from './dates';
 import { toTiming, validate, type EventDraft } from './eventForm';
 import type { EventInput } from './calendarRepo';
 import type { Category } from './categories';
@@ -186,6 +187,11 @@ export function calendarChangeParser(
 
     return { ok: true, change };
   };
+}
+
+export function outsideNoteFor(change: CalendarChange, month: string): string {
+  if (change.op === 'delete' || change.date === '') return '';
+  return monthOf(change.date) === month ? '' : "that's outside the months you're looking at";
 }
 
 export const MOMENT_MINUTES = 60;

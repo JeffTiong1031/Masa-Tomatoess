@@ -7,13 +7,13 @@ import {
   clashNoteFor,
   describeChange,
   opWordFor,
+  outsideNoteFor,
   reconcileCalendarPlan,
   toEventInput,
   validateCalendarPlan,
   type CalendarChange,
 } from '@/lib/calendarPlan';
 import { deleteEvent, insertEvent, updateEvent, fetchEvents } from '@/lib/calendarRepo';
-import { monthOf } from '@/lib/dates';
 import type { CalendarEvent } from '@/lib/calendarEvent';
 import type { Category } from '@/lib/categories';
 import { withStepBudget, type AssistantSection } from './section';
@@ -45,10 +45,7 @@ export function calendarSection({
       clashesFor(entry.change, rows, entry.id).map((row) => row.title),
     clashNote: clashNoteFor,
 
-    outsideNote(change) {
-      if (change.op === 'delete' || change.date === '') return '';
-      return monthOf(change.date) === month ? '' : "that's outside the month you're looking at";
-    },
+    outsideNote: (change) => outsideNoteFor(change, month),
 
     opWord: opWordFor,
     describe: describeChange,
