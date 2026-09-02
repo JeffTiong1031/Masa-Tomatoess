@@ -1,6 +1,17 @@
 import { describe, it, expect } from 'vitest';
 import { assignHandles, emptyHandleMap } from './assistantContext';
-import { todoChangeParser, validateTodoPlan, toDraft, reconcileTodoPlan, clashesFor, type TodoChange, type PlannedChange } from './todoPlan';
+import {
+  clashesFor,
+  describeChange,
+  opWordFor,
+  reconcileTodoPlan,
+  todoChangeParser,
+  toDraft,
+  validateTodoPlan,
+  type TodoChange,
+  type TodoOp,
+  type PlannedChange,
+} from './todoPlan';
 import type { OpenTodo, Todo } from './todo';
 
 const TODAY = '2026-09-01';
@@ -296,5 +307,65 @@ describe('clashesFor', () => {
 
   it('still flags an add with no row to exclude', () => {
     expect(clashesFor(add('Dentist', '2026-09-12'), [row()], null)).toHaveLength(1);
+  });
+});
+
+describe('opWordFor', () => {
+  function change(op: TodoOp): TodoChange {
+    return { op, handle: 't1', title: 'Dentist', dueDate: '', dueTime: '', priority: false };
+  }
+
+  it('names every op with its own word', () => {
+    expect(opWordFor(change('add'))).toBe('Add');
+    expect(opWordFor(change('edit'))).toBe('Change');
+    expect(opWordFor(change('complete'))).toBe('Tick off');
+    expect(opWordFor(change('reopen'))).toBe('Reopen');
+    expect(opWordFor(change('delete'))).toBe('Delete');
+  });
+});
+
+describe('describeChange', () => {
+  function change(overrides: Partial<TodoChange> = {}): TodoChange {
+    return {
+      op: 'add',
+      handle: '',
+      title: 'Dentist',
+      dueDate: '',
+      dueTime: '',
+      priority: false,
+      ...overrides,
+    };
+  }
+
+  it('joins every populated field in order with a middle dot', () => {
+    const described = describeChange(
+      change({ title: 'Dentist', dueDate: '2026-09-12', dueTime: '15:00', priority: true }),
+    );
+    expect(described).toBe('Dentist · 2026-09-12 · 15:00 · priority');
+  });
+
+  it('drops the due date when it is blank', () => {
+    const described = describeChange(
+      change({ title: 'Dentist', dueDate: '', dueTime: '15:00', priority: true }),
+    );
+    expect(described).toBe('Dentist · 15:00 · priority');
+  });
+
+  it('drops the due time when it is blank', () => {
+    const described = describeChange(
+      change({ title: 'Dentist', dueDate: '2026-09-12', dueTime: '', priority: true }),
+    );
+    expect(described).toBe('Dentist · 2026-09-12 · priority');
+  });
+
+  it('omits the literal "priority" when the flag is false', () => {
+    const described = describeChange(
+      change({ title: 'Dentist', dueDate: '2026-09-12', dueTime: '15:00', priority: false }),
+    );
+    expect(described).toBe('Dentist · 2026-09-12 · 15:00');
+  });
+
+  it('is just the title when every other field is blank or false', () => {
+    expect(describeChange(change())).toBe('Dentist');
   });
 });

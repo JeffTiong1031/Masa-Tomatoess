@@ -2,6 +2,8 @@ import { buildTodoSnapshot } from '@/lib/assistantContext';
 import { askTodoAssistant } from '@/lib/assistantRequest';
 import {
   clashesFor,
+  describeChange,
+  opWordFor,
   reconcileTodoPlan,
   toDraft,
   todoChangeParser,
@@ -17,14 +19,6 @@ import {
 } from '@/lib/todoRepo';
 import type { Todo } from '@/lib/todo';
 import { withStepBudget, type AssistantSection } from './section';
-
-const OP_WORDS: Record<TodoChange['op'], string> = {
-  add: 'Add',
-  edit: 'Change',
-  complete: 'Tick off',
-  reopen: 'Reopen',
-  delete: 'Delete',
-};
 
 export const todoSection: AssistantSection<TodoChange, Todo> = {
   prefix: 't',
@@ -43,15 +37,8 @@ export const todoSection: AssistantSection<TodoChange, Todo> = {
   clashTitles: (entry, rows) =>
     clashesFor(entry.change, rows, entry.id).map((row) => row.title),
   outsideNote: () => '',
-  opWord: (change) => OP_WORDS[change.op],
-
-  describe(change) {
-    const parts = [change.title];
-    if (change.dueDate !== '') parts.push(change.dueDate);
-    if (change.dueTime !== '') parts.push(change.dueTime);
-    if (change.priority) parts.push('priority');
-    return parts.join(' · ');
-  },
+  opWord: opWordFor,
+  describe: describeChange,
 
   async fetchFresh(owner) {
     const fresh = await fetchTodos(owner);

@@ -12,6 +12,26 @@ export type TodoOp = 'add' | 'edit' | 'complete' | 'reopen' | 'delete';
 const OPS: TodoOp[] = ['add', 'edit', 'complete', 'reopen', 'delete'];
 const END_STATE_OPS: TodoOp[] = ['add', 'edit'];
 
+const OP_WORDS: Record<TodoOp, string> = {
+  add: 'Add',
+  edit: 'Change',
+  complete: 'Tick off',
+  reopen: 'Reopen',
+  delete: 'Delete',
+};
+
+export function opWordFor(change: TodoChange): string {
+  return OP_WORDS[change.op];
+}
+
+export function describeChange(change: TodoChange): string {
+  const parts = [change.title];
+  if (change.dueDate !== '') parts.push(change.dueDate);
+  if (change.dueTime !== '') parts.push(change.dueTime);
+  if (change.priority) parts.push('priority');
+  return parts.join(' · ');
+}
+
 export interface TodoChange {
   op: TodoOp;
   handle: string;

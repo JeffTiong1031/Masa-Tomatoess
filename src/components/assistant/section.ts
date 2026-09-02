@@ -1,10 +1,10 @@
 import type { HandleMap } from '@/lib/assistantContext';
 import type { ChangeParser, Reason } from '@/lib/assistantReply';
-import type { Planned, StepOutcome } from '@/lib/assistantRun';
+import { STEP_BUDGET_MS, type Planned, type StepOutcome } from '@/lib/assistantRun';
 import type { Message, ReplyResult } from '@/lib/assistantRequest';
 import type { UserName } from '@/lib/identity';
 
-export const STEP_BUDGET_MS = 10_000;
+export { STEP_BUDGET_MS };
 
 export interface AssistantClock {
   today: string;

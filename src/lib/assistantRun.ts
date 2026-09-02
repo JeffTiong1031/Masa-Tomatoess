@@ -1,5 +1,6 @@
 export const APPLY_BUDGET_MS = 30_000;
 export const UNREACHED_LIMIT = 3;
+export const STEP_BUDGET_MS = 10_000;
 
 export type ChangeOutcome = 'pending' | 'saved' | 'stale' | 'failed' | 'notAttempted' | 'uncertain';
 
