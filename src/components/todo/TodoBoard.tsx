@@ -19,6 +19,7 @@ import Modal from '@/components/ui/Modal';
 import TodoComposer from '@/components/todo/TodoComposer';
 import TodoGroup from '@/components/todo/TodoGroup';
 import TodoEditModal from '@/components/todo/TodoEditModal';
+import AssistantButton from '@/components/assistant/AssistantButton';
 
 type BoardStatus = 'loading' | 'ok' | 'missing-table' | 'error';
 
@@ -299,6 +300,19 @@ export default function TodoBoard() {
           onClose={() => setEditing(null)}
           onSave={handleSave}
           onDelete={handleDelete}
+        />
+      )}
+
+      {viewing === signedIn && displayStatus === 'ok' && (
+        <AssistantButton
+          owner={signedIn}
+          rows={todos}
+          today={clock.today}
+          now={clock.now}
+          onApplied={(message) => {
+            setNotice(message);
+            setReloadToken((token) => token + 1);
+          }}
         />
       )}
     </div>
