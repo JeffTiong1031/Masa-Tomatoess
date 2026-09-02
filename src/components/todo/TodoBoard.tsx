@@ -23,6 +23,13 @@ import AssistantButton from '@/components/assistant/AssistantButton';
 
 type BoardStatus = 'loading' | 'ok' | 'missing-table' | 'error';
 
+type NoticeTone = 'ok' | 'problem';
+
+interface Notice {
+  text: string;
+  tone: NoticeTone;
+}
+
 interface Clock {
   today: string;
   now: string;
@@ -47,7 +54,7 @@ export default function TodoBoard() {
   const [status, setStatus] = useState<BoardStatus>('loading');
   const [loadedFor, setLoadedFor] = useState<UserName | null>(null);
   const [clock, setClock] = useState<Clock>(() => ({ today: todayISO(), now: timeISO() }));
-  const [notice, setNotice] = useState<string | null>(null);
+  const [notice, setNotice] = useState<Notice | null>(null);
   const [showCompleted, setShowCompleted] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deletingCompleted, setDeletingCompleted] = useState(false);
@@ -97,7 +104,7 @@ export default function TodoBoard() {
   const handleAdd = useCallback(async (draft: TodoDraft) => {
     const created = await insertTodo(draft);
     if (created === null) {
-      setNotice('That task did not save. Try again.');
+      setNotice({ text: 'That task did not save. Try again.', tone: 'problem' });
       return false;
     }
     setNotice(null);
@@ -124,13 +131,13 @@ export default function TodoBoard() {
     if (saved) return;
 
     setTodos((current) => current.map((row) => (row.id === todo.id ? todo : row)));
-    setNotice('That change did not save.');
+    setNotice({ text: 'That change did not save.', tone: 'problem' });
   }, []);
 
   const handleSave = useCallback(async (id: string, draft: TodoDraft) => {
     const saved = await updateTodo(id, draft);
     if (!saved) {
-      setNotice('That edit did not save.');
+      setNotice({ text: 'That edit did not save.', tone: 'problem' });
       return false;
     }
     setNotice(null);
@@ -141,7 +148,7 @@ export default function TodoBoard() {
   const handleDelete = useCallback(async (id: string) => {
     const removed = await deleteTodo(id);
     if (!removed) {
-      setNotice('That task could not be deleted.');
+      setNotice({ text: 'That task could not be deleted.', tone: 'problem' });
       return false;
     }
     setNotice(null);
@@ -155,7 +162,7 @@ export default function TodoBoard() {
     setDeletingCompleted(false);
     if (!removed) {
       setConfirmingDelete(false);
-      setNotice('Those completed tasks could not be deleted.');
+      setNotice({ text: 'Those completed tasks could not be deleted.', tone: 'problem' });
       return;
     }
     setNotice(null);
@@ -211,8 +218,13 @@ export default function TodoBoard() {
       <TodoComposer owner={signedIn} onAdd={handleAdd} />
 
       {notice ? (
-        <p role="status" className="text-sm text-[var(--mt-danger)]">
-          {notice}
+        <p
+          role="status"
+          className={`text-sm ${
+            notice.tone === 'problem' ? 'text-[var(--mt-danger)]' : 'text-[var(--mt-text-muted)]'
+          }`}
+        >
+          {notice.text}
         </p>
       ) : null}
 
@@ -309,8 +321,8 @@ export default function TodoBoard() {
           rows={todos}
           today={clock.today}
           now={clock.now}
-          onApplied={(message) => {
-            setNotice(message);
+          onApplied={(message, tone) => {
+            setNotice({ text: message, tone });
             setReloadToken((token) => token + 1);
           }}
         />

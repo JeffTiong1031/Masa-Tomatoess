@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Sparkles } from 'lucide-react';
 import AssistantSheet from './AssistantSheet';
+import type { ApplyTone } from '@/lib/applyRun';
 import type { Todo } from '@/lib/todo';
 import type { UserName } from '@/lib/identity';
 
@@ -17,7 +18,7 @@ export default function AssistantButton({
   rows: Todo[];
   today: string;
   now: string;
-  onApplied: (message: string) => void;
+  onApplied: (message: string, tone: ApplyTone) => void;
 }) {
   const [open, setOpen] = useState(false);
 

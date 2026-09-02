@@ -5,6 +5,17 @@ import type { Todo } from './todo';
 
 export type ChangeRunner = (entry: PlannedChange) => Promise<StepOutcome>;
 
+export type ApplyTone = 'ok' | 'problem';
+
+export function applySummary(results: PlannedChange[]): { message: string; tone: ApplyTone } {
+  const saved = results.filter((entry) => entry.outcome === 'saved').length;
+  if (saved === results.length) {
+    return { message: `Saved ${saved} change${saved === 1 ? '' : 's'}.`, tone: 'ok' };
+  }
+  if (saved === 0) return { message: 'Nothing saved.', tone: 'problem' };
+  return { message: `${saved} of ${results.length} saved.`, tone: 'problem' };
+}
+
 export async function runPlan(
   planned: PlannedChange[],
   map: HandleMap,

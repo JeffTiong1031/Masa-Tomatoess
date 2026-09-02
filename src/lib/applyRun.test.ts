@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { runPlan, type ChangeRunner } from './applyRun';
+import { applySummary, runPlan, type ChangeRunner } from './applyRun';
 import { assignHandles, emptyHandleMap } from './assistantContext';
 import { APPLY_BUDGET_MS, UNREACHED_LIMIT } from './assistantRun';
 import type { PlannedChange, TodoChange } from './todoPlan';
@@ -166,5 +166,35 @@ describe('runPlan', () => {
     expect(results[0].note).toBe('Not tried — the run stopped.');
     expect(results[1].outcome).toBe('notAttempted');
     expect(results[1].note).toBe('Not tried — the run stopped.');
+  });
+});
+
+describe('applySummary', () => {
+  it('gives an ok tone and a plural message when every change saved', () => {
+    const results = [planned({ outcome: 'saved' }), planned({ outcome: 'saved' })];
+
+    expect(applySummary(results)).toEqual({ message: 'Saved 2 changes.', tone: 'ok' });
+  });
+
+  it('does not pluralize a single saved change', () => {
+    const results = [planned({ outcome: 'saved' })];
+
+    expect(applySummary(results)).toEqual({ message: 'Saved 1 change.', tone: 'ok' });
+  });
+
+  it('gives a problem tone when only some changes saved', () => {
+    const results = [
+      planned({ outcome: 'saved' }),
+      planned({ outcome: 'saved' }),
+      planned({ outcome: 'failed' }),
+    ];
+
+    expect(applySummary(results)).toEqual({ message: '2 of 3 saved.', tone: 'problem' });
+  });
+
+  it('gives a problem tone and a distinct message when nothing saved', () => {
+    const results = [planned({ outcome: 'failed' }), planned({ outcome: 'notAttempted' })];
+
+    expect(applySummary(results)).toEqual({ message: 'Nothing saved.', tone: 'problem' });
   });
 });

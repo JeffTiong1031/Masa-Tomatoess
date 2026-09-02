@@ -13,7 +13,7 @@ import {
 } from '@/lib/assistantConversation';
 import { parseReply } from '@/lib/assistantReply';
 import { askTodoAssistant } from '@/lib/assistantRequest';
-import { runPlan } from '@/lib/applyRun';
+import { applySummary, runPlan, type ApplyTone } from '@/lib/applyRun';
 import type { StepOutcome } from '@/lib/assistantRun';
 import {
   reconcileTodoPlan,
@@ -72,7 +72,7 @@ export default function AssistantSheet({
   rows: Todo[];
   today: string;
   now: string;
-  onApplied: (message: string) => void;
+  onApplied: (message: string, tone: ApplyTone) => void;
 }) {
   const [entries, setEntries] = useState<Entry[]>([]);
   const [map, setMap] = useState<HandleMap>(() => emptyHandleMap('t'));
@@ -142,7 +142,7 @@ export default function AssistantSheet({
     const fresh = await fetchTodos(owner);
     if (fresh.status !== 'ok') {
       setRunning(false);
-      onApplied('Could not reach your list. Nothing was changed.');
+      onApplied('Could not reach your list. Nothing was changed.', 'problem');
       return;
     }
 
@@ -158,8 +158,8 @@ export default function AssistantSheet({
     setEntries(entries.map((e, i) => (i === index ? { ...entry, planned: results } : e)));
     setRunning(false);
 
-    const saved = results.filter((r) => r.outcome === 'saved').length;
-    onApplied(`${saved} of ${results.length} saved.`);
+    const { message, tone } = applySummary(results);
+    onApplied(message, tone);
   }
 
   function cancel(index: number) {
