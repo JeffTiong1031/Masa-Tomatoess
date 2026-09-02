@@ -65,15 +65,13 @@ export function parseReply<C>(value: unknown, parseChange: ChangeParser<C>): Par
   if (wire === null) return { ok: false, reason: { kind: 'unknownKind' } };
 
   if (TEXT_KINDS.includes(wire.kind as TextKind)) {
-    if (wire.changes.length > 0 || wire.summary !== '') {
+    if (wire.changes.length > 0) {
       return { ok: false, reason: { kind: 'shapeMismatch' } };
     }
     return { ok: true, reply: { kind: wire.kind as TextKind, text: wire.text } };
   }
 
   if (wire.kind !== 'plan') return { ok: false, reason: { kind: 'unknownKind' } };
-
-  if (wire.text !== '') return { ok: false, reason: { kind: 'shapeMismatch' } };
 
   if (wire.changes.length === 0 || wire.changes.length > MAX_CHANGES) {
     return { ok: false, reason: { kind: 'badChangeCount', count: wire.changes.length } };

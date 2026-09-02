@@ -40,17 +40,39 @@ describe('parseReply', () => {
     expect(result).toEqual({ ok: false, reason: { kind: 'shapeMismatch' } });
   });
 
-  it('rejects a text reply carrying a summary', () => {
+  it('ignores a summary on a text reply', () => {
     const result = parseReply(wire({ summary: 'Add one task' }), acceptAny);
-    expect(result).toEqual({ ok: false, reason: { kind: 'shapeMismatch' } });
+    expect(result).toEqual({
+      ok: true,
+      reply: { kind: 'answer', text: 'You have three things Thursday.' },
+    });
   });
 
-  it('rejects a plan carrying stray text', () => {
+  it('ignores stray text on a plan', () => {
     const result = parseReply(
       wire({ kind: 'plan', text: 'here you go', summary: 'Add one task', changes: [{ op: 'add' }] }),
       acceptAny,
     );
-    expect(result).toEqual({ ok: false, reason: { kind: 'shapeMismatch' } });
+    expect(result).toEqual({
+      ok: true,
+      reply: { kind: 'plan', summary: 'Add one task', changes: [{ op: 'add' }] },
+    });
+  });
+
+  it('accepts a realistic Gemini plan with both text and summary filled', () => {
+    const result = parseReply(
+      wire({
+        kind: 'plan',
+        text: "I've added that to your list for tomorrow.",
+        summary: 'Added one task.',
+        changes: [{ op: 'add' }],
+      }),
+      acceptAny,
+    );
+    expect(result).toEqual({
+      ok: true,
+      reply: { kind: 'plan', summary: 'Added one task.', changes: [{ op: 'add' }] },
+    });
   });
 
   it('rejects a plan with no changes', () => {
