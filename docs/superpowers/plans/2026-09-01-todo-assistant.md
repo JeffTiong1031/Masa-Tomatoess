@@ -2415,3 +2415,26 @@ Two modules are extracted, and `AssistantSheet.tsx` keeps only wiring and state:
   because it is the part that actually touches `todoRepo` and `window.setTimeout`.
 
 Both get test files. This is the plan's own standard applied to the plan's own code.
+
+---
+
+## Amendment — Task 12, after review
+
+The brief told Task 12 to route the assistant's result into `TodoBoard`'s existing
+notice slot, on the grounds that reusing it meant no new board state. That slot renders
+in `--mt-danger`, because every message it has ever carried is a failure. So a clean
+run would have told the person **"3 of 3 saved."** in error red.
+
+The notice grows a tone. `notice` becomes `{ text, tone } | null` where tone is `'ok'`
+or `'problem'`; the five existing error call sites pass `'problem'`, and the tone
+decides the colour.
+
+**The success colour is `--mt-text-muted`, not `--mt-success`.** Measured before
+choosing: `--mac-success` `#7FBF8F` as ink on cream is **2.04:1** and fails badly — it
+is a fill token whose contrast pair is `--mt-success-contrast`. `--mac-cocoa-muted`
+gives 5.06:1. This is the palette rule this project already documents: a pastel built
+to sit behind text cannot be used as text.
+
+The wording and the tone are one decision, so they move out of the component together:
+`applySummary(results)` in `src/lib/applyRun.ts` returns both, and is tested. `onApplied`
+becomes `(message: string, tone: ApplyTone) => void`.
