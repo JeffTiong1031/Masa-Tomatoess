@@ -12,6 +12,29 @@ export type CalendarOp = 'add' | 'edit' | 'delete';
 
 const OPS: CalendarOp[] = ['add', 'edit', 'delete'];
 
+const OP_WORDS: Record<CalendarOp, string> = {
+  add: 'Add',
+  edit: 'Change',
+  delete: 'Delete',
+};
+
+export function opWordFor(change: CalendarChange): string {
+  return OP_WORDS[change.op];
+}
+
+export function describeChange(change: CalendarChange): string {
+  const parts = [change.title];
+  if (change.date !== '') parts.push(change.date);
+  if (change.endDate !== '') parts.push(`to ${change.endDate}`);
+  if (change.startTime !== '') {
+    parts.push(change.endTime === '' ? change.startTime : `${change.startTime}–${change.endTime}`);
+  }
+  if (change.startTime === '' && change.date !== '') parts.push('all day');
+  if (change.category !== '') parts.push(change.category);
+  if (change.countdown) parts.push('countdown');
+  return parts.join(' · ');
+}
+
 const STRING_FIELDS = [
   'handle',
   'title',

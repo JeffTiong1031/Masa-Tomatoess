@@ -18,9 +18,11 @@ import {
   updateEvent,
 } from '@/lib/calendarRepo';
 import type { Category, SwatchIndex } from '@/lib/categories';
-import { addDays, addMonths, monthOf, todayISO } from '@/lib/dates';
+import { addDays, addMonths, monthOf, timeISO, todayISO } from '@/lib/dates';
 import { toTiming, type EventDraft } from '@/lib/eventForm';
 import { isUserName, type UserName } from '@/lib/identity';
+import AssistantButton from '@/components/assistant/AssistantButton';
+import { calendarSection } from '@/components/assistant/calendarSection';
 import CategoryManager from './CategoryManager';
 import DayPanel from './DayPanel';
 import EventModal from './EventModal';
@@ -64,6 +66,13 @@ type ModalState =
   | { mode: 'add' }
   | { mode: 'edit'; event: CalendarEvent };
 
+type NoticeTone = 'ok' | 'problem';
+
+interface Notice {
+  text: string;
+  tone: NoticeTone;
+}
+
 export default function CalendarBoard() {
   const mounted = useHasMounted();
 
@@ -87,6 +96,7 @@ export default function CalendarBoard() {
   const [managingCategories, setManagingCategories] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<Notice | null>(null);
 
   useEffect(() => {
     if (!mounted) return;
@@ -134,6 +144,13 @@ export default function CalendarBoard() {
     () => visible.filter((event) => occursOn(event, selectedDate)),
     [visible, selectedDate],
   );
+
+  const myEvents = useMemo(
+    () => events.filter((event) => event.owner === signedInAs),
+    [events, signedInAs],
+  );
+
+  const section = useMemo(() => calendarSection({ categories, month }), [categories, month]);
 
   const openAdd = () => {
     setDraft(blankDraft(selectedDate));
@@ -278,6 +295,17 @@ export default function CalendarBoard() {
         onManage={() => setManagingCategories(true)}
       />
 
+      {notice ? (
+        <p
+          role="status"
+          className={`text-sm ${
+            notice.tone === 'problem' ? 'text-[var(--mt-danger)]' : 'text-[var(--mt-text-muted)]'
+          }`}
+        >
+          {notice.text}
+        </p>
+      ) : null}
+
       {searching ? (
         <Card>
           <SearchResults
@@ -385,6 +413,19 @@ export default function CalendarBoard() {
           onDelete={handleDeleteCategory}
           onClose={() => {
             setManagingCategories(false);
+            load();
+          }}
+        />
+      )}
+
+      {owner === signedInAs && (
+        <AssistantButton
+          section={section}
+          owner={signedInAs}
+          rows={myEvents}
+          clock={() => ({ today: todayISO(), now: timeISO() })}
+          onApplied={(message, tone) => {
+            setNotice({ text: message, tone });
             load();
           }}
         />

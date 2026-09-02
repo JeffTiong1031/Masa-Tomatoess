@@ -4,6 +4,8 @@ import {
   calendarChangeParser,
   categoryIdFor,
   clashesFor,
+  describeChange,
+  opWordFor,
   reconcileCalendarPlan,
   toEventDraft,
   toEventInput,
@@ -365,5 +367,77 @@ describe('clashesFor', () => {
   it('says nothing about a delete', () => {
     const change = { ...base, op: 'delete' as const, handle: 'e1' };
     expect(clashesFor(change, [event({ id: 'ev-2' })], null)).toEqual([]);
+  });
+});
+
+function change(overrides: Partial<CalendarChange> = {}): CalendarChange {
+  return {
+    op: 'add',
+    handle: '',
+    title: 'Dentist',
+    date: '2026-09-10',
+    endDate: '',
+    startTime: '',
+    endTime: '',
+    notes: '',
+    countdown: false,
+    category: '',
+    ...overrides,
+  };
+}
+
+describe('opWordFor', () => {
+  it('names an add', () => {
+    expect(opWordFor(change({ op: 'add' }))).toBe('Add');
+  });
+
+  it('names an edit', () => {
+    expect(opWordFor(change({ op: 'edit', handle: 'e1' }))).toBe('Change');
+  });
+
+  it('names a delete', () => {
+    expect(opWordFor(change({ op: 'delete', handle: 'e1' }))).toBe('Delete');
+  });
+});
+
+describe('describeChange', () => {
+  it('lays out a fully populated timed event', () => {
+    const described = change({
+      startTime: '09:00',
+      endTime: '10:00',
+      category: 'Work',
+      countdown: true,
+    });
+    expect(describeChange(described)).toBe('Dentist · 2026-09-10 · 09:00–10:00 · Work · countdown');
+  });
+
+  it('shows a bare start time with no end time', () => {
+    const described = change({ startTime: '09:00' });
+    expect(describeChange(described)).toBe('Dentist · 2026-09-10 · 09:00');
+  });
+
+  it('marks a plain all-day event', () => {
+    const described = change();
+    expect(describeChange(described)).toBe('Dentist · 2026-09-10 · all day');
+  });
+
+  it('marks an all-day event with an end date', () => {
+    const described = change({ endDate: '2026-09-15' });
+    expect(describeChange(described)).toBe('Dentist · 2026-09-10 · to 2026-09-15 · all day');
+  });
+
+  it('drops the category entirely when there is none', () => {
+    const described = change({ startTime: '09:00', endTime: '10:00' });
+    expect(describeChange(described)).toBe('Dentist · 2026-09-10 · 09:00–10:00');
+  });
+
+  it('adds the countdown flag when set', () => {
+    const described = change({ startTime: '09:00', endTime: '10:00', countdown: true });
+    expect(describeChange(described)).toBe('Dentist · 2026-09-10 · 09:00–10:00 · countdown');
+  });
+
+  it('omits the countdown flag when clear', () => {
+    const described = change({ startTime: '09:00', endTime: '10:00', countdown: false });
+    expect(describeChange(described)).toBe('Dentist · 2026-09-10 · 09:00–10:00');
   });
 });
