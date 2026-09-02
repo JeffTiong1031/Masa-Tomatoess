@@ -419,3 +419,21 @@ and clash checks. Two branches, two pull requests.
 `@google/genai` 2.18.0 is installed and resolves. The meals routes already prove
 the call shape against it: `client.interactions.create` with a `response_format`
 carrying a JSON schema, which is the same shape both assistant routes use.
+
+---
+
+## Amendment — conversation lifetime, after the final review
+
+The spec said the conversation "dies when the sheet closes or the page reloads." The
+code keeps it alive across a close and drops it only on reload. That mismatch was found
+in the final review, and the spec is what changes, not the code.
+
+Two reasons. Closing a sheet by accident should not throw away a half-finished
+conversation — that is a worse outcome than the one the original rule was guarding
+against. And the design elsewhere requires that an Apply already in flight survives the
+sheet closing, so that its result still reaches the board; clearing state on close would
+undo that.
+
+The rule is now: **the conversation lives until the page reloads, or until "Start new
+chat" is pressed.** Everything else about it is unchanged — still client-side only,
+still nothing stored on a server or on disk.
