@@ -1,7 +1,7 @@
 'use client';
 
 import { AlertTriangle, Check, X } from 'lucide-react';
-import { buttonStateFor } from '@/lib/assistantRun';
+import { buttonStateFor, isRetryable } from '@/lib/assistantRun';
 import { clashesFor, type PlannedChange, type TodoChange } from '@/lib/todoPlan';
 import type { Todo } from '@/lib/todo';
 
@@ -12,8 +12,6 @@ const OP_WORDS: Record<TodoChange['op'], string> = {
   reopen: 'Reopen',
   delete: 'Delete',
 };
-
-const RETRYABLE = ['failed', 'notAttempted'];
 
 function describe(change: TodoChange): string {
   const parts = [change.title];
@@ -42,7 +40,7 @@ export default function PlanCard({
 }) {
   const state = buttonStateFor(planned.map((entry) => entry.outcome), running);
   const saved = planned.filter((entry) => entry.outcome === 'saved').length;
-  const retryCount = planned.filter((entry) => RETRYABLE.includes(entry.outcome)).length;
+  const retryCount = planned.filter((entry) => isRetryable(entry.outcome)).length;
 
   return (
     <div className="mt-soft border border-[var(--mt-border)] p-4">
@@ -61,7 +59,7 @@ export default function PlanCard({
               {entry.note !== '' && (
                 <span className="ml-1 text-[var(--mt-text-muted)]">— {entry.note}</span>
               )}
-              {clashes.length > 0 && entry.outcome === 'pending' && (
+              {clashes.length > 0 && entry.outcome !== 'saved' && entry.outcome !== 'stale' && (
                 <span className="mt-1 flex items-center gap-1 text-[var(--mt-text-muted)]">
                   <AlertTriangle size={14} aria-hidden />
                   You already have &ldquo;{clashes[0].title}&rdquo; that day.
@@ -94,9 +92,10 @@ export default function PlanCard({
             <button
               type="button"
               onClick={onCancel}
+              aria-label="Cancel"
               className="min-h-11 min-w-11 rounded-full border border-[var(--mt-border)] px-4 text-sm text-[var(--mt-text-muted)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--mt-focus)]"
             >
-              <X size={16} aria-label="Cancel" />
+              <X size={16} aria-hidden />
             </button>
           )}
         </div>

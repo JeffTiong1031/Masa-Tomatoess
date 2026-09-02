@@ -77,4 +77,12 @@ describe('buttonStateFor', () => {
   it('is idle before anything has run', () => {
     expect(buttonStateFor(['pending'], false)).toBe('idle');
   });
+
+  it('is idle when a stale row arrives before anything has run', () => {
+    expect(buttonStateFor(['pending', 'stale'], false)).toBe('idle');
+  });
+
+  it('is idle when every row is stale', () => {
+    expect(buttonStateFor(['stale'], false)).toBe('idle');
+  });
 });
