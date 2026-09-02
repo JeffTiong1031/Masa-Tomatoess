@@ -115,14 +115,14 @@ describe('runPlan', () => {
     expect(results[0].note).toBe('The database refused it.');
   });
 
-  it('yields notAttempted with the could-not-reach note when the runner cannot reach the database', async () => {
+  it('yields uncertain with the took-too-long note when the runner cannot reach the database', async () => {
     const run: ChangeRunner = async () => 'unreached';
     const live = [row({ id: 'aaa' })];
 
     const results = await runPlan([planned({ outcome: 'pending' })], MAP, live, run, () => 0);
 
-    expect(results[0].outcome).toBe('notAttempted');
-    expect(results[0].note).toBe("Couldn't reach the database.");
+    expect(results[0].outcome).toBe('uncertain');
+    expect(results[0].note).toBe('Took too long. It may have saved — check your list before trying again.');
   });
 
   it('stops after three unreached calls in a row and leaves the remainder not attempted', async () => {
@@ -140,11 +140,37 @@ describe('runPlan', () => {
     const results = await runPlan(plan, MAP, live, run, () => 0);
 
     for (const result of results.slice(0, UNREACHED_LIMIT)) {
-      expect(result.outcome).toBe('notAttempted');
-      expect(result.note).toBe("Couldn't reach the database.");
+      expect(result.outcome).toBe('uncertain');
+      expect(result.note).toBe('Took too long. It may have saved — check your list before trying again.');
     }
     expect(results[UNREACHED_LIMIT].outcome).toBe('notAttempted');
     expect(results[UNREACHED_LIMIT].note).toBe('Not tried — the run stopped.');
+  });
+
+  it('skips saved, stale and uncertain rows on a retry and only runs failed and notAttempted', async () => {
+    const calls: PlannedChange[] = [];
+    const run: ChangeRunner = async (entry) => {
+      calls.push(entry);
+      return 'saved';
+    };
+    const live = [row({ id: 'aaa' }), row({ id: 'bbb' }), row({ id: 'ccc' })];
+
+    const savedEntry = planned({ change: change({ handle: 't1' }), id: 'aaa', outcome: 'saved', note: '' });
+    const failedEntry = planned({ change: change({ handle: 't2' }), id: 'bbb', outcome: 'failed', note: 'The database refused it.' });
+    const notAttemptedEntry = planned({
+      change: change({ handle: 't3' }),
+      id: 'ccc',
+      outcome: 'notAttempted',
+      note: "Couldn't reach the database.",
+    });
+
+    const results = await runPlan([savedEntry, failedEntry, notAttemptedEntry], MAP, live, run, () => 0);
+
+    expect(calls).toHaveLength(2);
+    expect(calls.map((entry) => entry.change.handle)).toEqual(['t2', 't3']);
+    expect(results[0]).toEqual(savedEntry);
+    expect(results[1].outcome).toBe('saved');
+    expect(results[2].outcome).toBe('saved');
   });
 
   it('stops when a jump in the clock spends the budget, leaving the remainder not attempted', async () => {

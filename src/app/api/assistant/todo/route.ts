@@ -43,8 +43,9 @@ Reply with exactly one kind:
 
 Ops: add, edit, complete, reopen, delete. Nothing else exists.
 Refer to an existing task by its handle, exactly as given. Never invent one.
-An add has an empty handle. add and edit carry the whole end state, every field.
-complete, reopen and delete carry only the handle.
+An add has an empty handle. Every change sends every field, always: add and
+edit fill in the whole end state, and complete, reopen and delete still send
+title, dueDate and dueTime as empty strings and priority as false.
 Never put the same handle in two changes. At most ${MAX_CHANGES} changes.
 
 Dates are YYYY-MM-DD, times are HH:MM in 24 hours. Empty string means none.

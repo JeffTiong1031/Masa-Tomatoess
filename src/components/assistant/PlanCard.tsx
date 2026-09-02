@@ -74,7 +74,7 @@ export default function PlanCard({
 
       {state === 'done' && (
         <p className="mt-3 text-sm text-[var(--mt-text-muted)]">
-          Saved. {saved} of {planned.length}.
+          {saved === 0 ? 'Nothing saved.' : `Saved. ${saved} of ${planned.length}.`}
         </p>
       )}
 

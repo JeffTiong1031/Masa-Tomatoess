@@ -60,5 +60,6 @@ describe('reasonForStatus', () => {
     expect(reasonForStatus(429)).toEqual({ kind: 'quota' });
     expect(reasonForStatus(500)).toEqual({ kind: 'serverError' });
     expect(reasonForStatus(502)).toEqual({ kind: 'serverError' });
+    expect(reasonForStatus(400)).toEqual({ kind: 'serverError' });
   });
 });

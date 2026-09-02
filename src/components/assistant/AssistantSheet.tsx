@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Modal from '@/components/ui/Modal';
 import PlanCard from './PlanCard';
 import { assistantFailureMessage } from '@/lib/assistantFailure';
+import { MAX_MESSAGE_CHARS } from '@/lib/assistantBody';
 import { buildTodoSnapshot, emptyHandleMap, type HandleMap } from '@/lib/assistantContext';
 import {
   capStatus,
@@ -36,9 +37,10 @@ import type { UserName } from '@/lib/identity';
 const STEP_BUDGET_MS = 10_000;
 
 async function runChange(entry: PlannedChange, owner: UserName): Promise<StepOutcome> {
-  const budget = new Promise<'unreached'>((resolve) =>
-    window.setTimeout(() => resolve('unreached'), STEP_BUDGET_MS),
-  );
+  let timer!: number;
+  const budget = new Promise<'unreached'>((resolve) => {
+    timer = window.setTimeout(() => resolve('unreached'), STEP_BUDGET_MS);
+  });
 
   const work = (async (): Promise<StepOutcome> => {
     const { change, id } = entry;
@@ -54,7 +56,9 @@ async function runChange(entry: PlannedChange, owner: UserName): Promise<StepOut
     return (await setTodoDone(id as string, change.op === 'complete')) ? 'saved' : 'failed';
   })();
 
-  return Promise.race([work, budget]);
+  const outcome = await Promise.race([work, budget]);
+  window.clearTimeout(timer);
+  return outcome;
 }
 
 export default function AssistantSheet({
@@ -104,62 +108,67 @@ export default function AssistantSheet({
     setThinking(false);
 
     if (!result.ok) {
-      setEntries([...asked, { kind: 'text', role: 'assistant', text: assistantFailureMessage(result.reason) }]);
+      const text = assistantFailureMessage(result.reason);
+      setEntries((prev) => [...prev, { kind: 'text', role: 'assistant', text }]);
       return;
     }
 
     const parsed = parseReply<TodoChange>(result.value, todoChangeParser(nextMap, today));
     if (!parsed.ok) {
-      setEntries([...asked, { kind: 'text', role: 'assistant', text: assistantFailureMessage(parsed.reason) }]);
+      const text = assistantFailureMessage(parsed.reason);
+      setEntries((prev) => [...prev, { kind: 'text', role: 'assistant', text }]);
       return;
     }
 
     if (parsed.reply.kind !== 'plan') {
-      setEntries([...asked, { kind: 'text', role: 'assistant', text: parsed.reply.text }]);
+      const text = parsed.reply.text;
+      setEntries((prev) => [...prev, { kind: 'text', role: 'assistant', text }]);
       return;
     }
 
     const duplicate = validateTodoPlan(parsed.reply.changes);
     if (duplicate !== null) {
-      setEntries([...asked, { kind: 'text', role: 'assistant', text: assistantFailureMessage(duplicate) }]);
+      const text = assistantFailureMessage(duplicate);
+      setEntries((prev) => [...prev, { kind: 'text', role: 'assistant', text }]);
       return;
     }
 
-    setEntries([
-      ...asked,
-      {
-        kind: 'plan',
-        summary: parsed.reply.summary,
-        planned: reconcileTodoPlan(parsed.reply.changes, nextMap, rows),
-        cancelled: false,
-      },
-    ]);
+    const plan: Entry = {
+      kind: 'plan',
+      summary: parsed.reply.summary,
+      planned: reconcileTodoPlan(parsed.reply.changes, nextMap, rows),
+      cancelled: false,
+    };
+    setEntries((prev) => [...prev, plan]);
   }
 
   async function apply(index: number) {
     setRunning(true);
+    try {
+      const fresh = await fetchTodos(owner);
+      if (fresh.status !== 'ok') {
+        onApplied('Could not reach your list. Nothing was changed.', 'problem');
+        return;
+      }
 
-    const fresh = await fetchTodos(owner);
-    if (fresh.status !== 'ok') {
+      const entry = entries[index] as Extract<Entry, { kind: 'plan' }>;
+      const results = await runPlan(
+        entry.planned,
+        map,
+        fresh.rows,
+        (change) => runChange(change, owner),
+        Date.now,
+      );
+
+      setEntries((prev) =>
+        prev.map((e, i) => (i === index && e.kind === 'plan' ? { ...e, planned: results } : e)),
+      );
+
+      const { message, tone } = applySummary(results);
+      onApplied(message, tone);
+    } finally {
       setRunning(false);
-      onApplied('Could not reach your list. Nothing was changed.', 'problem');
-      return;
     }
-
-    const entry = entries[index] as Extract<Entry, { kind: 'plan' }>;
-    const results = await runPlan(
-      entry.planned,
-      map,
-      fresh.rows,
-      (change) => runChange(change, owner),
-      Date.now,
-    );
-
-    setEntries(entries.map((e, i) => (i === index ? { ...entry, planned: results } : e)));
-    setRunning(false);
-
-    const { message, tone } = applySummary(results);
-    onApplied(message, tone);
   }
 
   function cancel(index: number) {
@@ -173,33 +182,35 @@ export default function AssistantSheet({
   return (
     <Modal open={open} onClose={onClose} title="Ask about your list" variant="sheet" maxWidthClass="max-w-lg">
       <div className="flex flex-col gap-3">
-        {entries.map((entry, index) =>
-          entry.kind === 'text' ? (
-            <p
-              key={index}
-              className={
-                entry.role === 'you'
-                  ? 'self-end rounded-2xl bg-[color-mix(in_srgb,var(--mt-accent)_28%,transparent)] px-3 py-2 text-sm text-[var(--mt-text)]'
-                  : 'text-sm text-[var(--mt-text)]'
-              }
-            >
-              {entry.text}
-            </p>
-          ) : (
-            <PlanCard
-              key={index}
-              summary={entry.summary}
-              planned={entry.planned}
-              rows={rows}
-              running={running}
-              cancelled={entry.cancelled}
-              onApply={() => apply(index)}
-              onCancel={() => cancel(index)}
-            />
-          ),
-        )}
+        <div className="flex flex-col gap-3" aria-live="polite">
+          {entries.map((entry, index) =>
+            entry.kind === 'text' ? (
+              <p
+                key={index}
+                className={
+                  entry.role === 'you'
+                    ? 'self-end rounded-2xl bg-[color-mix(in_srgb,var(--mt-accent)_28%,transparent)] px-3 py-2 text-sm text-[var(--mt-text)]'
+                    : 'text-sm text-[var(--mt-text)]'
+                }
+              >
+                {entry.text}
+              </p>
+            ) : (
+              <PlanCard
+                key={index}
+                summary={entry.summary}
+                planned={entry.planned}
+                rows={rows}
+                running={running}
+                cancelled={entry.cancelled}
+                onApply={() => apply(index)}
+                onCancel={() => cancel(index)}
+              />
+            ),
+          )}
 
-        {thinking && <p className="text-sm text-[var(--mt-text-muted)]">Thinking…</p>}
+          {thinking && <p className="text-sm text-[var(--mt-text-muted)]">Thinking…</p>}
+        </div>
 
         {full ? (
           <div className="mt-soft p-4">
@@ -229,6 +240,8 @@ export default function AssistantSheet({
                 value={draft}
                 onChange={(event) => setDraft(event.target.value)}
                 placeholder="Move dentist to Friday"
+                aria-label="Message"
+                maxLength={MAX_MESSAGE_CHARS}
                 className="min-h-11 flex-1 rounded-full border border-[var(--mt-border)] bg-[var(--mt-surface)] px-4 text-sm text-[var(--mt-text)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--mt-focus)]"
               />
               <button

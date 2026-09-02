@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { capStatus, countFromYou, historyFor, type Entry } from './assistantConversation';
+import { MAX_MESSAGE_CHARS } from './assistantBody';
 import type { PlannedChange, TodoChange } from './todoPlan';
 
 function change(overrides: Partial<TodoChange> = {}): TodoChange {
@@ -92,6 +93,41 @@ describe('historyFor', () => {
       {
         role: 'assistant',
         text: `Open plan, not yet applied: Move the dentist\n${JSON.stringify([oneChange])}`,
+      },
+    ]);
+  });
+
+  function bigPlan(count: number): PlannedChange[] {
+    const list: PlannedChange[] = [];
+    for (let i = 0; i < count; i += 1) {
+      list.push(planned({ change: change({ handle: `t${i}` }), outcome: 'pending' }));
+    }
+    return list;
+  }
+
+  it('still sends the full change list when it fits under the cap', () => {
+    const summary = 'Move things around';
+    const ten = bigPlan(10);
+    const entries: Entry[] = [{ kind: 'plan', summary, cancelled: false, planned: ten }];
+
+    const fullText = `Open plan, not yet applied: ${summary}\n${JSON.stringify(ten.map((p) => p.change))}`;
+    expect(fullText.length).toBeLessThanOrEqual(MAX_MESSAGE_CHARS);
+
+    expect(historyFor(entries)).toEqual([{ role: 'assistant', text: fullText }]);
+  });
+
+  it('sends a plain sentence instead of the change list once it would exceed the cap', () => {
+    const summary = 'Move things around';
+    const eleven = bigPlan(11);
+    const entries: Entry[] = [{ kind: 'plan', summary, cancelled: false, planned: eleven }];
+
+    const fullText = `Open plan, not yet applied: ${summary}\n${JSON.stringify(eleven.map((p) => p.change))}`;
+    expect(fullText.length).toBeGreaterThan(MAX_MESSAGE_CHARS);
+
+    expect(historyFor(entries)).toEqual([
+      {
+        role: 'assistant',
+        text: `Open plan, not yet applied: ${summary}\nThis plan has 11 changes and is still waiting.`,
       },
     ]);
   });

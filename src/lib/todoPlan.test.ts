@@ -20,10 +20,17 @@ describe('todoChangeParser', () => {
     });
   });
 
-  it('accepts a delete carrying only a handle', () => {
+  it('accepts a delete with the non-handle fields left blank', () => {
     expect(parse(raw({ op: 'delete', handle: 't2', title: '', dueDate: '', dueTime: '' }))).toEqual({
       ok: true,
       change: { op: 'delete', handle: 't2', title: '', dueDate: '', dueTime: '', priority: false },
+    });
+  });
+
+  it('blanks a handle the model attached to an add', () => {
+    expect(parse(raw({ op: 'add', handle: 't1' }))).toEqual({
+      ok: true,
+      change: { op: 'add', handle: '', title: 'Dentist', dueDate: '', dueTime: '', priority: false },
     });
   });
 

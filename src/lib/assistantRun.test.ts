@@ -55,7 +55,7 @@ describe('buttonStateFor', () => {
   });
 
   it('never leaves a finished run on saving', () => {
-    const every: ChangeOutcome[] = ['pending', 'saved', 'stale', 'failed', 'notAttempted'];
+    const every: ChangeOutcome[] = ['pending', 'saved', 'stale', 'failed', 'notAttempted', 'uncertain'];
     for (const outcome of every) {
       const state: RunState = buttonStateFor([outcome], false);
       expect(state).not.toBe('saving');
@@ -82,7 +82,15 @@ describe('buttonStateFor', () => {
     expect(buttonStateFor(['pending', 'stale'], false)).toBe('idle');
   });
 
-  it('is idle when every row is stale', () => {
-    expect(buttonStateFor(['stale'], false)).toBe('idle');
+  it('is done, not idle, when every row is stale', () => {
+    expect(buttonStateFor(['stale'], false)).toBe('done');
+  });
+
+  it('is idle when a pending row sits next to an uncertain one', () => {
+    expect(buttonStateFor(['pending', 'uncertain'], false)).toBe('idle');
+  });
+
+  it('is done, not idle, when every row is uncertain', () => {
+    expect(buttonStateFor(['uncertain'], false)).toBe('done');
   });
 });

@@ -28,7 +28,7 @@ export async function runPlan(
   const results: PlannedChange[] = [];
 
   for (const previous of planned) {
-    if (previous.outcome === 'saved' || previous.outcome === 'stale') {
+    if (previous.outcome === 'saved' || previous.outcome === 'stale' || previous.outcome === 'uncertain') {
       results.push(previous);
       continue;
     }
@@ -60,10 +60,10 @@ export async function runPlan(
 
     results.push({
       ...step,
-      outcome: outcome === 'unreached' ? 'notAttempted' : 'failed',
+      outcome: outcome === 'unreached' ? 'uncertain' : 'failed',
       note:
         outcome === 'unreached'
-          ? "Couldn't reach the database."
+          ? 'Took too long. It may have saved — check your list before trying again.'
           : 'The database refused it.',
     });
   }

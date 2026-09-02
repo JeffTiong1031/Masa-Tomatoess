@@ -76,7 +76,7 @@ export function todoChangeParser(map: HandleMap, today: string): ChangeParser<To
     const op = value.op as TodoOp;
     const change: TodoChange = {
       op,
-      handle: value.handle,
+      handle: op === 'add' ? '' : value.handle,
       title: value.title,
       dueDate: value.dueDate,
       dueTime: value.dueTime,

@@ -1,4 +1,5 @@
 import type { Message } from './assistantRequest';
+import { MAX_MESSAGE_CHARS } from './assistantBody';
 import type { PlannedChange } from './todoPlan';
 
 export const MAX_FROM_YOU = 6;
@@ -39,12 +40,16 @@ export function historyFor(entries: Entry[]): Message[] {
       return { role: 'assistant', text: `Applied: ${entry.summary} (${handles.join(', ')})` };
     }
 
+    const openText = `Open plan, not yet applied: ${entry.summary}\n${JSON.stringify(
+      entry.planned.map((p) => p.change),
+    )}`;
+    if (openText.length <= MAX_MESSAGE_CHARS) {
+      return { role: 'assistant', text: openText };
+    }
+
     return {
       role: 'assistant',
-      text: `Open plan, not yet applied: ${entry.summary}
-${JSON.stringify(
-        entry.planned.map((p) => p.change),
-      )}`,
+      text: `Open plan, not yet applied: ${entry.summary}\nThis plan has ${entry.planned.length} changes and is still waiting.`,
     };
   });
 }

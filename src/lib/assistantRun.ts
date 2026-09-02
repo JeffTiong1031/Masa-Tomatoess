@@ -1,7 +1,7 @@
 export const APPLY_BUDGET_MS = 30_000;
 export const UNREACHED_LIMIT = 3;
 
-export type ChangeOutcome = 'pending' | 'saved' | 'stale' | 'failed' | 'notAttempted';
+export type ChangeOutcome = 'pending' | 'saved' | 'stale' | 'failed' | 'notAttempted' | 'uncertain';
 
 export const RETRYABLE_OUTCOMES: ChangeOutcome[] = ['failed', 'notAttempted'];
 
@@ -26,6 +26,6 @@ export function nextStep(state: { outcomes: StepOutcome[]; elapsedMs: number }):
 export function buttonStateFor(outcomes: ChangeOutcome[], running: boolean): RunState {
   if (running) return 'saving';
   if (outcomes.some(isRetryable)) return 'retry';
-  if (outcomes.some((outcome) => outcome === 'saved')) return 'done';
-  return 'idle';
+  if (outcomes.some((outcome) => outcome === 'pending')) return 'idle';
+  return 'done';
 }
