@@ -51,7 +51,10 @@ export function calendarSection({
     opWord: opWordFor,
     describe: describeChange,
 
-    fetchFresh: () => fetchEvents(),
+    async fetchFresh(owner) {
+      const fresh = await fetchEvents();
+      return fresh === null ? null : fresh.filter((event) => event.owner === owner);
+    },
 
     runChange({ change, id }, owner) {
       const categoryId = categoryIdFor(change.category, categories);
