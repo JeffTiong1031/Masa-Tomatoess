@@ -4,20 +4,20 @@ import { useState } from 'react';
 import { Sparkles } from 'lucide-react';
 import AssistantSheet from './AssistantSheet';
 import type { ApplyTone } from '@/lib/applyRun';
-import type { Todo } from '@/lib/todo';
 import type { UserName } from '@/lib/identity';
+import type { AssistantClock, AssistantSection } from './section';
 
-export default function AssistantButton({
+export default function AssistantButton<C extends { handle: string }, R>({
+  section,
   owner,
   rows,
-  today,
-  now,
+  clock,
   onApplied,
 }: {
+  section: AssistantSection<C, R>;
   owner: UserName;
-  rows: Todo[];
-  today: string;
-  now: string;
+  rows: R[];
+  clock: () => AssistantClock;
   onApplied: (message: string, tone: ApplyTone) => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -27,7 +27,7 @@ export default function AssistantButton({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        aria-label="Ask about your list"
+        aria-label={section.title}
         className="fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-[var(--mt-accent)] text-[var(--mt-text)] shadow-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--mt-focus)]"
       >
         <Sparkles size={22} aria-hidden />
@@ -35,10 +35,10 @@ export default function AssistantButton({
       <AssistantSheet
         open={open}
         onClose={() => setOpen(false)}
+        section={section}
         owner={owner}
         rows={rows}
-        today={today}
-        now={now}
+        clock={clock}
         onApplied={onApplied}
       />
     </>

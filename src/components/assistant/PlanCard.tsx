@@ -1,27 +1,11 @@
 'use client';
 
 import { AlertTriangle, Check, X } from 'lucide-react';
-import { buttonStateFor, isRetryable } from '@/lib/assistantRun';
-import { clashesFor, type PlannedChange, type TodoChange } from '@/lib/todoPlan';
-import type { Todo } from '@/lib/todo';
+import { buttonStateFor, isRetryable, type Planned } from '@/lib/assistantRun';
+import type { AssistantSection } from './section';
 
-const OP_WORDS: Record<TodoChange['op'], string> = {
-  add: 'Add',
-  edit: 'Change',
-  complete: 'Tick off',
-  reopen: 'Reopen',
-  delete: 'Delete',
-};
-
-function describe(change: TodoChange): string {
-  const parts = [change.title];
-  if (change.dueDate !== '') parts.push(change.dueDate);
-  if (change.dueTime !== '') parts.push(change.dueTime);
-  if (change.priority) parts.push('priority');
-  return parts.join(' · ');
-}
-
-export default function PlanCard({
+export default function PlanCard<C extends { handle: string }, R>({
+  section,
   summary,
   planned,
   rows,
@@ -30,9 +14,10 @@ export default function PlanCard({
   onCancel,
   cancelled,
 }: {
+  section: AssistantSection<C, R>;
   summary: string;
-  planned: PlannedChange[];
-  rows: Todo[];
+  planned: Planned<C>[];
+  rows: R[];
   running: boolean;
   onApply: () => void;
   onCancel: () => void;
@@ -48,21 +33,26 @@ export default function PlanCard({
 
       <ul className="mt-3 space-y-2">
         {planned.map((entry, index) => {
-          const clashes = clashesFor(entry.change, rows, entry.id);
+          const clashes = section.clashTitles(entry, rows);
+          const outside = section.outsideNote(entry.change);
+          const pending = entry.outcome !== 'saved' && entry.outcome !== 'stale';
           return (
             <li key={index} className="text-sm text-[var(--mt-text)]">
-              <span className="font-medium">{OP_WORDS[entry.change.op]}</span>{' '}
-              {describe(entry.change)}
+              <span className="font-medium">{section.opWord(entry.change)}</span>{' '}
+              {section.describe(entry.change)}
               {entry.outcome === 'saved' && (
                 <Check size={14} className="ml-1 inline text-[var(--mt-text-muted)]" aria-label="saved" />
               )}
               {entry.note !== '' && (
                 <span className="ml-1 text-[var(--mt-text-muted)]">— {entry.note}</span>
               )}
-              {clashes.length > 0 && entry.outcome !== 'saved' && entry.outcome !== 'stale' && (
+              {outside !== '' && (
+                <span className="ml-1 text-[var(--mt-text-muted)]">— {outside}</span>
+              )}
+              {clashes.length > 0 && pending && (
                 <span className="mt-1 flex items-center gap-1 text-[var(--mt-text-muted)]">
                   <AlertTriangle size={14} aria-hidden />
-                  You already have &ldquo;{clashes[0].title}&rdquo; that day.
+                  You already have &ldquo;{clashes[0]}&rdquo; that day.
                 </span>
               )}
             </li>
