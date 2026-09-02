@@ -21,28 +21,28 @@ const MAP = assignHandles(emptyHandleMap('t'), ['aaa', 'bbb']);
 const parse = todoChangeParser(MAP, TODAY);
 
 function raw(overrides: Record<string, unknown> = {}) {
-  return { op: 'add', handle: '', title: 'Dentist', dueDate: '', dueTime: '', priority: false, ...overrides };
+  return { op: 'add', handle: '', title: 'Dentist', dueDate: '', dueTime: '', ...overrides };
 }
 
 describe('todoChangeParser', () => {
   it('accepts an add', () => {
-    expect(parse(raw({ dueDate: '2026-09-12', dueTime: '15:00', priority: true }))).toEqual({
+    expect(parse(raw({ dueDate: '2026-09-12', dueTime: '15:00' }))).toEqual({
       ok: true,
-      change: { op: 'add', handle: '', title: 'Dentist', dueDate: '2026-09-12', dueTime: '15:00', priority: true },
+      change: { op: 'add', handle: '', title: 'Dentist', dueDate: '2026-09-12', dueTime: '15:00' },
     });
   });
 
   it('accepts a delete with the non-handle fields left blank', () => {
     expect(parse(raw({ op: 'delete', handle: 't2', title: '', dueDate: '', dueTime: '' }))).toEqual({
       ok: true,
-      change: { op: 'delete', handle: 't2', title: '', dueDate: '', dueTime: '', priority: false },
+      change: { op: 'delete', handle: 't2', title: '', dueDate: '', dueTime: '' },
     });
   });
 
   it('blanks a handle the model attached to an add', () => {
     expect(parse(raw({ op: 'add', handle: 't1' }))).toEqual({
       ok: true,
-      change: { op: 'add', handle: '', title: 'Dentist', dueDate: '', dueTime: '', priority: false },
+      change: { op: 'add', handle: '', title: 'Dentist', dueDate: '', dueTime: '' },
     });
   });
 
@@ -149,7 +149,7 @@ describe('todoChangeParser', () => {
 
 describe('validateTodoPlan', () => {
   function change(overrides: Partial<TodoChange> = {}): TodoChange {
-    return { op: 'edit', handle: 't1', title: 'Dentist', dueDate: '', dueTime: '', priority: false, ...overrides };
+    return { op: 'edit', handle: 't1', title: 'Dentist', dueDate: '', dueTime: '', ...overrides };
   }
 
   it('accepts distinct handles', () => {
@@ -171,15 +171,15 @@ describe('validateTodoPlan', () => {
 describe('toDraft', () => {
   it('turns empty strings back into nulls', () => {
     const draft = toDraft(
-      { op: 'add', handle: '', title: 'Dentist', dueDate: '', dueTime: '', priority: true },
+      { op: 'add', handle: '', title: 'Dentist', dueDate: '', dueTime: '' },
       'Jeff',
     );
-    expect(draft).toEqual({ owner: 'Jeff', title: 'Dentist', dueDate: null, dueTime: null, priority: true });
+    expect(draft).toEqual({ owner: 'Jeff', title: 'Dentist', dueDate: null, dueTime: null });
   });
 
   it('keeps a date and time when given', () => {
     const draft = toDraft(
-      { op: 'add', handle: '', title: 'Dentist', dueDate: '2026-09-12', dueTime: '15:00', priority: false },
+      { op: 'add', handle: '', title: 'Dentist', dueDate: '2026-09-12', dueTime: '15:00' },
       'Rachel',
     );
     expect(draft).toEqual({
@@ -187,7 +187,6 @@ describe('toDraft', () => {
       title: 'Dentist',
       dueDate: '2026-09-12',
       dueTime: '15:00',
-      priority: false,
     });
   });
 });
@@ -199,7 +198,7 @@ function row(overrides: Partial<OpenTodo> = {}): OpenTodo {
     title: 'Dentist',
     dueDate: '2026-09-12',
     dueTime: null,
-    priority: false,
+    sortOrder: 100,
     done: false,
     completedAt: null,
     createdAt: '2026-09-01T08:00:00.000Z',
@@ -210,7 +209,7 @@ function row(overrides: Partial<OpenTodo> = {}): OpenTodo {
 describe('reconcileTodoPlan', () => {
   it('resolves a live handle to its id and leaves it pending', () => {
     const planned = reconcileTodoPlan(
-      [{ op: 'delete', handle: 't1', title: '', dueDate: '', dueTime: '', priority: false }],
+      [{ op: 'delete', handle: 't1', title: '', dueDate: '', dueTime: '' }],
       MAP,
       [row({ id: 'aaa' })],
     );
@@ -220,7 +219,7 @@ describe('reconcileTodoPlan', () => {
 
   it('marks a change stale when its row has gone', () => {
     const planned = reconcileTodoPlan(
-      [{ op: 'delete', handle: 't2', title: '', dueDate: '', dueTime: '', priority: false }],
+      [{ op: 'delete', handle: 't2', title: '', dueDate: '', dueTime: '' }],
       MAP,
       [row({ id: 'aaa' })],
     );
@@ -230,12 +229,12 @@ describe('reconcileTodoPlan', () => {
 
   it('leaves an add pending with no id', () => {
     const planned = reconcileTodoPlan(
-      [{ op: 'add', handle: '', title: 'New', dueDate: '', dueTime: '', priority: false }],
+      [{ op: 'add', handle: '', title: 'New', dueDate: '', dueTime: '' }],
       MAP,
       [],
     );
     expect(planned[0]).toEqual<PlannedChange>({
-      change: { op: 'add', handle: '', title: 'New', dueDate: '', dueTime: '', priority: false },
+      change: { op: 'add', handle: '', title: 'New', dueDate: '', dueTime: '' },
       id: null,
       outcome: 'pending',
       note: '',
@@ -250,7 +249,6 @@ describe('clashesFor', () => {
     title,
     dueDate,
     dueTime: '',
-    priority: false,
   });
 
   it('finds a task with the same title on the same day', () => {
@@ -277,7 +275,7 @@ describe('clashesFor', () => {
   });
 
   it('does not flag a delete', () => {
-    const change: TodoChange = { op: 'delete', handle: 't1', title: '', dueDate: '', dueTime: '', priority: false };
+    const change: TodoChange = { op: 'delete', handle: 't1', title: '', dueDate: '', dueTime: '' };
     expect(clashesFor(change, [row()], null)).toEqual([]);
   });
 
@@ -288,7 +286,6 @@ describe('clashesFor', () => {
       title: 'Dentist',
       dueDate: '2026-09-12',
       dueTime: '',
-      priority: true,
     };
     expect(clashesFor(change, [row({ id: 'aaa' })], 'aaa')).toEqual([]);
   });
@@ -300,7 +297,6 @@ describe('clashesFor', () => {
       title: 'Dentist',
       dueDate: '2026-09-12',
       dueTime: '',
-      priority: false,
     };
     const rows = [row({ id: 'aaa' }), row({ id: 'bbb' })];
     expect(clashesFor(change, rows, 'aaa').map((t) => t.id)).toEqual(['bbb']);
@@ -313,7 +309,7 @@ describe('clashesFor', () => {
 
 describe('opWordFor', () => {
   function change(op: TodoOp): TodoChange {
-    return { op, handle: 't1', title: 'Dentist', dueDate: '', dueTime: '', priority: false };
+    return { op, handle: 't1', title: 'Dentist', dueDate: '', dueTime: '' };
   }
 
   it('names every op with its own word', () => {
@@ -333,40 +329,32 @@ describe('describeChange', () => {
       title: 'Dentist',
       dueDate: '',
       dueTime: '',
-      priority: false,
       ...overrides,
     };
   }
 
   it('joins every populated field in order with a middle dot', () => {
     const described = describeChange(
-      change({ title: 'Dentist', dueDate: '2026-09-12', dueTime: '15:00', priority: true }),
-    );
-    expect(described).toBe('Dentist · 2026-09-12 · 15:00 · priority');
-  });
-
-  it('drops the due date when it is blank', () => {
-    const described = describeChange(
-      change({ title: 'Dentist', dueDate: '', dueTime: '15:00', priority: true }),
-    );
-    expect(described).toBe('Dentist · 15:00 · priority');
-  });
-
-  it('drops the due time when it is blank', () => {
-    const described = describeChange(
-      change({ title: 'Dentist', dueDate: '2026-09-12', dueTime: '', priority: true }),
-    );
-    expect(described).toBe('Dentist · 2026-09-12 · priority');
-  });
-
-  it('omits the literal "priority" when the flag is false', () => {
-    const described = describeChange(
-      change({ title: 'Dentist', dueDate: '2026-09-12', dueTime: '15:00', priority: false }),
+      change({ title: 'Dentist', dueDate: '2026-09-12', dueTime: '15:00' }),
     );
     expect(described).toBe('Dentist · 2026-09-12 · 15:00');
   });
 
-  it('is just the title when every other field is blank or false', () => {
+  it('drops the due date when it is blank', () => {
+    const described = describeChange(
+      change({ title: 'Dentist', dueDate: '', dueTime: '15:00' }),
+    );
+    expect(described).toBe('Dentist · 15:00');
+  });
+
+  it('drops the due time when it is blank', () => {
+    const described = describeChange(
+      change({ title: 'Dentist', dueDate: '2026-09-12', dueTime: '' }),
+    );
+    expect(described).toBe('Dentist · 2026-09-12');
+  });
+
+  it('is just the title when every other field is blank', () => {
     expect(describeChange(change())).toBe('Dentist');
   });
 });

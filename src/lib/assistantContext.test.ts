@@ -92,7 +92,7 @@ function open(overrides: Partial<OpenTodo> = {}): OpenTodo {
     title: 'task',
     dueDate: null,
     dueTime: null,
-    priority: false,
+    sortOrder: 100,
     done: false,
     completedAt: null,
     createdAt: '2026-09-01T08:00:00.000Z',
@@ -132,7 +132,6 @@ describe('buildTodoSnapshot', () => {
       title: 'task',
       dueDate: '',
       dueTime: '',
-      priority: false,
       done: false,
     });
   });

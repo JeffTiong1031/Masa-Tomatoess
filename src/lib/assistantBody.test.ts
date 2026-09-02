@@ -14,7 +14,6 @@ function row(overrides: Partial<Record<string, unknown>> = {}): Record<string, u
     title: 'task',
     dueDate: '',
     dueTime: '',
-    priority: false,
     done: false,
     ...overrides,
   };
@@ -71,8 +70,8 @@ describe('parseAssistantBody', () => {
     expect(result.ok).toBe(false);
   });
 
-  it('rejects a row whose priority is a string rather than a boolean', () => {
-    const result = parseAssistantBody(body({ snapshot: snapshot([row({ priority: 'true' })]) }));
+  it('rejects a row whose done flag is a string rather than a boolean', () => {
+    const result = parseAssistantBody(body({ snapshot: snapshot([row({ done: 'true' })]) }));
     expect(result.ok).toBe(false);
   });
 

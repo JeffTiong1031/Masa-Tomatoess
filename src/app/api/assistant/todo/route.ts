@@ -22,9 +22,8 @@ const SCHEMA = {
           title: { type: 'string' },
           dueDate: { type: 'string' },
           dueTime: { type: 'string' },
-          priority: { type: 'boolean' },
         },
-        required: ['op', 'handle', 'title', 'dueDate', 'dueTime', 'priority'],
+        required: ['op', 'handle', 'title', 'dueDate', 'dueTime'],
       },
     },
   },
@@ -45,7 +44,7 @@ Ops: add, edit, complete, reopen, delete. Nothing else exists.
 Refer to an existing task by its handle, exactly as given. Never invent one.
 An add has an empty handle. Every change sends every field, always: add and
 edit fill in the whole end state, and complete, reopen and delete still send
-title, dueDate and dueTime as empty strings and priority as false.
+title, dueDate and dueTime as empty strings.
 Never put the same handle in two changes. At most ${MAX_CHANGES} changes.
 
 Dates are YYYY-MM-DD, times are HH:MM in 24 hours. Empty string means none.
@@ -63,8 +62,7 @@ If more than one task matches what the person said, you must reply with
 "question" naming the candidates. Do not pick one. Guessing which task someone
 meant is worse than asking, because the change is applied to real data.
 Also ask when a date is genuinely ambiguous — "next Friday" said on a Friday.
-Do not ask which category, what time, or whether something is a priority: leave
-an optional field empty instead.
+Do not ask which category or what time: leave an optional field empty instead.
 
 Fill only the fields that belong to your reply kind.
 A "plan" fills "summary" and "changes", and leaves "text" as an empty string.

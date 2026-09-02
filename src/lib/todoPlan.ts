@@ -32,7 +32,6 @@ export function describeChange(change: TodoChange): string {
   const parts = [change.title];
   if (change.dueDate !== '') parts.push(change.dueDate);
   if (change.dueTime !== '') parts.push(change.dueTime);
-  if (change.priority) parts.push('priority');
   return parts.join(' · ');
 }
 
@@ -42,9 +41,7 @@ export interface TodoChange {
   title: string;
   dueDate: string;
   dueTime: string;
-  priority: boolean;
 }
-
 
 export function todoChangeParser(map: HandleMap, today: string): ChangeParser<TodoChange> {
   return (raw) => {
@@ -60,7 +57,6 @@ export function todoChangeParser(map: HandleMap, today: string): ChangeParser<To
     if (typeof value.title !== 'string') return { ok: false, reason: { kind: 'unknownKind' } };
     if (typeof value.dueDate !== 'string') return { ok: false, reason: { kind: 'unknownKind' } };
     if (typeof value.dueTime !== 'string') return { ok: false, reason: { kind: 'unknownKind' } };
-    if (typeof value.priority !== 'boolean') return { ok: false, reason: { kind: 'unknownKind' } };
 
     const op = value.op as TodoOp;
     const change: TodoChange = {
@@ -69,7 +65,6 @@ export function todoChangeParser(map: HandleMap, today: string): ChangeParser<To
       title: value.title,
       dueDate: value.dueDate,
       dueTime: value.dueTime,
-      priority: value.priority,
     };
 
     if (op !== 'add' && idOf(map, change.handle) === null) {
@@ -77,7 +72,7 @@ export function todoChangeParser(map: HandleMap, today: string): ChangeParser<To
     }
 
     if (!END_STATE_OPS.includes(op)) {
-      return { ok: true, change: { ...change, title: '', dueDate: '', dueTime: '', priority: false } };
+      return { ok: true, change: { ...change, title: '', dueDate: '', dueTime: '' } };
     }
 
     if (change.title.trim() === '') return { ok: false, reason: { kind: 'emptyTitle' } };
@@ -102,7 +97,6 @@ export function toDraft(change: TodoChange, owner: UserName): TodoDraft {
     title: change.title,
     dueDate: change.dueDate === '' ? null : change.dueDate,
     dueTime: change.dueTime === '' ? null : change.dueTime,
-    priority: change.priority,
   };
 }
 

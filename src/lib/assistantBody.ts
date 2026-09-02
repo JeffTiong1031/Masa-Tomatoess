@@ -25,13 +25,12 @@ function toRow(value: unknown): TodoSnapshotRow | null {
   if (typeof raw.handle !== 'string') return null;
   if (typeof raw.title !== 'string' || raw.title.length > MAX_TITLE_CHARS) return null;
   if (typeof raw.dueDate !== 'string' || typeof raw.dueTime !== 'string') return null;
-  if (typeof raw.priority !== 'boolean' || typeof raw.done !== 'boolean') return null;
+  if (typeof raw.done !== 'boolean') return null;
   return {
     handle: raw.handle,
     title: raw.title,
     dueDate: raw.dueDate,
     dueTime: raw.dueTime,
-    priority: raw.priority,
     done: raw.done,
   };
 }

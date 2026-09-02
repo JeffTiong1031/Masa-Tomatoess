@@ -8,7 +8,7 @@ interface TodoRow {
   title: string;
   due_date: string | null;
   due_time: string | null;
-  priority: boolean;
+  sort_order: number;
   completed_at: string | null;
   created_at: string;
 }
@@ -18,7 +18,8 @@ export type TodoFetch =
   | { status: 'missing-table' }
   | { status: 'error' };
 
-const COLUMNS = 'id, owner, title, due_date, due_time, priority, completed_at, created_at';
+const COLUMNS =
+  'id, owner, title, due_date, due_time, sort_order, completed_at, created_at';
 
 const MISSING_TABLE_CODES = ['42P01', 'PGRST205'];
 
@@ -29,7 +30,7 @@ function toTodo(row: TodoRow): Todo {
     title: row.title,
     dueDate: row.due_date,
     dueTime: row.due_time === null ? null : row.due_time.slice(0, 5),
-    priority: row.priority,
+    sortOrder: row.sort_order,
     createdAt: row.created_at,
   };
   return row.completed_at === null
@@ -37,14 +38,27 @@ function toTodo(row: TodoRow): Todo {
     : { ...base, done: true, completedAt: row.completed_at };
 }
 
-function toRow(draft: TodoDraft) {
+function toRow(draft: TodoDraft, sortOrder: number) {
   return {
     owner: draft.owner,
     title: draft.title.trim(),
     due_date: draft.dueDate,
     due_time: draft.dueTime,
-    priority: draft.priority,
+    sort_order: sortOrder,
   };
+}
+
+async function nextSortOrder(owner: UserName): Promise<number> {
+  const { data, error } = await supabase
+    .from('todos')
+    .select('sort_order')
+    .eq('owner', owner)
+    .eq('done', false)
+    .order('sort_order', { ascending: false })
+    .limit(1);
+
+  if (error || data === null || data.length === 0) return 100;
+  return (data[0] as { sort_order: number }).sort_order + 100;
 }
 
 export async function fetchTodos(owner: UserName): Promise<TodoFetch> {
@@ -52,7 +66,7 @@ export async function fetchTodos(owner: UserName): Promise<TodoFetch> {
     .from('todos')
     .select(COLUMNS)
     .eq('owner', owner)
-    .order('created_at', { ascending: true });
+    .order('sort_order', { ascending: true });
 
   if (error) {
     if (MISSING_TABLE_CODES.includes(error.code)) return { status: 'missing-table' };
@@ -64,9 +78,10 @@ export async function fetchTodos(owner: UserName): Promise<TodoFetch> {
 }
 
 export async function insertTodo(draft: TodoDraft): Promise<Todo | null> {
+  const sortOrder = await nextSortOrder(draft.owner);
   const { data, error } = await supabase
     .from('todos')
-    .insert(toRow(draft))
+    .insert(toRow(draft, sortOrder))
     .select(COLUMNS)
     .single();
 
@@ -98,11 +113,38 @@ export async function setTodoDone(id: string, done: boolean): Promise<boolean> {
 export async function updateTodo(id: string, fields: TodoDraft): Promise<boolean> {
   const { error } = await supabase
     .from('todos')
-    .update({ ...toRow(fields), updated_at: new Date().toISOString() })
+    .update({
+      owner: fields.owner,
+      title: fields.title.trim(),
+      due_date: fields.dueDate,
+      due_time: fields.dueTime,
+      updated_at: new Date().toISOString(),
+    })
     .eq('id', id);
 
   if (error) {
     console.error('Failed to edit a todo:', error);
+    return false;
+  }
+  return true;
+}
+
+export async function reorderTodos(
+  updates: { id: string; sortOrder: number }[],
+): Promise<boolean> {
+  const at = new Date().toISOString();
+  const results = await Promise.all(
+    updates.map(({ id, sortOrder }) =>
+      supabase
+        .from('todos')
+        .update({ sort_order: sortOrder, updated_at: at })
+        .eq('id', id),
+    ),
+  );
+
+  const failed = results.find(({ error }) => error !== null);
+  if (failed?.error) {
+    console.error('Failed to reorder todos:', failed.error);
     return false;
   }
   return true;

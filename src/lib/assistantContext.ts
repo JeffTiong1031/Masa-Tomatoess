@@ -47,7 +47,6 @@ export interface TodoSnapshotRow {
   title: string;
   dueDate: string;
   dueTime: string;
-  priority: boolean;
   done: boolean;
 }
 
@@ -80,7 +79,6 @@ export function buildTodoSnapshot(
         title: row.title,
         dueDate: row.dueDate ?? '',
         dueTime: row.dueTime ?? '',
-        priority: row.priority,
         done: row.done,
       })),
     },

@@ -10,8 +10,7 @@ const GROUP_ORDER: TodoGroupName[] = [
   'No date',
 ];
 
-const AFTER_EVERY_DATE = '9999-12-31';
-const AFTER_EVERY_TIME = '99:99';
+export const SORT_ORDER_GAP = 100;
 
 export function weekEnd(date: string): string {
   return addDays(date, 6 - weekdayIndex(date));
@@ -30,16 +29,7 @@ export function groupOf(todo: Todo, today: string, now: string): TodoGroupName {
 }
 
 export function compareTodos(a: Todo, b: Todo): number {
-  const dateA = a.dueDate ?? AFTER_EVERY_DATE;
-  const dateB = b.dueDate ?? AFTER_EVERY_DATE;
-  if (dateA !== dateB) return dateA < dateB ? -1 : 1;
-
-  if (a.priority !== b.priority) return a.priority ? -1 : 1;
-
-  const timeA = a.dueTime ?? AFTER_EVERY_TIME;
-  const timeB = b.dueTime ?? AFTER_EVERY_TIME;
-  if (timeA !== timeB) return timeA < timeB ? -1 : 1;
-
+  if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder;
   return a.createdAt.localeCompare(b.createdAt);
 }
 
@@ -66,6 +56,28 @@ export function groupTodos(
     name,
     todos: buckets[name].sort(compareTodos),
   })).filter((group) => group.todos.length > 0);
+}
+
+export function reorderInGroup(todos: Todo[], activeId: string, overId: string): string[] {
+  const ids = todos.map((todo) => todo.id);
+  const from = ids.indexOf(activeId);
+  const to = ids.indexOf(overId);
+  if (from === -1 || to === -1 || from === to) return ids;
+
+  const next = [...ids];
+  const [moved] = next.splice(from, 1);
+  next.splice(to, 0, moved);
+  return next;
+}
+
+export function sortOrdersForOrder(
+  ids: string[],
+  startAt = SORT_ORDER_GAP,
+): { id: string; sortOrder: number }[] {
+  return ids.map((id, index) => ({
+    id,
+    sortOrder: startAt + index * SORT_ORDER_GAP,
+  }));
 }
 
 const COMPLETED_WINDOW_DAYS = 7;
