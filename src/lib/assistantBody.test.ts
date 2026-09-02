@@ -157,6 +157,15 @@ describe('parseCalendarBody', () => {
     });
   });
 
+  it.each(['handle', 'date', 'endDate', 'startTime', 'endTime', 'category'] as const)(
+    'rejects a row whose %s is the wrong type',
+    (field) => {
+      expect(parseCalendarBody(calBody({ rows: [calRow({ [field]: 5 })] }))).toEqual({
+        ok: false,
+      });
+    },
+  );
+
   it('rejects a title longer than the cap', () => {
     expect(
       parseCalendarBody(calBody({ rows: [calRow({ title: 'x'.repeat(MAX_TITLE_CHARS + 1) })] })),
