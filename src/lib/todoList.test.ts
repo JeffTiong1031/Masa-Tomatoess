@@ -9,6 +9,9 @@ import {
   msUntil,
   nextWakeDelayMs,
   OVERDUE_WAKE_SLACK_MS,
+  reorderInGroup,
+  sortOrdersForOrder,
+  SORT_ORDER_GAP,
 } from './todoList';
 import { addDays } from './dates';
 import type { OpenTodo, Todo, DoneTodo } from './todo';
@@ -20,7 +23,7 @@ function open(overrides: Partial<OpenTodo> = {}): OpenTodo {
     title: 'task',
     dueDate: null,
     dueTime: null,
-    priority: false,
+    sortOrder: 100,
     done: false,
     completedAt: null,
     createdAt: '2026-08-26T08:00:00.000Z',
@@ -82,40 +85,49 @@ describe('groupOf', () => {
 });
 
 describe('compareTodos', () => {
-  it('sorts an earlier date first', () => {
-    const early = open({ id: 'e', dueDate: '2026-08-26' });
-    const late = open({ id: 'l', dueDate: '2026-08-28' });
-    expect(compareTodos(early, late)).toBeLessThan(0);
-  });
-
-  it('sorts undated last', () => {
-    expect(compareTodos(open({ dueDate: '2026-12-31' }), open())).toBeLessThan(0);
-  });
-
-  it('sorts a flagged task above an unflagged one on the same date', () => {
-    const flagged = open({ id: 'f', dueDate: TODAY, priority: true });
-    const plain = open({ id: 'p', dueDate: TODAY });
-    expect(compareTodos(flagged, plain)).toBeLessThan(0);
-  });
-
-  it('does not let a flag outrank an earlier date', () => {
-    const flaggedLater = open({ id: 'f', dueDate: '2026-09-02', priority: true });
-    const plainToday = open({ id: 'p', dueDate: TODAY });
-    expect(compareTodos(plainToday, flaggedLater)).toBeLessThan(0);
-  });
-
-  it('sorts an earlier time first, and both above an untimed task', () => {
-    const nine = open({ id: '9', dueDate: TODAY, dueTime: '09:00' });
-    const five = open({ id: '5', dueDate: TODAY, dueTime: '17:00' });
-    const none = open({ id: 'n', dueDate: TODAY });
-    expect(compareTodos(nine, five)).toBeLessThan(0);
-    expect(compareTodos(five, none)).toBeLessThan(0);
-  });
-
-  it('falls back to creation order', () => {
-    const first = open({ id: '1', createdAt: '2026-08-20T08:00:00.000Z' });
-    const second = open({ id: '2', createdAt: '2026-08-21T08:00:00.000Z' });
+  it('sorts by sortOrder ascending', () => {
+    const first = open({ id: '1', sortOrder: 100 });
+    const second = open({ id: '2', sortOrder: 200 });
     expect(compareTodos(first, second)).toBeLessThan(0);
+  });
+
+  it('falls back to creation order when sortOrder matches', () => {
+    const first = open({ id: '1', sortOrder: 100, createdAt: '2026-08-20T08:00:00.000Z' });
+    const second = open({ id: '2', sortOrder: 100, createdAt: '2026-08-21T08:00:00.000Z' });
+    expect(compareTodos(first, second)).toBeLessThan(0);
+  });
+
+  it('lets manual order beat due time within a group', () => {
+    const lateTimeFirst = open({ id: 'late', dueDate: TODAY, dueTime: '17:00', sortOrder: 100 });
+    const earlyTimeSecond = open({ id: 'early', dueDate: TODAY, dueTime: '09:00', sortOrder: 200 });
+    expect(compareTodos(lateTimeFirst, earlyTimeSecond)).toBeLessThan(0);
+  });
+});
+
+describe('reorderInGroup', () => {
+  it('moves an item to a new position', () => {
+    const todos = [
+      open({ id: 'a', sortOrder: 100 }),
+      open({ id: 'b', sortOrder: 200 }),
+      open({ id: 'c', sortOrder: 300 }),
+    ];
+    expect(reorderInGroup(todos, 'c', 'a')).toEqual(['c', 'a', 'b']);
+  });
+
+  it('returns the same order when ids are missing or equal', () => {
+    const todos = [open({ id: 'a' }), open({ id: 'b' })];
+    expect(reorderInGroup(todos, 'a', 'a')).toEqual(['a', 'b']);
+    expect(reorderInGroup(todos, 'missing', 'a')).toEqual(['a', 'b']);
+  });
+});
+
+describe('sortOrdersForOrder', () => {
+  it('assigns spaced sort orders', () => {
+    expect(sortOrdersForOrder(['a', 'b', 'c'])).toEqual([
+      { id: 'a', sortOrder: SORT_ORDER_GAP },
+      { id: 'b', sortOrder: SORT_ORDER_GAP * 2 },
+      { id: 'c', sortOrder: SORT_ORDER_GAP * 3 },
+    ]);
   });
 });
 
@@ -133,13 +145,13 @@ describe('groupTodos', () => {
     ]);
   });
 
-  it('sorts inside a group', () => {
+  it('sorts inside a group by sortOrder', () => {
     const todos: Todo[] = [
-      open({ id: 'plain', dueDate: TODAY }),
-      open({ id: 'flagged', dueDate: TODAY, priority: true }),
+      open({ id: 'second', dueDate: TODAY, sortOrder: 200 }),
+      open({ id: 'first', dueDate: TODAY, sortOrder: 100 }),
     ];
     const [today] = groupTodos(todos, TODAY, '09:00:00');
-    expect(today.todos.map((todo) => todo.id)).toEqual(['flagged', 'plain']);
+    expect(today.todos.map((todo) => todo.id)).toEqual(['first', 'second']);
   });
 
   it('leaves completed tasks out of every group', () => {

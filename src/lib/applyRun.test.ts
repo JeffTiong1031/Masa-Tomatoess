@@ -14,7 +14,6 @@ function change(overrides: Partial<TodoChange> = {}): TodoChange {
     title: 'Dentist',
     dueDate: '2026-09-12',
     dueTime: '',
-    priority: false,
     ...overrides,
   };
 }
@@ -36,7 +35,7 @@ function row(overrides: Partial<OpenTodo> = {}): OpenTodo {
     title: 'Dentist',
     dueDate: '2026-09-12',
     dueTime: null,
-    priority: false,
+    sortOrder: 100,
     done: false,
     completedAt: null,
     createdAt: '2026-09-01T08:00:00.000Z',

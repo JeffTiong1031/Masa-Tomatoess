@@ -1,5 +1,6 @@
 'use client';
 
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import TodoRow from './TodoRow';
 import { Trash2 } from 'lucide-react';
 import type { Todo } from '@/lib/todo';
@@ -9,12 +10,16 @@ export default function TodoGroup({
   onToggle,
   onOpen,
   onDeleteCompleted,
+  sortable = true,
 }: {
   group: { name: string; todos: Todo[] };
   onToggle: (todo: Todo) => void;
   onOpen: (todo: Todo) => void;
   onDeleteCompleted?: () => void;
+  sortable?: boolean;
 }) {
+  const ids = group.todos.map((todo) => todo.id);
+
   return (
     <section className="mt-soft p-4">
       <h2 className="mb-2 flex items-center justify-between gap-2 text-sm font-semibold text-[var(--mt-text)]">
@@ -35,17 +40,20 @@ export default function TodoGroup({
           </button>
         ) : null}
       </h2>
-      <ul className="grid gap-1">
-        {group.todos.map((todo) => (
-          <TodoRow
-            key={todo.id}
-            todo={todo}
-            overdue={group.name === 'Overdue'}
-            onToggle={onToggle}
-            onOpen={onOpen}
-          />
-        ))}
-      </ul>
+      <SortableContext items={ids} strategy={verticalListSortingStrategy}>
+        <ul className="grid gap-1">
+          {group.todos.map((todo) => (
+            <TodoRow
+              key={todo.id}
+              todo={todo}
+              overdue={group.name === 'Overdue'}
+              onToggle={onToggle}
+              onOpen={onOpen}
+              sortable={sortable}
+            />
+          ))}
+        </ul>
+      </SortableContext>
     </section>
   );
 }

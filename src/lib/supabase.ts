@@ -205,7 +205,7 @@ create table todos (
   title        text not null check (length(trim(title)) > 0),
   due_date     date,
   due_time     time,
-  priority     boolean not null default false,
+  sort_order   integer not null default 0,
   done         boolean not null default false,
   completed_at timestamptz,
   created_at   timestamptz not null default now(),

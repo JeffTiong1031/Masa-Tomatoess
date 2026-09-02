@@ -1,6 +1,15 @@
 'use client';
 
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
+import {
+  DndContext,
+  PointerSensor,
+  TouchSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
 import { todayISO, timeISO } from '@/lib/dates';
 import { isUserName, USERS, type UserName } from '@/lib/identity';
 import {
@@ -8,10 +17,17 @@ import {
   deleteTodo,
   fetchTodos,
   insertTodo,
+  reorderTodos,
   setTodoDone,
   updateTodo,
 } from '@/lib/todoRepo';
-import { completedTodos, groupTodos, nextWakeDelayMs } from '@/lib/todoList';
+import {
+  completedTodos,
+  groupTodos,
+  nextWakeDelayMs,
+  reorderInGroup,
+  sortOrdersForOrder,
+} from '@/lib/todoList';
 import type { Todo, TodoDraft } from '@/lib/todo';
 import { useHasMounted } from '@/hooks/useHasMounted';
 import Card from '@/components/ui/Card';
@@ -72,6 +88,11 @@ export default function TodoBoard() {
   const visible = displayStatus === 'ok' ? todos : [];
   const groups = groupTodos(visible, clock.today, clock.now);
   const finished = completedTodos(visible, clock.today);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -177,6 +198,42 @@ export default function TodoBoard() {
     setConfirmingDelete(true);
   }, []);
 
+  const handleDragEnd = useCallback(
+    async (event: DragEndEvent) => {
+      const { active, over } = event;
+      if (over === null || active.id === over.id) return;
+
+      const activeId = String(active.id);
+      const overId = String(over.id);
+      const currentGroups = groupTodos(todos, clock.today, clock.now);
+      const group = currentGroups.find(
+        (entry) =>
+          entry.todos.some((todo) => todo.id === activeId) &&
+          entry.todos.some((todo) => todo.id === overId),
+      );
+      if (group === undefined) return;
+
+      const previous = todos;
+      const orderedIds = reorderInGroup(group.todos, activeId, overId);
+      const updates = sortOrdersForOrder(orderedIds);
+      const byId = new Map(updates.map((update) => [update.id, update.sortOrder]));
+
+      setTodos((current) =>
+        current.map((todo) =>
+          byId.has(todo.id) ? { ...todo, sortOrder: byId.get(todo.id) as number } : todo,
+        ),
+      );
+      setNotice(null);
+
+      const saved = await reorderTodos(updates);
+      if (saved) return;
+
+      setTodos(previous);
+      setNotice({ text: 'That order did not save.', tone: 'problem' });
+    },
+    [todos, clock],
+  );
+
   if (!mounted) return null;
 
   if (displayStatus === 'missing-table') {
@@ -246,12 +303,18 @@ export default function TodoBoard() {
       ) : null}
 
       {groups.map((group) => (
-        <TodoGroup
+        <DndContext
           key={group.name}
-          group={group}
-          onToggle={handleToggle}
-          onOpen={setEditing}
-        />
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <TodoGroup
+            group={group}
+            onToggle={handleToggle}
+            onOpen={setEditing}
+          />
+        </DndContext>
       ))}
 
       {finished.length === 0 ? null : (
@@ -270,6 +333,7 @@ export default function TodoBoard() {
           onToggle={handleToggle}
           onOpen={setEditing}
           onDeleteCompleted={requestDeleteCompleted}
+          sortable={false}
         />
       ) : null}
 

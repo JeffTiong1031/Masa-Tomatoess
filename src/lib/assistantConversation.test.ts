@@ -16,7 +16,6 @@ function change(overrides: Partial<TodoChange> = {}): TodoChange {
     title: 'Dentist',
     dueDate: '',
     dueTime: '',
-    priority: false,
     ...overrides,
   };
 }
@@ -124,16 +123,16 @@ describe('historyFor', () => {
 
   it('sends a plain sentence instead of the change list once it would exceed the cap', () => {
     const summary = 'Move things around';
-    const eleven = bigPlan(11);
-    const entries: Entry<TodoChange>[] = [{ kind: 'plan', summary, cancelled: false, planned: eleven }];
+    const fourteen = bigPlan(14);
+    const entries: Entry<TodoChange>[] = [{ kind: 'plan', summary, cancelled: false, planned: fourteen }];
 
-    const fullText = `Open plan, not yet applied: ${summary}\n${JSON.stringify(eleven.map((p) => p.change))}`;
+    const fullText = `Open plan, not yet applied: ${summary}\n${JSON.stringify(fourteen.map((p) => p.change))}`;
     expect(fullText.length).toBeGreaterThan(MAX_MESSAGE_CHARS);
 
     expect(historyFor(entries)).toEqual([
       {
         role: 'assistant',
-        text: `Open plan, not yet applied: ${summary}\nThis plan has 11 changes and is still waiting.`,
+        text: `Open plan, not yet applied: ${summary}\nThis plan has 14 changes and is still waiting.`,
       },
     ]);
   });

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Flag, Trash2 } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 import Modal from '@/components/ui/Modal';
 import type { Todo, TodoDraft } from '@/lib/todo';
 
@@ -19,7 +19,6 @@ export default function TodoEditModal({
   const [title, setTitle] = useState(todo.title);
   const [dueDate, setDueDate] = useState(todo.dueDate ?? '');
   const [dueTime, setDueTime] = useState(todo.dueTime ?? '');
-  const [priority, setPriority] = useState(todo.priority);
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
 
@@ -33,7 +32,6 @@ export default function TodoEditModal({
       title: trimmed,
       dueDate: dueDate === '' ? null : dueDate,
       dueTime: dueDate === '' || dueTime === '' ? null : dueTime,
-      priority,
     });
     setBusy(false);
     if (!saved) {
@@ -107,19 +105,6 @@ export default function TodoEditModal({
               className="min-h-11 rounded-xl bg-[var(--mt-bg)] px-3 text-sm text-[var(--mt-text)]"
             />
           )}
-          <button
-            type="button"
-            onClick={() => setPriority((current) => !current)}
-            aria-pressed={priority}
-            aria-label="Important"
-            className={`min-h-11 min-w-11 inline-flex items-center justify-center rounded-xl ${
-              priority
-                ? 'bg-[var(--mt-accent)] text-[var(--mt-accent-contrast)]'
-                : 'text-[var(--mt-text-muted)]'
-            }`}
-          >
-            <Flag size={18} strokeWidth={1.9} aria-hidden />
-          </button>
         </div>
         {failed ? (
           <p className="text-xs text-[var(--mt-danger)]">
