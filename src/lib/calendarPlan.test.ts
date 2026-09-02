@@ -320,6 +320,19 @@ describe('reconcileCalendarPlan', () => {
     expect(planned.id).toBeNull();
     expect(planned.note).toBe('That event was already deleted.');
   });
+
+  it('carries the live row title onto a delete, which the parser blanked', () => {
+    const change = { ...base, op: 'delete' as const, handle: 'e1', title: '' };
+    const [planned] = reconcileCalendarPlan([change], map, [event({ id: 'ev-1', title: 'Flight' })]);
+    expect(planned.change.title).toBe('Flight');
+    expect(planned.outcome).toBe('pending');
+  });
+
+  it('leaves an edit title exactly as the model sent it', () => {
+    const change = { ...base, op: 'edit' as const, handle: 'e1', title: 'Renamed' };
+    const [planned] = reconcileCalendarPlan([change], map, [event({ id: 'ev-1', title: 'Flight' })]);
+    expect(planned.change.title).toBe('Renamed');
+  });
 });
 
 describe('clashesFor', () => {
@@ -441,6 +454,22 @@ describe('describeChange', () => {
   it('omits the countdown flag when clear', () => {
     const described = change({ startTime: '09:00', endTime: '10:00', countdown: false });
     expect(describeChange(described)).toBe('Dentist · 2026-09-10 · 09:00–10:00');
+  });
+
+  it('is blank for a delete, which blanks every field including the title', () => {
+    const described = change({
+      op: 'delete',
+      handle: 'e1',
+      title: '',
+      date: '',
+      endDate: '',
+      startTime: '',
+      endTime: '',
+      notes: '',
+      countdown: false,
+      category: '',
+    });
+    expect(describeChange(described)).toBe('');
   });
 });
 

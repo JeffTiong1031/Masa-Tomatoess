@@ -207,7 +207,7 @@ export function reconcileCalendarPlan(
   map: HandleMap,
   rows: CalendarEvent[],
 ): PlannedEvent[] {
-  const live = new Set(rows.map((row) => row.id));
+  const live = new Map(rows.map((row) => [row.id, row]));
 
   return changes.map((change) => {
     if (change.op === 'add') {
@@ -215,11 +215,13 @@ export function reconcileCalendarPlan(
     }
 
     const id = idOf(map, change.handle);
-    if (id === null || !live.has(id)) {
+    const row = id === null ? undefined : live.get(id);
+    if (row === undefined) {
       return { change, id: null, outcome: 'stale', note: 'That event was already deleted.' };
     }
 
-    return { change, id, outcome: 'pending', note: '' };
+    const named = change.op === 'delete' ? { ...change, title: row.title } : change;
+    return { change: named, id, outcome: 'pending', note: '' };
   });
 }
 
