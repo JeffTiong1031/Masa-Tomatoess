@@ -65,6 +65,9 @@ startTime, endTime, notes and category as empty strings and countdown as false.
 Never put the same handle in two changes. At most ${MAX_CHANGES} changes.
 
 Dates are YYYY-MM-DD, times are HH:MM in 24 hours. Empty string means none.
+Every add and every edit must carry a date. An event without one does not
+exist. The other fields — endDate, startTime, endTime, notes and category —
+may be empty.
 You are given today's date and weekday. Work out "tomorrow" and "next Friday"
 from those.
 
