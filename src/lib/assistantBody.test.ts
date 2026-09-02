@@ -1,6 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { MAX_HISTORY, MAX_MESSAGE_CHARS, MAX_TITLE_CHARS, parseAssistantBody } from './assistantBody';
-import { MAX_TODO_ROWS } from './assistantContext';
+import {
+  MAX_HISTORY,
+  MAX_MESSAGE_CHARS,
+  MAX_TITLE_CHARS,
+  parseAssistantBody,
+  parseCalendarBody,
+} from './assistantBody';
+import { MAX_EVENT_ROWS, MAX_NOTE_CHARS, MAX_TODO_ROWS } from './assistantContext';
 
 function row(overrides: Partial<Record<string, unknown>> = {}): Record<string, unknown> {
   return {
@@ -91,5 +97,93 @@ describe('parseAssistantBody', () => {
   it('rejects a body that is not an object at all', () => {
     const result = parseAssistantBody('not an object');
     expect(result.ok).toBe(false);
+  });
+});
+
+function calRow(over: Record<string, unknown> = {}) {
+  return {
+    handle: 'e1',
+    title: 'Standup',
+    date: '2026-09-03',
+    endDate: '',
+    startTime: '09:00',
+    endTime: '',
+    countdown: false,
+    category: 'Work',
+    notes: '',
+    ...over,
+  };
+}
+
+function calBody(over: Record<string, unknown> = {}) {
+  return {
+    snapshot: {
+      today: '2026-09-02',
+      weekday: 'Wed',
+      now: '14:30:00',
+      from: '2026-08-03',
+      to: '2026-12-01',
+      categories: ['Work'],
+      rows: [calRow()],
+      ...over,
+    },
+    history: [{ role: 'you', text: 'what is on Thursday?' }],
+  };
+}
+
+describe('parseCalendarBody', () => {
+  it('accepts a well-formed body', () => {
+    const parsed = parseCalendarBody(calBody());
+    expect(parsed.ok).toBe(true);
+  });
+
+  it('accepts an empty board', () => {
+    expect(parseCalendarBody(calBody({ rows: [] })).ok).toBe(true);
+  });
+
+  it('rejects a body that is not an object', () => {
+    expect(parseCalendarBody('hello')).toEqual({ ok: false });
+  });
+
+  it('rejects a snapshot missing its window', () => {
+    const body = calBody();
+    delete (body.snapshot as Record<string, unknown>).to;
+    expect(parseCalendarBody(body)).toEqual({ ok: false });
+  });
+
+  it('rejects a row with a field of the wrong type', () => {
+    expect(parseCalendarBody(calBody({ rows: [calRow({ countdown: 'yes' })] }))).toEqual({
+      ok: false,
+    });
+  });
+
+  it('rejects a title longer than the cap', () => {
+    expect(
+      parseCalendarBody(calBody({ rows: [calRow({ title: 'x'.repeat(MAX_TITLE_CHARS + 1) })] })),
+    ).toEqual({ ok: false });
+  });
+
+  it('rejects notes longer than the cap', () => {
+    expect(
+      parseCalendarBody(calBody({ rows: [calRow({ notes: 'x'.repeat(MAX_NOTE_CHARS + 1) })] })),
+    ).toEqual({ ok: false });
+  });
+
+  it('rejects more rows than the cap allows', () => {
+    const rows = Array.from({ length: MAX_EVENT_ROWS + 1 }, () => calRow());
+    expect(parseCalendarBody(calBody({ rows }))).toEqual({ ok: false });
+  });
+
+  it('rejects a category list that is not strings', () => {
+    expect(parseCalendarBody(calBody({ categories: [1, 2] }))).toEqual({ ok: false });
+  });
+
+  it('rejects an empty history', () => {
+    expect(parseCalendarBody({ ...calBody(), history: [] })).toEqual({ ok: false });
+  });
+
+  it('rejects a history longer than the cap', () => {
+    const history = Array.from({ length: MAX_HISTORY + 1 }, () => ({ role: 'you', text: 'hi' }));
+    expect(parseCalendarBody({ ...calBody(), history })).toEqual({ ok: false });
   });
 });
