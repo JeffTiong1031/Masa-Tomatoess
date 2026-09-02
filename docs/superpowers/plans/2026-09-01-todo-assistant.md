@@ -1080,6 +1080,7 @@ git commit -m "feat(assistant): say why a reply was rejected, quoting the real v
   - `function nextStep(state: { outcomes: StepOutcome[]; elapsedMs: number }): RunAction`
   - `type RunState = 'idle' | 'saving' | 'retry' | 'done'`
   - `function buttonStateFor(outcomes: ChangeOutcome[], running: boolean): RunState`
+  - `function isRetryable(outcome: ChangeOutcome): boolean` and `RETRYABLE_OUTCOMES` — the single home for "is this change still open for action", consumed by both `buttonStateFor` and `PlanCard`
   - `const APPLY_BUDGET_MS = 30_000`, `const UNREACHED_LIMIT = 3`
 
 This is the task that exists because the button could sit grey forever. `unreached` means the request never got to Supabase — a rejected fetch or a spent per-change budget. `failed` means the database answered with an error, which is real information and must not abort the run.
@@ -1196,13 +1197,17 @@ export function nextStep(state: { outcomes: StepOutcome[]; elapsedMs: number }):
   return 'run';
 }
 
+export const RETRYABLE_OUTCOMES: ChangeOutcome[] = ['failed', 'notAttempted'];
+
+export function isRetryable(outcome: ChangeOutcome): boolean {
+  return RETRYABLE_OUTCOMES.includes(outcome);
+}
+
 export function buttonStateFor(outcomes: ChangeOutcome[], running: boolean): RunState {
   if (running) return 'saving';
-  if (outcomes.some((outcome) => outcome === 'failed' || outcome === 'notAttempted')) {
-    return 'retry';
-  }
-  if (outcomes.every((outcome) => outcome === 'pending')) return 'idle';
-  return 'done';
+  if (outcomes.some(isRetryable)) return 'retry';
+  if (outcomes.some((outcome) => outcome === 'saved')) return 'done';
+  return 'idle';
 }
 ```
 
@@ -1703,7 +1708,7 @@ No decision logic in this file — it renders what Tasks 6 and 7 decided. That i
 'use client';
 
 import { AlertTriangle, Check, X } from 'lucide-react';
-import { buttonStateFor } from '@/lib/assistantRun';
+import { buttonStateFor, isRetryable } from '@/lib/assistantRun';
 import { clashesFor, type PlannedChange, type TodoChange } from '@/lib/todoPlan';
 import type { Todo } from '@/lib/todo';
 
@@ -1714,8 +1719,6 @@ const OP_WORDS: Record<TodoChange['op'], string> = {
   reopen: 'Reopen',
   delete: 'Delete',
 };
-
-const RETRYABLE = ['failed', 'notAttempted'];
 
 function describe(change: TodoChange): string {
   const parts = [change.title];
@@ -1744,7 +1747,7 @@ export default function PlanCard({
 }) {
   const state = buttonStateFor(planned.map((entry) => entry.outcome), running);
   const saved = planned.filter((entry) => entry.outcome === 'saved').length;
-  const retryCount = planned.filter((entry) => RETRYABLE.includes(entry.outcome)).length;
+  const retryCount = planned.filter((entry) => isRetryable(entry.outcome)).length;
 
   return (
     <div className="mt-soft border border-[var(--mt-border)] p-4">
@@ -1763,7 +1766,7 @@ export default function PlanCard({
               {entry.note !== '' && (
                 <span className="ml-1 text-[var(--mt-text-muted)]">— {entry.note}</span>
               )}
-              {clashes.length > 0 && entry.outcome === 'pending' && (
+              {clashes.length > 0 && entry.outcome !== 'saved' && entry.outcome !== 'stale' && (
                 <span className="mt-1 flex items-center gap-1 text-[var(--mt-text-muted)]">
                   <AlertTriangle size={14} aria-hidden />
                   You already have &ldquo;{clashes[0].title}&rdquo; that day.
@@ -1796,9 +1799,10 @@ export default function PlanCard({
             <button
               type="button"
               onClick={onCancel}
+              aria-label="Cancel"
               className="min-h-11 min-w-11 rounded-full border border-[var(--mt-border)] px-4 text-sm text-[var(--mt-text-muted)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--mt-focus)]"
             >
-              <X size={16} aria-label="Cancel" />
+              <X size={16} aria-hidden />
             </button>
           )}
         </div>
