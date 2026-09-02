@@ -1,10 +1,12 @@
 import { idOf, type HandleMap } from './assistantContext';
 import type { ChangeParser, Reason } from './assistantReply';
-import { dateProblem, timeProblem } from './assistantValidate';
+import { dateProblem, duplicateHandleIn, timeProblem } from './assistantValidate';
 import { toTiming, validate, type EventDraft } from './eventForm';
 import type { EventInput } from './calendarRepo';
 import type { Category } from './categories';
 import type { UserName } from './identity';
+import type { Planned } from './assistantRun';
+import type { CalendarEvent, EventTiming } from './calendarEvent';
 
 export type CalendarOp = 'add' | 'edit' | 'delete';
 
@@ -157,4 +159,78 @@ export function calendarChangeParser(
 
     return { ok: true, change };
   };
+}
+
+export const MOMENT_MINUTES = 60;
+
+export function validateCalendarPlan(changes: CalendarChange[]): Reason | null {
+  return duplicateHandleIn(changes);
+}
+
+export type PlannedEvent = Planned<CalendarChange>;
+
+export function reconcileCalendarPlan(
+  changes: CalendarChange[],
+  map: HandleMap,
+  rows: CalendarEvent[],
+): PlannedEvent[] {
+  const live = new Set(rows.map((row) => row.id));
+
+  return changes.map((change) => {
+    if (change.op === 'add') {
+      return { change, id: null, outcome: 'pending', note: '' };
+    }
+
+    const id = idOf(map, change.handle);
+    if (id === null || !live.has(id)) {
+      return { change, id: null, outcome: 'stale', note: 'That event was already deleted.' };
+    }
+
+    return { change, id, outcome: 'pending', note: '' };
+  });
+}
+
+interface Span {
+  from: number;
+  to: number;
+}
+
+function minutesOf(time: string): number {
+  return Number(time.slice(0, 2)) * 60 + Number(time.slice(3, 5));
+}
+
+function spanOfTiming(timing: EventTiming): Span | null {
+  if (timing.kind === 'allDay') return null;
+  const from = minutesOf(timing.startTime);
+  if (timing.kind === 'moment') return { from, to: from + MOMENT_MINUTES };
+  return { from, to: minutesOf(timing.endTime) };
+}
+
+function spanOfChange(change: CalendarChange): Span | null {
+  if (change.startTime === '') return null;
+  const from = minutesOf(change.startTime);
+  if (change.endTime === '') return { from, to: from + MOMENT_MINUTES };
+  return { from, to: minutesOf(change.endTime) };
+}
+
+function overlaps(a: Span, b: Span): boolean {
+  return a.from < b.to && b.from < a.to;
+}
+
+export function clashesFor(
+  change: CalendarChange,
+  rows: CalendarEvent[],
+  excludeId: string | null,
+): CalendarEvent[] {
+  if (change.op === 'delete') return [];
+
+  const span = spanOfChange(change);
+  if (span === null) return [];
+
+  return rows.filter((row) => {
+    if (row.id === excludeId) return false;
+    if (row.date !== change.date) return false;
+    const other = spanOfTiming(row.timing);
+    return other !== null && overlaps(span, other);
+  });
 }

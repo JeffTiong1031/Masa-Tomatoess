@@ -3,10 +3,14 @@ import { assignHandles, emptyHandleMap } from './assistantContext';
 import {
   calendarChangeParser,
   categoryIdFor,
+  clashesFor,
+  reconcileCalendarPlan,
   toEventDraft,
   toEventInput,
+  validateCalendarPlan,
   type CalendarChange,
 } from './calendarPlan';
+import type { CalendarEvent } from './calendarEvent';
 import type { Category } from './categories';
 
 const TODAY = '2026-09-02';
@@ -238,5 +242,128 @@ describe('toEventDraft and toEventInput', () => {
   it('gives an all-day event with no end date a null end date', () => {
     const allDay: CalendarChange = { ...timed, startTime: '', endTime: '', endDate: '' };
     expect(toEventInput(allDay, 'Jeff', null).timing).toEqual({ kind: 'allDay', endDate: null });
+  });
+});
+
+function event(over: Partial<CalendarEvent> & { id: string }): CalendarEvent {
+  return {
+    owner: 'Jeff',
+    title: 'Flight',
+    date: '2026-09-10',
+    timing: { kind: 'span', startTime: '09:00', endTime: '11:00' },
+    notes: null,
+    countdown: false,
+    categoryId: null,
+    ...over,
+  };
+}
+
+const base: CalendarChange = {
+  op: 'add',
+  handle: '',
+  title: 'Dentist',
+  date: '2026-09-10',
+  endDate: '',
+  startTime: '09:30',
+  endTime: '10:30',
+  notes: '',
+  countdown: false,
+  category: '',
+};
+
+describe('validateCalendarPlan', () => {
+  it('passes a plan with distinct handles', () => {
+    expect(
+      validateCalendarPlan([
+        { ...base, op: 'edit', handle: 'e1' },
+        { ...base, op: 'edit', handle: 'e2' },
+      ]),
+    ).toBeNull();
+  });
+
+  it('passes a plan of several adds', () => {
+    expect(validateCalendarPlan([base, base, base])).toBeNull();
+  });
+
+  it('rejects the same handle twice and names it', () => {
+    expect(
+      validateCalendarPlan([
+        { ...base, op: 'edit', handle: 'e1' },
+        { ...base, op: 'delete', handle: 'e1' },
+      ]),
+    ).toEqual({ kind: 'duplicateHandle', handle: 'e1' });
+  });
+});
+
+describe('reconcileCalendarPlan', () => {
+  const map = assignHandles(emptyHandleMap('e'), ['ev-1', 'ev-2']);
+
+  it('leaves an add pending with no id', () => {
+    const [planned] = reconcileCalendarPlan([base], map, []);
+    expect(planned).toEqual({ change: base, id: null, outcome: 'pending', note: '' });
+  });
+
+  it('resolves an edit to the row it points at', () => {
+    const change = { ...base, op: 'edit' as const, handle: 'e1' };
+    const [planned] = reconcileCalendarPlan([change], map, [event({ id: 'ev-1' })]);
+    expect(planned).toEqual({ change, id: 'ev-1', outcome: 'pending', note: '' });
+  });
+
+  it('marks a change stale when its row has gone', () => {
+    const change = { ...base, op: 'delete' as const, handle: 'e2' };
+    const [planned] = reconcileCalendarPlan([change], map, [event({ id: 'ev-1' })]);
+    expect(planned.outcome).toBe('stale');
+    expect(planned.id).toBeNull();
+    expect(planned.note).toBe('That event was already deleted.');
+  });
+});
+
+describe('clashesFor', () => {
+  it('finds an overlapping span on the same day', () => {
+    const found = clashesFor(base, [event({ id: 'ev-1' })], null);
+    expect(found.map((row) => row.title)).toEqual(['Flight']);
+  });
+
+  it('ignores a different day', () => {
+    const found = clashesFor(base, [event({ id: 'ev-1', date: '2026-09-11' })], null);
+    expect(found).toEqual([]);
+  });
+
+  it('ignores spans that only touch at the edge', () => {
+    const change = { ...base, startTime: '11:00', endTime: '12:00' };
+    expect(clashesFor(change, [event({ id: 'ev-1' })], null)).toEqual([]);
+  });
+
+  it('treats a moment as one hour', () => {
+    const moment = event({ id: 'ev-1', timing: { kind: 'moment', startTime: '09:00' } });
+    const inside = { ...base, startTime: '09:30', endTime: '10:30' };
+    const after = { ...base, startTime: '10:00', endTime: '11:00' };
+    expect(clashesFor(inside, [moment], null).length).toBe(1);
+    expect(clashesFor(after, [moment], null)).toEqual([]);
+  });
+
+  it('treats a change with no end time as one hour too', () => {
+    const change = { ...base, startTime: '10:30', endTime: '' };
+    expect(clashesFor(change, [event({ id: 'ev-1' })], null).length).toBe(1);
+  });
+
+  it('never clashes with an all-day event', () => {
+    const allDay = event({ id: 'ev-1', timing: { kind: 'allDay', endDate: null } });
+    expect(clashesFor(base, [allDay], null)).toEqual([]);
+  });
+
+  it('never reports a clash for an all-day change', () => {
+    const change = { ...base, startTime: '', endTime: '' };
+    expect(clashesFor(change, [event({ id: 'ev-1' })], null)).toEqual([]);
+  });
+
+  it('does not match an edit against the very row it is editing', () => {
+    const change = { ...base, op: 'edit' as const, handle: 'e1' };
+    expect(clashesFor(change, [event({ id: 'ev-1' })], 'ev-1')).toEqual([]);
+  });
+
+  it('says nothing about a delete', () => {
+    const change = { ...base, op: 'delete' as const, handle: 'e1' };
+    expect(clashesFor(change, [event({ id: 'ev-2' })], null)).toEqual([]);
   });
 });
