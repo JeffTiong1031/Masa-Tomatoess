@@ -1606,7 +1606,7 @@ git commit -m "feat(assistant): add the to-do reply route"
 **Interfaces:**
 - Consumes: `Reason` from Task 1; `reasonForStatus` from Task 5; `TodoSnapshot` from Task 3.
 - Produces:
-  - `interface Message { role: 'you' | 'assistant'; text: string }`
+  - re-exports `Message` from `./assistantBody` — Task 8's fix round moved it there; do not redefine it
   - `type ReplyResult = { ok: true; value: unknown } | { ok: false; reason: Reason }`
   - `function askTodoAssistant(snapshot: TodoSnapshot, history: Message[]): Promise<ReplyResult>`
   - `const MESSAGE_BUDGET_MS = 20_000`
@@ -1619,13 +1619,11 @@ Returns the raw JSON. The caller runs `parseReply` with its own handle map.
 import { reasonForStatus } from './assistantFailure';
 import type { Reason } from './assistantReply';
 import type { TodoSnapshot } from './assistantContext';
+import type { Message } from './assistantBody';
+
+export type { Message };
 
 export const MESSAGE_BUDGET_MS = 20_000;
-
-export interface Message {
-  role: 'you' | 'assistant';
-  text: string;
-}
 
 export type ReplyResult = { ok: true; value: unknown } | { ok: false; reason: Reason };
 
