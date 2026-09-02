@@ -1,6 +1,9 @@
-import { WEEKDAYS_SHORT, weekdayIndex } from './dates';
+import { WEEKDAYS_SHORT, addDays, weekdayIndex } from './dates';
 import { completedTodos } from './todoList';
 import type { Todo } from './todo';
+import type { CalendarEvent, EventTiming } from './calendarEvent';
+import type { Category } from './categories';
+import type { UserName } from './identity';
 
 export interface HandleMap {
   prefix: string;
@@ -80,6 +83,114 @@ export function buildTodoSnapshot(
         priority: row.priority,
         done: row.done,
       })),
+    },
+    map: nextMap,
+  };
+}
+
+export const MAX_EVENT_ROWS = 250;
+export const MAX_NOTE_CHARS = 200;
+export const WIDE_BACK = 30;
+export const WIDE_AHEAD = 90;
+export const NARROW_BACK = 14;
+export const NARROW_AHEAD = 45;
+
+export interface CalendarSnapshotRow {
+  handle: string;
+  title: string;
+  date: string;
+  endDate: string;
+  startTime: string;
+  endTime: string;
+  countdown: boolean;
+  category: string;
+  notes: string;
+}
+
+export interface CalendarSnapshot {
+  today: string;
+  weekday: string;
+  now: string;
+  from: string;
+  to: string;
+  categories: string[];
+  rows: CalendarSnapshotRow[];
+}
+
+interface Window {
+  from: string;
+  to: string;
+}
+
+function lastDayOf(event: CalendarEvent): string {
+  const { timing } = event;
+  if (timing.kind === 'allDay' && timing.endDate !== null) return timing.endDate;
+  return event.date;
+}
+
+function startKeyOf(timing: EventTiming): string {
+  return timing.kind === 'allDay' ? '' : timing.startTime;
+}
+
+function within(event: CalendarEvent, window: Window): boolean {
+  return event.date <= window.to && lastDayOf(event) >= window.from;
+}
+
+function ordered(events: CalendarEvent[]): CalendarEvent[] {
+  return [...events].sort((a, b) => {
+    const byDate = a.date.localeCompare(b.date);
+    if (byDate !== 0) return byDate;
+    const byStart = startKeyOf(a.timing).localeCompare(startKeyOf(b.timing));
+    if (byStart !== 0) return byStart;
+    return a.title.localeCompare(b.title);
+  });
+}
+
+export function buildCalendarSnapshot(
+  rows: CalendarEvent[],
+  categories: Category[],
+  owner: UserName,
+  map: HandleMap,
+  today: string,
+  now: string,
+): { snapshot: CalendarSnapshot; map: HandleMap } {
+  const mine = ordered(rows.filter((event) => event.owner === owner));
+
+  const wide: Window = { from: addDays(today, -WIDE_BACK), to: addDays(today, WIDE_AHEAD) };
+  const narrow: Window = { from: addDays(today, -NARROW_BACK), to: addDays(today, NARROW_AHEAD) };
+
+  const inWide = mine.filter((event) => within(event, wide));
+  const window = inWide.length > MAX_EVENT_ROWS ? narrow : wide;
+  const chosen = inWide.length > MAX_EVENT_ROWS ? mine.filter((event) => within(event, narrow)) : inWide;
+
+  const sent = chosen.slice(0, MAX_EVENT_ROWS);
+  const to = sent.length < chosen.length ? sent[sent.length - 1].date : window.to;
+
+  const nextMap = assignHandles(map, sent.map((event) => event.id));
+  const nameById = new Map(categories.map((category) => [category.id, category.name]));
+
+  return {
+    snapshot: {
+      today,
+      weekday: WEEKDAYS_SHORT[weekdayIndex(today)],
+      now,
+      from: window.from,
+      to,
+      categories: categories.map((category) => category.name),
+      rows: sent.map((event) => {
+        const { timing } = event;
+        return {
+          handle: handleOf(nextMap, event.id) as string,
+          title: event.title,
+          date: event.date,
+          endDate: timing.kind === 'allDay' ? (timing.endDate ?? '') : '',
+          startTime: startKeyOf(timing),
+          endTime: timing.kind === 'span' ? timing.endTime : '',
+          countdown: event.countdown,
+          category: event.categoryId === null ? '' : (nameById.get(event.categoryId) ?? ''),
+          notes: (event.notes ?? '').slice(0, MAX_NOTE_CHARS),
+        };
+      }),
     },
     map: nextMap,
   };
