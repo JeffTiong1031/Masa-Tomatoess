@@ -3,11 +3,9 @@ import type { ChangeParser, Reason } from './assistantReply';
 import type { Todo, TodoDraft } from './todo';
 import type { UserName } from './identity';
 import type { Planned } from './assistantRun';
+import { dateProblem, duplicateHandleIn, timeProblem, YEAR_RANGE } from './assistantValidate';
 
-export const YEAR_RANGE = 5;
-
-const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
-const TIME_PATTERN = /^\d{2}:\d{2}$/;
+export { YEAR_RANGE };
 
 export type TodoOp = 'add' | 'edit' | 'complete' | 'reopen' | 'delete';
 
@@ -23,39 +21,6 @@ export interface TodoChange {
   priority: boolean;
 }
 
-function dateProblem(value: string, today: string): Reason | null {
-  if (value === '') return null;
-  if (!DATE_PATTERN.test(value)) return { kind: 'badDate', value };
-
-  const year = Number(value.slice(0, 4));
-  const month = Number(value.slice(5, 7));
-  const day = Number(value.slice(8, 10));
-
-  const utcTime = Date.UTC(year, month - 1, day);
-  const parsed = new Date(utcTime);
-  if (parsed.getUTCFullYear() !== year || parsed.getUTCMonth() !== month - 1 || parsed.getUTCDate() !== day) {
-    return { kind: 'badDate', value };
-  }
-
-  const thisYear = Number(today.slice(0, 4));
-  if (year < thisYear - YEAR_RANGE || year > thisYear + YEAR_RANGE) {
-    return { kind: 'yearOutOfRange', year };
-  }
-  return null;
-}
-
-function timeProblem(value: string): Reason | null {
-  if (value === '') return null;
-  if (!TIME_PATTERN.test(value)) return { kind: 'badTime', value };
-
-  const hours = Number(value.slice(0, 2));
-  const minutes = Number(value.slice(3, 5));
-
-  if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
-    return { kind: 'badTime', value };
-  }
-  return null;
-}
 
 export function todoChangeParser(map: HandleMap, today: string): ChangeParser<TodoChange> {
   return (raw) => {
@@ -104,15 +69,7 @@ export function todoChangeParser(map: HandleMap, today: string): ChangeParser<To
 }
 
 export function validateTodoPlan(changes: TodoChange[]): Reason | null {
-  const seen = new Set<string>();
-  for (const change of changes) {
-    if (change.handle === '') continue;
-    if (seen.has(change.handle)) {
-      return { kind: 'duplicateHandle', handle: change.handle };
-    }
-    seen.add(change.handle);
-  }
-  return null;
+  return duplicateHandleIn(changes);
 }
 
 export function toDraft(change: TodoChange, owner: UserName): TodoDraft {
