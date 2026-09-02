@@ -1,5 +1,6 @@
 export const APPLY_BUDGET_MS = 30_000;
 export const UNREACHED_LIMIT = 3;
+export const STEP_BUDGET_MS = 10_000;
 
 export type ChangeOutcome = 'pending' | 'saved' | 'stale' | 'failed' | 'notAttempted' | 'uncertain';
 
@@ -28,4 +29,11 @@ export function buttonStateFor(outcomes: ChangeOutcome[], running: boolean): Run
   if (outcomes.some(isRetryable)) return 'retry';
   if (outcomes.some((outcome) => outcome === 'pending')) return 'idle';
   return 'done';
+}
+
+export interface Planned<C> {
+  change: C;
+  id: string | null;
+  outcome: ChangeOutcome;
+  note: string;
 }

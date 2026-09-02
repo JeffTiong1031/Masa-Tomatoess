@@ -354,6 +354,10 @@ body {
   padding-bottom: calc(var(--mt-safe-bottom) + var(--mt-nav-height) + 1.5rem);
 }
 
+[data-section='study'] .mt-assistant-fab {
+  bottom: calc(var(--mt-safe-bottom) + var(--mt-nav-height) + 1.5rem);
+}
+
 @media (min-width: 768px) {
   .mt-page-pad {
     padding-top: calc(var(--mt-chrome-offset) + 4.5rem);

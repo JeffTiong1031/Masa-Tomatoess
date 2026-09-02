@@ -2,17 +2,39 @@ import { idOf, type HandleMap } from './assistantContext';
 import type { ChangeParser, Reason } from './assistantReply';
 import type { Todo, TodoDraft } from './todo';
 import type { UserName } from './identity';
-import type { ChangeOutcome } from './assistantRun';
+import type { Planned } from './assistantRun';
+import { dateProblem, duplicateHandleIn, timeProblem, YEAR_RANGE } from './assistantValidate';
 
-export const YEAR_RANGE = 5;
-
-const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
-const TIME_PATTERN = /^\d{2}:\d{2}$/;
+export { YEAR_RANGE };
 
 export type TodoOp = 'add' | 'edit' | 'complete' | 'reopen' | 'delete';
 
 const OPS: TodoOp[] = ['add', 'edit', 'complete', 'reopen', 'delete'];
 const END_STATE_OPS: TodoOp[] = ['add', 'edit'];
+
+const OP_WORDS: Record<TodoOp, string> = {
+  add: 'Add',
+  edit: 'Change',
+  complete: 'Tick off',
+  reopen: 'Reopen',
+  delete: 'Delete',
+};
+
+export function opWordFor(change: TodoChange): string {
+  return OP_WORDS[change.op];
+}
+
+export function clashNoteFor(title: string): string {
+  return `You already have “${title}” that day.`;
+}
+
+export function describeChange(change: TodoChange): string {
+  const parts = [change.title];
+  if (change.dueDate !== '') parts.push(change.dueDate);
+  if (change.dueTime !== '') parts.push(change.dueTime);
+  if (change.priority) parts.push('priority');
+  return parts.join(' · ');
+}
 
 export interface TodoChange {
   op: TodoOp;
@@ -23,39 +45,6 @@ export interface TodoChange {
   priority: boolean;
 }
 
-function dateProblem(value: string, today: string): Reason | null {
-  if (value === '') return null;
-  if (!DATE_PATTERN.test(value)) return { kind: 'badDate', value };
-
-  const year = Number(value.slice(0, 4));
-  const month = Number(value.slice(5, 7));
-  const day = Number(value.slice(8, 10));
-
-  const utcTime = Date.UTC(year, month - 1, day);
-  const parsed = new Date(utcTime);
-  if (parsed.getUTCFullYear() !== year || parsed.getUTCMonth() !== month - 1 || parsed.getUTCDate() !== day) {
-    return { kind: 'badDate', value };
-  }
-
-  const thisYear = Number(today.slice(0, 4));
-  if (year < thisYear - YEAR_RANGE || year > thisYear + YEAR_RANGE) {
-    return { kind: 'yearOutOfRange', year };
-  }
-  return null;
-}
-
-function timeProblem(value: string): Reason | null {
-  if (value === '') return null;
-  if (!TIME_PATTERN.test(value)) return { kind: 'badTime', value };
-
-  const hours = Number(value.slice(0, 2));
-  const minutes = Number(value.slice(3, 5));
-
-  if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
-    return { kind: 'badTime', value };
-  }
-  return null;
-}
 
 export function todoChangeParser(map: HandleMap, today: string): ChangeParser<TodoChange> {
   return (raw) => {
@@ -104,15 +93,7 @@ export function todoChangeParser(map: HandleMap, today: string): ChangeParser<To
 }
 
 export function validateTodoPlan(changes: TodoChange[]): Reason | null {
-  const seen = new Set<string>();
-  for (const change of changes) {
-    if (change.handle === '') continue;
-    if (seen.has(change.handle)) {
-      return { kind: 'duplicateHandle', handle: change.handle };
-    }
-    seen.add(change.handle);
-  }
-  return null;
+  return duplicateHandleIn(changes);
 }
 
 export function toDraft(change: TodoChange, owner: UserName): TodoDraft {
@@ -125,12 +106,7 @@ export function toDraft(change: TodoChange, owner: UserName): TodoDraft {
   };
 }
 
-export interface PlannedChange {
-  change: TodoChange;
-  id: string | null;
-  outcome: ChangeOutcome;
-  note: string;
-}
+export type PlannedChange = Planned<TodoChange>;
 
 export function reconcileTodoPlan(
   changes: TodoChange[],

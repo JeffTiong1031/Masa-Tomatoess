@@ -20,6 +20,7 @@ import TodoComposer from '@/components/todo/TodoComposer';
 import TodoGroup from '@/components/todo/TodoGroup';
 import TodoEditModal from '@/components/todo/TodoEditModal';
 import AssistantButton from '@/components/assistant/AssistantButton';
+import { todoSection } from '@/components/assistant/todoSection';
 
 type BoardStatus = 'loading' | 'ok' | 'missing-table' | 'error';
 
@@ -317,10 +318,10 @@ export default function TodoBoard() {
 
       {viewing === signedIn && displayStatus === 'ok' && (
         <AssistantButton
+          section={todoSection}
           owner={signedIn}
           rows={todos}
-          today={clock.today}
-          now={clock.now}
+          clock={() => clock}
           onApplied={(message, tone) => {
             setNotice({ text: message, tone });
             setReloadToken((token) => token + 1);

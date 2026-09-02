@@ -5,81 +5,38 @@ import Modal from '@/components/ui/Modal';
 import PlanCard from './PlanCard';
 import { assistantFailureMessage } from '@/lib/assistantFailure';
 import { MAX_MESSAGE_CHARS } from '@/lib/assistantBody';
-import { buildTodoSnapshot, emptyHandleMap, type HandleMap } from '@/lib/assistantContext';
+import { emptyHandleMap, type HandleMap } from '@/lib/assistantContext';
 import {
   capStatus,
   countFromYou,
   historyFor,
+  remainingLabel,
   type Entry,
 } from '@/lib/assistantConversation';
 import { parseReply } from '@/lib/assistantReply';
-import { askTodoAssistant } from '@/lib/assistantRequest';
 import { applySummary, runPlan, type ApplyTone } from '@/lib/applyRun';
-import type { StepOutcome } from '@/lib/assistantRun';
-import {
-  reconcileTodoPlan,
-  todoChangeParser,
-  toDraft,
-  validateTodoPlan,
-  type PlannedChange,
-  type TodoChange,
-} from '@/lib/todoPlan';
-import {
-  deleteTodo,
-  fetchTodos,
-  insertTodo,
-  setTodoDone,
-  updateTodo,
-} from '@/lib/todoRepo';
-import type { Todo } from '@/lib/todo';
 import type { UserName } from '@/lib/identity';
+import type { AssistantClock, AssistantSection } from './section';
 
-const STEP_BUDGET_MS = 10_000;
-
-async function runChange(entry: PlannedChange, owner: UserName): Promise<StepOutcome> {
-  let timer!: number;
-  const budget = new Promise<'unreached'>((resolve) => {
-    timer = window.setTimeout(() => resolve('unreached'), STEP_BUDGET_MS);
-  });
-
-  const work = (async (): Promise<StepOutcome> => {
-    const { change, id } = entry;
-    if (change.op === 'add') {
-      return (await insertTodo(toDraft(change, owner))) === null ? 'failed' : 'saved';
-    }
-    if (change.op === 'edit') {
-      return (await updateTodo(id as string, toDraft(change, owner))) ? 'saved' : 'failed';
-    }
-    if (change.op === 'delete') {
-      return (await deleteTodo(id as string)) ? 'saved' : 'failed';
-    }
-    return (await setTodoDone(id as string, change.op === 'complete')) ? 'saved' : 'failed';
-  })();
-
-  const outcome = await Promise.race([work, budget]);
-  window.clearTimeout(timer);
-  return outcome;
-}
-
-export default function AssistantSheet({
+export default function AssistantSheet<C extends { handle: string }, R>({
   open,
   onClose,
+  section,
   owner,
   rows,
-  today,
-  now,
+  clock,
   onApplied,
 }: {
   open: boolean;
   onClose: () => void;
+  section: AssistantSection<C, R>;
   owner: UserName;
-  rows: Todo[];
-  today: string;
-  now: string;
+  rows: R[];
+  clock: () => AssistantClock;
   onApplied: (message: string, tone: ApplyTone) => void;
 }) {
-  const [entries, setEntries] = useState<Entry[]>([]);
-  const [map, setMap] = useState<HandleMap>(() => emptyHandleMap('t'));
+  const [entries, setEntries] = useState<Entry<C>[]>([]);
+  const [map, setMap] = useState<HandleMap>(() => emptyHandleMap(section.prefix));
   const [draft, setDraft] = useState('');
   const [thinking, setThinking] = useState(false);
   const [running, setRunning] = useState(false);
@@ -88,75 +45,84 @@ export default function AssistantSheet({
 
   function reset() {
     setEntries([]);
-    setMap(emptyHandleMap('t'));
+    setMap(emptyHandleMap(section.prefix));
     setDraft('');
+  }
+
+  function say(text: string) {
+    setEntries((prev) => [...prev, { kind: 'text', role: 'assistant', text }]);
   }
 
   async function send() {
     const text = draft.trim();
     if (text === '' || full || thinking) return;
 
-    const asked: Entry[] = [...entries, { kind: 'text', role: 'you', text }];
+    const asked: Entry<C>[] = [...entries, { kind: 'text', role: 'you', text }];
     setEntries(asked);
     setDraft('');
     setThinking(true);
 
-    const { snapshot, map: nextMap } = buildTodoSnapshot(rows, map, today, now);
+    const { today, now } = clock();
+    const { map: nextMap, result } = await section.ask({
+      rows,
+      map,
+      today,
+      now,
+      history: historyFor(asked),
+      owner,
+    });
     setMap(nextMap);
-
-    const result = await askTodoAssistant(snapshot, historyFor(asked));
     setThinking(false);
 
     if (!result.ok) {
-      const text = assistantFailureMessage(result.reason);
-      setEntries((prev) => [...prev, { kind: 'text', role: 'assistant', text }]);
+      say(assistantFailureMessage(result.reason));
       return;
     }
 
-    const parsed = parseReply<TodoChange>(result.value, todoChangeParser(nextMap, today));
+    const parsed = parseReply<C>(result.value, section.parser(nextMap, today));
     if (!parsed.ok) {
-      const text = assistantFailureMessage(parsed.reason);
-      setEntries((prev) => [...prev, { kind: 'text', role: 'assistant', text }]);
+      say(assistantFailureMessage(parsed.reason));
       return;
     }
 
     if (parsed.reply.kind !== 'plan') {
-      const text = parsed.reply.text;
-      setEntries((prev) => [...prev, { kind: 'text', role: 'assistant', text }]);
+      say(parsed.reply.text);
       return;
     }
 
-    const duplicate = validateTodoPlan(parsed.reply.changes);
+    const duplicate = section.validatePlan(parsed.reply.changes);
     if (duplicate !== null) {
-      const text = assistantFailureMessage(duplicate);
-      setEntries((prev) => [...prev, { kind: 'text', role: 'assistant', text }]);
+      say(assistantFailureMessage(duplicate));
       return;
     }
 
-    const plan: Entry = {
-      kind: 'plan',
-      summary: parsed.reply.summary,
-      planned: reconcileTodoPlan(parsed.reply.changes, nextMap, rows),
-      cancelled: false,
-    };
-    setEntries((prev) => [...prev, plan]);
+    const plan = parsed.reply;
+    setEntries((prev) => [
+      ...prev,
+      {
+        kind: 'plan',
+        summary: plan.summary,
+        planned: section.reconcile(plan.changes, nextMap, rows),
+        cancelled: false,
+      },
+    ]);
   }
 
   async function apply(index: number) {
     setRunning(true);
     try {
-      const fresh = await fetchTodos(owner);
-      if (fresh.status !== 'ok') {
-        onApplied('Could not reach your list. Nothing was changed.', 'problem');
+      const fresh = await section.fetchFresh(owner);
+      if (fresh === null) {
+        onApplied(section.fetchFailure, 'problem');
         return;
       }
 
-      const entry = entries[index] as Extract<Entry, { kind: 'plan' }>;
-      const results = await runPlan(
+      const entry = entries[index] as Extract<Entry<C>, { kind: 'plan' }>;
+      const results = await runPlan<C>(
         entry.planned,
-        map,
-        fresh.rows,
-        (change) => runChange(change, owner),
+        (change) => section.reconcile([change], map, fresh)[0],
+        (step) => section.clashTitles(step, fresh),
+        (step) => section.runChange(step, owner),
         Date.now,
       );
 
@@ -180,7 +146,7 @@ export default function AssistantSheet({
   }
 
   return (
-    <Modal open={open} onClose={onClose} title="Ask about your list" variant="sheet" maxWidthClass="max-w-lg">
+    <Modal open={open} onClose={onClose} title={section.title} variant="sheet" maxWidthClass="max-w-lg">
       <div className="flex flex-col gap-3">
         <div className="flex flex-col gap-3" aria-live="polite">
           {entries.map((entry, index) =>
@@ -198,6 +164,7 @@ export default function AssistantSheet({
             ) : (
               <PlanCard
                 key={index}
+                section={section}
                 summary={entry.summary}
                 planned={entry.planned}
                 rows={rows}
@@ -217,7 +184,7 @@ export default function AssistantSheet({
             <p className="text-sm font-medium text-[var(--mt-text)]">This chat is full.</p>
             <p className="mt-1 text-sm text-[var(--mt-text-muted)]">
               Six messages is the limit, so replies stay fast and cheap. Start a new one — it will
-              still see all your current tasks.
+              still see everything on your board.
             </p>
             <button
               type="button"
@@ -239,7 +206,7 @@ export default function AssistantSheet({
               <input
                 value={draft}
                 onChange={(event) => setDraft(event.target.value)}
-                placeholder="Move dentist to Friday"
+                placeholder={section.placeholder}
                 aria-label="Message"
                 maxLength={MAX_MESSAGE_CHARS}
                 className="min-h-11 flex-1 rounded-full border border-[var(--mt-border)] bg-[var(--mt-surface)] px-4 text-sm text-[var(--mt-text)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--mt-focus)]"
@@ -253,9 +220,7 @@ export default function AssistantSheet({
               </button>
             </form>
             {warn && (
-              <p className="text-xs text-[var(--mt-text-muted)]">
-                {remaining} messages left in this chat.
-              </p>
+              <p className="text-xs text-[var(--mt-text-muted)]">{remainingLabel(remaining)}</p>
             )}
           </>
         )}

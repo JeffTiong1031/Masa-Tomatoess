@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { capStatus, countFromYou, historyFor, type Entry } from './assistantConversation';
+import {
+  capStatus,
+  countFromYou,
+  historyFor,
+  remainingLabel,
+  type Entry,
+} from './assistantConversation';
 import { MAX_MESSAGE_CHARS } from './assistantBody';
 import type { PlannedChange, TodoChange } from './todoPlan';
 
@@ -27,7 +33,7 @@ function planned(overrides: Partial<PlannedChange> = {}): PlannedChange {
 
 describe('historyFor', () => {
   it('lists only the saved handles on a partial apply', () => {
-    const entries: Entry[] = [
+    const entries: Entry<TodoChange>[] = [
       {
         kind: 'plan',
         summary: 'Move two tasks',
@@ -46,7 +52,7 @@ describe('historyFor', () => {
   });
 
   it('lists every handle when every change saved', () => {
-    const entries: Entry[] = [
+    const entries: Entry<TodoChange>[] = [
       {
         kind: 'plan',
         summary: 'Move two tasks',
@@ -64,7 +70,7 @@ describe('historyFor', () => {
   });
 
   it('sends a cancelled plan back as one line', () => {
-    const entries: Entry[] = [
+    const entries: Entry<TodoChange>[] = [
       {
         kind: 'plan',
         summary: 'Delete the dentist task',
@@ -80,7 +86,7 @@ describe('historyFor', () => {
 
   it('carries the full change list for an open plan', () => {
     const oneChange = change({ handle: 't1', title: 'Dentist', dueDate: '2026-09-12' });
-    const entries: Entry[] = [
+    const entries: Entry<TodoChange>[] = [
       {
         kind: 'plan',
         summary: 'Move the dentist',
@@ -108,7 +114,7 @@ describe('historyFor', () => {
   it('still sends the full change list when it fits under the cap', () => {
     const summary = 'Move things around';
     const ten = bigPlan(10);
-    const entries: Entry[] = [{ kind: 'plan', summary, cancelled: false, planned: ten }];
+    const entries: Entry<TodoChange>[] = [{ kind: 'plan', summary, cancelled: false, planned: ten }];
 
     const fullText = `Open plan, not yet applied: ${summary}\n${JSON.stringify(ten.map((p) => p.change))}`;
     expect(fullText.length).toBeLessThanOrEqual(MAX_MESSAGE_CHARS);
@@ -119,7 +125,7 @@ describe('historyFor', () => {
   it('sends a plain sentence instead of the change list once it would exceed the cap', () => {
     const summary = 'Move things around';
     const eleven = bigPlan(11);
-    const entries: Entry[] = [{ kind: 'plan', summary, cancelled: false, planned: eleven }];
+    const entries: Entry<TodoChange>[] = [{ kind: 'plan', summary, cancelled: false, planned: eleven }];
 
     const fullText = `Open plan, not yet applied: ${summary}\n${JSON.stringify(eleven.map((p) => p.change))}`;
     expect(fullText.length).toBeGreaterThan(MAX_MESSAGE_CHARS);
@@ -133,7 +139,7 @@ describe('historyFor', () => {
   });
 
   it('passes text entries through with their role', () => {
-    const entries: Entry[] = [
+    const entries: Entry<TodoChange>[] = [
       { kind: 'text', role: 'you', text: 'Move dentist to Friday' },
       { kind: 'text', role: 'assistant', text: 'Which one?' },
     ];
@@ -147,7 +153,7 @@ describe('historyFor', () => {
 
 describe('countFromYou', () => {
   it('counts only your text entries', () => {
-    const entries: Entry[] = [
+    const entries: Entry<TodoChange>[] = [
       { kind: 'text', role: 'you', text: 'Move dentist to Friday' },
       { kind: 'text', role: 'assistant', text: 'Which one?' },
       { kind: 'text', role: 'you', text: 'The 3pm one' },
@@ -178,5 +184,16 @@ describe('capStatus', () => {
 
   it('is full at zero remaining', () => {
     expect(capStatus(6)).toEqual({ remaining: 0, full: true, warn: true });
+  });
+});
+
+describe('remainingLabel', () => {
+  it('keeps message singular at one', () => {
+    expect(remainingLabel(1)).toBe('1 message left in this chat.');
+  });
+
+  it('pluralises message otherwise', () => {
+    expect(remainingLabel(2)).toBe('2 messages left in this chat.');
+    expect(remainingLabel(0)).toBe('0 messages left in this chat.');
   });
 });

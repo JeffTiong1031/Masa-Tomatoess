@@ -20,4 +20,14 @@ describe('the assistant button', () => {
     const ratio = contrastRatio(token('--mac-accent-todo'), token('--mac-white'));
     expect(ratio).toBeLessThan(3);
   });
+
+  it('keeps a cocoa icon readable on the calendar accent', () => {
+    const ratio = contrastRatio(token('--mac-accent-calendar'), token('--mac-cocoa'));
+    expect(ratio).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it('is why the calendar icon is not white either', () => {
+    const ratio = contrastRatio(token('--mac-accent-calendar'), token('--mac-white'));
+    expect(ratio).toBeLessThan(3);
+  });
 });
