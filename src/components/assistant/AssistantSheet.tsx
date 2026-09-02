@@ -6,7 +6,13 @@ import PlanCard from './PlanCard';
 import { assistantFailureMessage } from '@/lib/assistantFailure';
 import { MAX_MESSAGE_CHARS } from '@/lib/assistantBody';
 import { emptyHandleMap, type HandleMap } from '@/lib/assistantContext';
-import { capStatus, countFromYou, historyFor, type Entry } from '@/lib/assistantConversation';
+import {
+  capStatus,
+  countFromYou,
+  historyFor,
+  remainingLabel,
+  type Entry,
+} from '@/lib/assistantConversation';
 import { parseReply } from '@/lib/assistantReply';
 import { applySummary, runPlan, type ApplyTone } from '@/lib/applyRun';
 import type { UserName } from '@/lib/identity';
@@ -214,9 +220,7 @@ export default function AssistantSheet<C extends { handle: string }, R>({
               </button>
             </form>
             {warn && (
-              <p className="text-xs text-[var(--mt-text-muted)]">
-                {remaining} messages left in this chat.
-              </p>
+              <p className="text-xs text-[var(--mt-text-muted)]">{remainingLabel(remaining)}</p>
             )}
           </>
         )}

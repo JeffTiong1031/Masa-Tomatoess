@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { capStatus, countFromYou, historyFor, type Entry } from './assistantConversation';
+import {
+  capStatus,
+  countFromYou,
+  historyFor,
+  remainingLabel,
+  type Entry,
+} from './assistantConversation';
 import { MAX_MESSAGE_CHARS } from './assistantBody';
 import type { PlannedChange, TodoChange } from './todoPlan';
 
@@ -178,5 +184,16 @@ describe('capStatus', () => {
 
   it('is full at zero remaining', () => {
     expect(capStatus(6)).toEqual({ remaining: 0, full: true, warn: true });
+  });
+});
+
+describe('remainingLabel', () => {
+  it('keeps message singular at one', () => {
+    expect(remainingLabel(1)).toBe('1 message left in this chat.');
+  });
+
+  it('pluralises message otherwise', () => {
+    expect(remainingLabel(2)).toBe('2 messages left in this chat.');
+    expect(remainingLabel(0)).toBe('0 messages left in this chat.');
   });
 });

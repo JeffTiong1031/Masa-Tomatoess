@@ -28,6 +28,10 @@ export function capStatus(fromYou: number): CapStatus {
   };
 }
 
+export function remainingLabel(remaining: number): string {
+  return `${remaining} message${remaining === 1 ? '' : 's'} left in this chat.`;
+}
+
 export function historyFor<C extends { handle: string }>(entries: Entry<C>[]): Message[] {
   return entries.map((entry) => {
     if (entry.kind === 'text') return { role: entry.role, text: entry.text };
