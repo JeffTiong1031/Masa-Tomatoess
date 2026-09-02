@@ -17,6 +17,7 @@ import { askTodoAssistant } from '@/lib/assistantRequest';
 import { applySummary, runPlan, type ApplyTone } from '@/lib/applyRun';
 import type { StepOutcome } from '@/lib/assistantRun';
 import {
+  clashesFor,
   reconcileTodoPlan,
   todoChangeParser,
   toDraft,
@@ -78,7 +79,7 @@ export default function AssistantSheet({
   now: string;
   onApplied: (message: string, tone: ApplyTone) => void;
 }) {
-  const [entries, setEntries] = useState<Entry[]>([]);
+  const [entries, setEntries] = useState<Entry<TodoChange>[]>([]);
   const [map, setMap] = useState<HandleMap>(() => emptyHandleMap('t'));
   const [draft, setDraft] = useState('');
   const [thinking, setThinking] = useState(false);
@@ -96,7 +97,7 @@ export default function AssistantSheet({
     const text = draft.trim();
     if (text === '' || full || thinking) return;
 
-    const asked: Entry[] = [...entries, { kind: 'text', role: 'you', text }];
+    const asked: Entry<TodoChange>[] = [...entries, { kind: 'text', role: 'you', text }];
     setEntries(asked);
     setDraft('');
     setThinking(true);
@@ -133,7 +134,7 @@ export default function AssistantSheet({
       return;
     }
 
-    const plan: Entry = {
+    const plan: Entry<TodoChange> = {
       kind: 'plan',
       summary: parsed.reply.summary,
       planned: reconcileTodoPlan(parsed.reply.changes, nextMap, rows),
@@ -151,11 +152,11 @@ export default function AssistantSheet({
         return;
       }
 
-      const entry = entries[index] as Extract<Entry, { kind: 'plan' }>;
-      const results = await runPlan(
+      const entry = entries[index] as Extract<Entry<TodoChange>, { kind: 'plan' }>;
+      const results = await runPlan<TodoChange>(
         entry.planned,
-        map,
-        fresh.rows,
+        (change) => reconcileTodoPlan([change], map, fresh.rows)[0],
+        (step) => clashesFor(step.change, fresh.rows, step.id).map((row) => row.title),
         (change) => runChange(change, owner),
         Date.now,
       );

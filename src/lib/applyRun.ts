@@ -1,13 +1,10 @@
-import { clashesFor, reconcileTodoPlan, type PlannedChange } from './todoPlan';
-import { nextStep, type StepOutcome } from './assistantRun';
-import type { HandleMap } from './assistantContext';
-import type { Todo } from './todo';
+import { nextStep, type Planned, type StepOutcome } from './assistantRun';
 
-export type ChangeRunner = (entry: PlannedChange) => Promise<StepOutcome>;
+export type ChangeRunner<C> = (entry: Planned<C>) => Promise<StepOutcome>;
 
 export type ApplyTone = 'ok' | 'problem';
 
-export function applySummary(results: PlannedChange[]): { message: string; tone: ApplyTone } {
+export function applySummary<C>(results: Planned<C>[]): { message: string; tone: ApplyTone } {
   const saved = results.filter((entry) => entry.outcome === 'saved').length;
   if (saved === results.length) {
     return { message: `Saved ${saved} change${saved === 1 ? '' : 's'}.`, tone: 'ok' };
@@ -16,24 +13,28 @@ export function applySummary(results: PlannedChange[]): { message: string; tone:
   return { message: `${saved} of ${results.length} saved.`, tone: 'problem' };
 }
 
-export async function runPlan(
-  planned: PlannedChange[],
-  map: HandleMap,
-  live: Todo[],
-  run: ChangeRunner,
+export async function runPlan<C>(
+  planned: Planned<C>[],
+  reconcileOne: (change: C) => Planned<C>,
+  clashTitles: (entry: Planned<C>) => string[],
+  run: ChangeRunner<C>,
   now: () => number,
-): Promise<PlannedChange[]> {
+): Promise<Planned<C>[]> {
   const startedAt = now();
   const outcomes: StepOutcome[] = [];
-  const results: PlannedChange[] = [];
+  const results: Planned<C>[] = [];
 
   for (const previous of planned) {
-    if (previous.outcome === 'saved' || previous.outcome === 'stale' || previous.outcome === 'uncertain') {
+    if (
+      previous.outcome === 'saved' ||
+      previous.outcome === 'stale' ||
+      previous.outcome === 'uncertain'
+    ) {
       results.push(previous);
       continue;
     }
 
-    const [step] = reconcileTodoPlan([previous.change], map, live);
+    const step = reconcileOne(previous.change);
     if (step.outcome === 'stale') {
       results.push(step);
       continue;
@@ -49,11 +50,11 @@ export async function runPlan(
     outcomes.push(outcome);
 
     if (outcome === 'saved') {
-      const clashes = clashesFor(step.change, live, step.id);
+      const titles = clashTitles(step);
       results.push({
         ...step,
         outcome: 'saved',
-        note: clashes.length > 0 ? `That day already had "${clashes[0].title}".` : '',
+        note: titles.length > 0 ? `That day already had "${titles[0]}".` : '',
       });
       continue;
     }

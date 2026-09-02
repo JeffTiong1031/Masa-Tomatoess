@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { applySummary, runPlan, type ChangeRunner } from './applyRun';
 import { assignHandles, emptyHandleMap } from './assistantContext';
 import { APPLY_BUDGET_MS, UNREACHED_LIMIT } from './assistantRun';
-import type { PlannedChange, TodoChange } from './todoPlan';
+import { clashesFor, reconcileTodoPlan, type PlannedChange, type TodoChange } from './todoPlan';
 import type { OpenTodo } from './todo';
 
 const MAP = assignHandles(emptyHandleMap('t'), ['aaa', 'bbb', 'ccc']);
@@ -44,14 +44,21 @@ function row(overrides: Partial<OpenTodo> = {}): OpenTodo {
   };
 }
 
-const NEVER_CALLED: ChangeRunner = async () => {
+const NEVER_CALLED: ChangeRunner<TodoChange> = async () => {
   throw new Error('the runner should not have been called');
 };
+
+function planFns(live: OpenTodo[]) {
+  const reconcileOne = (change: TodoChange) => reconcileTodoPlan([change], MAP, live)[0];
+  const clashTitles = (entry: PlannedChange) =>
+    clashesFor(entry.change, live, entry.id).map((row) => row.title);
+  return { reconcileOne, clashTitles };
+}
 
 describe('runPlan', () => {
   it('passes saved and stale entries through untouched without calling the runner', async () => {
     const calls: PlannedChange[] = [];
-    const run: ChangeRunner = async (entry) => {
+    const run: ChangeRunner<TodoChange> = async (entry) => {
       calls.push(entry);
       return 'saved';
     };
@@ -59,17 +66,19 @@ describe('runPlan', () => {
     const savedEntry = planned({ outcome: 'saved', note: 'already saved' });
     const staleEntry = planned({ outcome: 'stale', note: 'That task was already deleted.' });
 
-    const results = await runPlan([savedEntry, staleEntry], MAP, [], run, () => 0);
+    const { reconcileOne, clashTitles } = planFns([]);
+    const results = await runPlan([savedEntry, staleEntry], reconcileOne, clashTitles, run, () => 0);
 
     expect(results).toEqual([savedEntry, staleEntry]);
     expect(calls).toHaveLength(0);
   });
 
   it('marks a change stale and does not run it when its row is missing from the live rows', async () => {
+    const { reconcileOne, clashTitles } = planFns([]);
     const results = await runPlan(
       [planned({ change: change({ handle: 't1' }), id: 'aaa', outcome: 'pending' })],
-      MAP,
-      [],
+      reconcileOne,
+      clashTitles,
       NEVER_CALLED,
       () => 0,
     );
@@ -79,7 +88,7 @@ describe('runPlan', () => {
   });
 
   it('gives a save an empty note, and gives one that collides with a different live row the clash note', async () => {
-    const run: ChangeRunner = async () => 'saved';
+    const run: ChangeRunner<TodoChange> = async () => 'saved';
     const live = [
       row({ id: 'aaa', title: 'Old title', dueDate: '2026-09-01' }),
       row({ id: 'bbb', title: 'Dentist', dueDate: '2026-09-12' }),
@@ -97,7 +106,8 @@ describe('runPlan', () => {
       outcome: 'pending',
     });
 
-    const results = await runPlan([clashing, clean], MAP, live, run, () => 0);
+    const { reconcileOne, clashTitles } = planFns(live);
+    const results = await runPlan([clashing, clean], reconcileOne, clashTitles, run, () => 0);
 
     expect(results[0].outcome).toBe('saved');
     expect(results[0].note).toBe('That day already had "Dentist".');
@@ -106,27 +116,29 @@ describe('runPlan', () => {
   });
 
   it('yields failed with the database-refused note when the runner refuses', async () => {
-    const run: ChangeRunner = async () => 'failed';
+    const run: ChangeRunner<TodoChange> = async () => 'failed';
     const live = [row({ id: 'aaa' })];
 
-    const results = await runPlan([planned({ outcome: 'pending' })], MAP, live, run, () => 0);
+    const { reconcileOne, clashTitles } = planFns(live);
+    const results = await runPlan([planned({ outcome: 'pending' })], reconcileOne, clashTitles, run, () => 0);
 
     expect(results[0].outcome).toBe('failed');
     expect(results[0].note).toBe('The database refused it.');
   });
 
   it('yields uncertain with the took-too-long note when the runner cannot reach the database', async () => {
-    const run: ChangeRunner = async () => 'unreached';
+    const run: ChangeRunner<TodoChange> = async () => 'unreached';
     const live = [row({ id: 'aaa' })];
 
-    const results = await runPlan([planned({ outcome: 'pending' })], MAP, live, run, () => 0);
+    const { reconcileOne, clashTitles } = planFns(live);
+    const results = await runPlan([planned({ outcome: 'pending' })], reconcileOne, clashTitles, run, () => 0);
 
     expect(results[0].outcome).toBe('uncertain');
     expect(results[0].note).toBe('Took too long. It may have saved — check your list before trying again.');
   });
 
   it('stops after three unreached calls in a row and leaves the remainder not attempted', async () => {
-    const run: ChangeRunner = async () => 'unreached';
+    const run: ChangeRunner<TodoChange> = async () => 'unreached';
     const live = [row({ id: 'aaa' }), row({ id: 'bbb' }), row({ id: 'ccc' })];
 
     const plan = [
@@ -137,7 +149,8 @@ describe('runPlan', () => {
     ];
     expect(plan).toHaveLength(UNREACHED_LIMIT + 1);
 
-    const results = await runPlan(plan, MAP, live, run, () => 0);
+    const { reconcileOne, clashTitles } = planFns(live);
+    const results = await runPlan(plan, reconcileOne, clashTitles, run, () => 0);
 
     for (const result of results.slice(0, UNREACHED_LIMIT)) {
       expect(result.outcome).toBe('uncertain');
@@ -149,7 +162,7 @@ describe('runPlan', () => {
 
   it('skips saved, stale and uncertain rows on a retry and only runs failed and notAttempted', async () => {
     const calls: PlannedChange[] = [];
-    const run: ChangeRunner = async (entry) => {
+    const run: ChangeRunner<TodoChange> = async (entry) => {
       calls.push(entry);
       return 'saved';
     };
@@ -164,7 +177,8 @@ describe('runPlan', () => {
       note: "Couldn't reach the database.",
     });
 
-    const results = await runPlan([savedEntry, failedEntry, notAttemptedEntry], MAP, live, run, () => 0);
+    const { reconcileOne, clashTitles } = planFns(live);
+    const results = await runPlan([savedEntry, failedEntry, notAttemptedEntry], reconcileOne, clashTitles, run, () => 0);
 
     expect(calls).toHaveLength(2);
     expect(calls.map((entry) => entry.change.handle)).toEqual(['t2', 't3']);
@@ -186,7 +200,8 @@ describe('runPlan', () => {
       planned({ change: change({ handle: 't2' }), id: 'bbb', outcome: 'pending' }),
     ];
 
-    const results = await runPlan(plan, MAP, live, NEVER_CALLED, now);
+    const { reconcileOne, clashTitles } = planFns(live);
+    const results = await runPlan(plan, reconcileOne, clashTitles, NEVER_CALLED, now);
 
     expect(results[0].outcome).toBe('notAttempted');
     expect(results[0].note).toBe('Not tried — the run stopped.');

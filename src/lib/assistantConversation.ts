@@ -1,13 +1,13 @@
 import type { Message } from './assistantRequest';
 import { MAX_MESSAGE_CHARS } from './assistantBody';
-import type { PlannedChange } from './todoPlan';
+import type { Planned } from './assistantRun';
 
 export const MAX_FROM_YOU = 6;
 export const WARN_AT_REMAINING = 2;
 
-export type Entry =
+export type Entry<C> =
   | { kind: 'text'; role: 'you' | 'assistant'; text: string }
-  | { kind: 'plan'; summary: string; planned: PlannedChange[]; cancelled: boolean };
+  | { kind: 'plan'; summary: string; planned: Planned<C>[]; cancelled: boolean };
 
 export interface CapStatus {
   remaining: number;
@@ -15,7 +15,7 @@ export interface CapStatus {
   warn: boolean;
 }
 
-export function countFromYou(entries: Entry[]): number {
+export function countFromYou<C>(entries: Entry<C>[]): number {
   return entries.filter((entry) => entry.kind === 'text' && entry.role === 'you').length;
 }
 
@@ -28,7 +28,7 @@ export function capStatus(fromYou: number): CapStatus {
   };
 }
 
-export function historyFor(entries: Entry[]): Message[] {
+export function historyFor<C extends { handle: string }>(entries: Entry<C>[]): Message[] {
   return entries.map((entry) => {
     if (entry.kind === 'text') return { role: entry.role, text: entry.text };
 

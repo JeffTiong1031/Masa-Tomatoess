@@ -2,7 +2,7 @@ import { idOf, type HandleMap } from './assistantContext';
 import type { ChangeParser, Reason } from './assistantReply';
 import type { Todo, TodoDraft } from './todo';
 import type { UserName } from './identity';
-import type { ChangeOutcome } from './assistantRun';
+import type { Planned } from './assistantRun';
 
 export const YEAR_RANGE = 5;
 
@@ -125,12 +125,7 @@ export function toDraft(change: TodoChange, owner: UserName): TodoDraft {
   };
 }
 
-export interface PlannedChange {
-  change: TodoChange;
-  id: string | null;
-  outcome: ChangeOutcome;
-  note: string;
-}
+export type PlannedChange = Planned<TodoChange>;
 
 export function reconcileTodoPlan(
   changes: TodoChange[],

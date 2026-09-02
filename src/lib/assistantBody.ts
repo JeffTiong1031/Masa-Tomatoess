@@ -45,7 +45,7 @@ function toSnapshot(value: unknown): TodoSnapshot | null {
   return { today: raw.today, weekday: raw.weekday, now: raw.now, rows };
 }
 
-function toHistory(value: unknown): Message[] | null {
+export function parseHistory(value: unknown): Message[] | null {
   if (!Array.isArray(value) || value.length === 0 || value.length > MAX_HISTORY) return null;
   for (const entry of value) {
     if (typeof entry !== 'object' || entry === null) return null;
@@ -60,7 +60,7 @@ export function parseAssistantBody(value: unknown): ParsedBody {
   if (typeof value !== 'object' || value === null) return { ok: false };
   const raw = value as Record<string, unknown>;
   const snapshot = toSnapshot(raw.snapshot);
-  const history = toHistory(raw.history);
+  const history = parseHistory(raw.history);
   if (snapshot === null || history === null) return { ok: false };
   return { ok: true, snapshot, history };
 }

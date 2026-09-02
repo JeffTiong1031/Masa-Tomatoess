@@ -29,3 +29,10 @@ export function buttonStateFor(outcomes: ChangeOutcome[], running: boolean): Run
   if (outcomes.some((outcome) => outcome === 'pending')) return 'idle';
   return 'done';
 }
+
+export interface Planned<C> {
+  change: C;
+  id: string | null;
+  outcome: ChangeOutcome;
+  note: string;
+}
