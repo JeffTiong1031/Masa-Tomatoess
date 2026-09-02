@@ -36,7 +36,7 @@ export function timeProblem(value: string): Reason | null {
   const hours = Number(value.slice(0, 2));
   const minutes = Number(value.slice(3, 5));
 
-  if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
+  if (hours > 23 || minutes > 59) {
     return { kind: 'badTime', value };
   }
   return null;

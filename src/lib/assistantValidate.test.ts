@@ -47,6 +47,14 @@ describe('timeProblem', () => {
     expect(timeProblem('25:99')).toEqual({ kind: 'badTime', value: '25:99' });
   });
 
+  it('rejects an hour out of range on its own', () => {
+    expect(timeProblem('24:00')).toEqual({ kind: 'badTime', value: '24:00' });
+  });
+
+  it('rejects a minute out of range on its own', () => {
+    expect(timeProblem('12:60')).toEqual({ kind: 'badTime', value: '12:60' });
+  });
+
   it('rejects a shape it cannot read', () => {
     expect(timeProblem('9am')).toEqual({ kind: 'badTime', value: '9am' });
   });
