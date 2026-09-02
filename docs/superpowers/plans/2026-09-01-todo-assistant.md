@@ -2389,3 +2389,29 @@ The PR description must call out the one deliberate widening of the spec: check 
 The calendar bot, once this has landed and its signatures are real rather than predicted: `calendarPlan.ts` beside `todoPlan.ts`, `buildCalendarSnapshot` in `assistantContext.ts` with the −30/+90 window and the 250-event cap that shrinks to −14/+45, the category-name check, `eventForm.validate()` as spec check 10, span-overlap clashes, and the button gated on the owner filter equalling the signed-in user — hidden on **Both**.
 
 `assistantReply.ts`, `assistantFailure.ts`, `assistantRun.ts` and `assistantContext.ts`'s handle map are written here to be reused by it unchanged. `Reason` already carries `unknownCategory` and `formRejection` for exactly that reason.
+
+---
+
+## Amendment — Task 11, after review
+
+Task 11's review found the corrected brief violating this plan's own rule that no
+judgement lives in a `.tsx` file. Three pieces of policy had landed in
+`AssistantSheet.tsx` where Vitest can never reach them, and one of them carried a bug
+that a test would have caught the moment it was written.
+
+The bug: `historyFor` told the model `Applied: <summary> (t1, t2, t3)` whenever *any*
+change in a plan saved, listing every handle in the plan rather than only the saved
+ones. On a partial apply — the exact case the retry button exists for — the next turn
+would tell the model that rows which failed had been applied.
+
+Two modules are extracted, and `AssistantSheet.tsx` keeps only wiring and state:
+
+- **`src/lib/assistantConversation.ts`** — the conversation model: the `Entry` union,
+  `historyFor`, `MAX_FROM_YOU`, and `capStatus`. `historyFor` now lists only handles
+  whose outcome is `saved`.
+- **`src/lib/applyRun.ts`** — `runPlan(planned, map, live, run, now)`. The change
+  runner and the clock arrive as parameters, so the retry, budget and outcome-mapping
+  policy is testable without a database or a DOM. `runChange` stays in the component,
+  because it is the part that actually touches `todoRepo` and `window.setTimeout`.
+
+Both get test files. This is the plan's own standard applied to the plan's own code.
