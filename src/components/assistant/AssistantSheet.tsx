@@ -5,11 +5,17 @@ import Modal from '@/components/ui/Modal';
 import PlanCard from './PlanCard';
 import { assistantFailureMessage } from '@/lib/assistantFailure';
 import { buildTodoSnapshot, emptyHandleMap, type HandleMap } from '@/lib/assistantContext';
-import { parseReply } from '@/lib/assistantReply';
-import { askTodoAssistant, type Message } from '@/lib/assistantRequest';
-import { nextStep, type StepOutcome } from '@/lib/assistantRun';
 import {
-  clashesFor,
+  capStatus,
+  countFromYou,
+  historyFor,
+  type Entry,
+} from '@/lib/assistantConversation';
+import { parseReply } from '@/lib/assistantReply';
+import { askTodoAssistant } from '@/lib/assistantRequest';
+import { runPlan } from '@/lib/applyRun';
+import type { StepOutcome } from '@/lib/assistantRun';
+import {
   reconcileTodoPlan,
   todoChangeParser,
   toDraft,
@@ -27,13 +33,7 @@ import {
 import type { Todo } from '@/lib/todo';
 import type { UserName } from '@/lib/identity';
 
-const MAX_FROM_YOU = 6;
-const WARN_AT_REMAINING = 2;
 const STEP_BUDGET_MS = 10_000;
-
-type Entry =
-  | { kind: 'text'; role: 'you' | 'assistant'; text: string }
-  | { kind: 'plan'; summary: string; planned: PlannedChange[]; cancelled: boolean };
 
 async function runChange(entry: PlannedChange, owner: UserName): Promise<StepOutcome> {
   const budget = new Promise<'unreached'>((resolve) =>
@@ -56,61 +56,6 @@ async function runChange(entry: PlannedChange, owner: UserName): Promise<StepOut
 
   return Promise.race([work, budget]);
 }
-
-async function runPlan(
-  planned: PlannedChange[],
-  map: HandleMap,
-  owner: UserName,
-  live: Todo[],
-): Promise<PlannedChange[]> {
-  const startedAt = Date.now();
-  const outcomes: StepOutcome[] = [];
-  const results: PlannedChange[] = [];
-
-  for (const previous of planned) {
-    if (previous.outcome === 'saved' || previous.outcome === 'stale') {
-      results.push(previous);
-      continue;
-    }
-
-    const [step] = reconcileTodoPlan([previous.change], map, live);
-    if (step.outcome === 'stale') {
-      results.push(step);
-      continue;
-    }
-
-    const action = nextStep({ outcomes, elapsedMs: Date.now() - startedAt });
-    if (action !== 'run') {
-      results.push({ ...step, outcome: 'notAttempted', note: 'Not tried — the run stopped.' });
-      continue;
-    }
-
-    const outcome = await runChange(step, owner);
-    outcomes.push(outcome);
-
-    if (outcome === 'saved') {
-      const clashes = clashesFor(step.change, live, step.id);
-      results.push({
-        ...step,
-        outcome: 'saved',
-        note: clashes.length > 0 ? `That day already had "${clashes[0].title}".` : '',
-      });
-      continue;
-    }
-
-    results.push({
-      ...step,
-      outcome: outcome === 'unreached' ? 'notAttempted' : 'failed',
-      note:
-        outcome === 'unreached'
-          ? "Couldn't reach the database."
-          : 'The database refused it.',
-    });
-  }
-
-  return results;
-}
-
 
 export default function AssistantSheet({
   open,
@@ -135,33 +80,12 @@ export default function AssistantSheet({
   const [thinking, setThinking] = useState(false);
   const [running, setRunning] = useState(false);
 
-  const fromYou = entries.filter((e) => e.kind === 'text' && e.role === 'you').length;
-  const remaining = MAX_FROM_YOU - fromYou;
-  const full = remaining <= 0;
+  const { remaining, full, warn } = capStatus(countFromYou(entries));
 
   function reset() {
     setEntries([]);
     setMap(emptyHandleMap('t'));
     setDraft('');
-  }
-
-  function historyFor(entries: Entry[]): Message[] {
-    return entries.map((entry) => {
-      if (entry.kind === 'text') return { role: entry.role, text: entry.text };
-      const saved = entry.planned.some((p) => p.outcome === 'saved');
-      if (entry.cancelled) return { role: 'assistant', text: `You cancelled: ${entry.summary}` };
-      if (saved) {
-        const handles = entry.planned.map((p) => p.change.handle).filter((h) => h !== '');
-        return { role: 'assistant', text: `Applied: ${entry.summary} (${handles.join(', ')})` };
-      }
-      return {
-        role: 'assistant',
-        text: `Open plan, not yet applied: ${entry.summary}
-${JSON.stringify(
-          entry.planned.map((p) => p.change),
-        )}`,
-      };
-    });
   }
 
   async function send() {
@@ -223,7 +147,13 @@ ${JSON.stringify(
     }
 
     const entry = entries[index] as Extract<Entry, { kind: 'plan' }>;
-    const results = await runPlan(entry.planned, map, owner, fresh.rows);
+    const results = await runPlan(
+      entry.planned,
+      map,
+      fresh.rows,
+      (change) => runChange(change, owner),
+      Date.now,
+    );
 
     setEntries(entries.map((e, i) => (i === index ? { ...entry, planned: results } : e)));
     setRunning(false);
@@ -309,7 +239,7 @@ ${JSON.stringify(
                 Send
               </button>
             </form>
-            {remaining <= WARN_AT_REMAINING && (
+            {warn && (
               <p className="text-xs text-[var(--mt-text-muted)]">
                 {remaining} messages left in this chat.
               </p>
