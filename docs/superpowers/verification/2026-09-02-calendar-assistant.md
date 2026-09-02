@@ -138,3 +138,44 @@ handle map committed one step later than it used to be. The Task 7 review argued
 is unobservable because `assignHandles` is append-only, so an older map resolves every
 handle to the same row it always did. That argument was checked against the code and
 holds; it was not reproduced in the browser.
+
+## After the final whole-branch review
+
+The review that followed this run raised two more defects that a browser pass could
+plausibly have missed, and both were fixed and re-checked live.
+
+**The Apply-time clash check was reading both people's events.** `fetchEvents()` takes
+no owner filter, so the fresh fetch that runs before Apply handed `clashesFor` the
+whole shared calendar. The card therefore meant one thing on first render — own rows,
+because the board passes an owner-filtered list — and another after Apply, where it
+could have quoted Rachel's event back at Jeff. Writes were never affected: the handle
+map is built from own rows only, so a partner row can never be a write target. Fixed
+by filtering in `fetchFresh`, which already receives the owner.
+
+Re-checked with an overlapping event of Jeff's and an overlapping event of Rachel's on
+the same day and hour: the card named Jeff's.
+
+**A delete row had no name on it.** The parser blanks every end-state field on a
+delete, so the plan card rendered the bare word "Delete". One delete is survivable
+because the summary line above carries the name; three deletes asked the person to
+apply three nameless rows against real data, with no undo. Fixed by carrying the live
+row's title through `reconcileCalendarPlan`, which already resolves that row.
+
+Re-checked: "delete the zzalpha event" renders as **Delete zzalpha**.
+
+**The clash sentence now belongs to each section.** It read "You already have "X" that
+day." for both bots. That is right for a to-do, where a clash really is same-day and
+same-title, but wrong for the calendar, where two events on the same day that do not
+overlap do not clash at all. The calendar's now reads "You already have "X" at that
+time." The to-do wording is unchanged.
+
+Re-checked: the overlap above rendered "You already have "zzalpha" at that time."
+
+Three smaller items went with them: the outside-the-window note moved into `lib` where
+a test can reach it and its copy corrected to the plural "months"; two unreachable
+lower-bound comparisons in `timeProblem` removed, with tests added that isolate a bad
+hour from a bad minute so neither remaining bound can be deleted unnoticed; and a local
+`interface Window` renamed so it no longer shadows the DOM global.
+
+Every row created during this second pass was deleted. The calendar is back to its
+original 20 events.
