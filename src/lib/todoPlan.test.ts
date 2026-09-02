@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { assignHandles, emptyHandleMap } from './assistantContext';
 import {
   clashesFor,
+  clashNoteFor,
   describeChange,
   opWordFor,
   reconcileTodoPlan,
@@ -367,5 +368,11 @@ describe('describeChange', () => {
 
   it('is just the title when every other field is blank or false', () => {
     expect(describeChange(change())).toBe('Dentist');
+  });
+});
+
+describe('clashNoteFor', () => {
+  it('says the clash is on the same day', () => {
+    expect(clashNoteFor('Dentist')).toBe('You already have “Dentist” that day.');
   });
 });

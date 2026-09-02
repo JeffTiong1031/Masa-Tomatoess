@@ -2,6 +2,7 @@ import { buildTodoSnapshot } from '@/lib/assistantContext';
 import { askTodoAssistant } from '@/lib/assistantRequest';
 import {
   clashesFor,
+  clashNoteFor,
   describeChange,
   opWordFor,
   reconcileTodoPlan,
@@ -36,6 +37,7 @@ export const todoSection: AssistantSection<TodoChange, Todo> = {
   reconcile: reconcileTodoPlan,
   clashTitles: (entry, rows) =>
     clashesFor(entry.change, rows, entry.id).map((row) => row.title),
+  clashNote: clashNoteFor,
   outsideNote: () => '',
   opWord: opWordFor,
   describe: describeChange,

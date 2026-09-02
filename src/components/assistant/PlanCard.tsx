@@ -52,7 +52,7 @@ export default function PlanCard<C extends { handle: string }, R>({
               {clashes.length > 0 && pending && (
                 <span className="mt-1 flex items-center gap-1 text-[var(--mt-text-muted)]">
                   <AlertTriangle size={14} aria-hidden />
-                  You already have &ldquo;{clashes[0]}&rdquo; that day.
+                  {section.clashNote(clashes[0])}
                 </span>
               )}
             </li>

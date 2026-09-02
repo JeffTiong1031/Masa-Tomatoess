@@ -30,6 +30,7 @@ export interface AssistantSection<C extends { handle: string }, R> {
   validatePlan(changes: C[]): Reason | null;
   reconcile(changes: C[], map: HandleMap, rows: R[]): Planned<C>[];
   clashTitles(entry: Planned<C>, rows: R[]): string[];
+  clashNote(title: string): string;
   outsideNote(change: C): string;
   opWord(change: C): string;
   describe(change: C): string;

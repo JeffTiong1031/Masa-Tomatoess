@@ -24,6 +24,10 @@ export function opWordFor(change: TodoChange): string {
   return OP_WORDS[change.op];
 }
 
+export function clashNoteFor(title: string): string {
+  return `You already have “${title}” that day.`;
+}
+
 export function describeChange(change: TodoChange): string {
   const parts = [change.title];
   if (change.dueDate !== '') parts.push(change.dueDate);

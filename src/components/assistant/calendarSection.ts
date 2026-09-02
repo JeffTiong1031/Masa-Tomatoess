@@ -4,6 +4,7 @@ import {
   calendarChangeParser,
   categoryIdFor,
   clashesFor,
+  clashNoteFor,
   describeChange,
   opWordFor,
   reconcileCalendarPlan,
@@ -42,6 +43,7 @@ export function calendarSection({
     reconcile: reconcileCalendarPlan,
     clashTitles: (entry, rows) =>
       clashesFor(entry.change, rows, entry.id).map((row) => row.title),
+    clashNote: clashNoteFor,
 
     outsideNote(change) {
       if (change.op === 'delete' || change.date === '') return '';

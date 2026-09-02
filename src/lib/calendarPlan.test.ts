@@ -4,6 +4,7 @@ import {
   calendarChangeParser,
   categoryIdFor,
   clashesFor,
+  clashNoteFor,
   describeChange,
   opWordFor,
   reconcileCalendarPlan,
@@ -439,5 +440,11 @@ describe('describeChange', () => {
   it('omits the countdown flag when clear', () => {
     const described = change({ startTime: '09:00', endTime: '10:00', countdown: false });
     expect(describeChange(described)).toBe('Dentist · 2026-09-10 · 09:00–10:00');
+  });
+});
+
+describe('clashNoteFor', () => {
+  it('says the clash is an overlap in time, not just the same day', () => {
+    expect(clashNoteFor('Flight')).toBe('You already have “Flight” at that time.');
   });
 });

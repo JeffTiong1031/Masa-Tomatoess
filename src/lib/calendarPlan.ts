@@ -22,6 +22,10 @@ export function opWordFor(change: CalendarChange): string {
   return OP_WORDS[change.op];
 }
 
+export function clashNoteFor(title: string): string {
+  return `You already have “${title}” at that time.`;
+}
+
 export function describeChange(change: CalendarChange): string {
   const parts = [change.title];
   if (change.date !== '') parts.push(change.date);
