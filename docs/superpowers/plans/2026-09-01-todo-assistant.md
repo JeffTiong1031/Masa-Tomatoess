@@ -2438,3 +2438,33 @@ to sit behind text cannot be used as text.
 The wording and the tone are one decision, so they move out of the component together:
 `applySummary(results)` in `src/lib/applyRun.ts` returns both, and is tested. `onApplied`
 becomes `(message: string, tone: ApplyTone) => void`.
+
+---
+
+## Amendment — after browser verification
+
+The browser run failed four checks against one root cause, and it is the defect this
+whole plan most deserved to be caught on: **the system prompt and the parser never
+agreed.**
+
+`parseReply` rejects a `plan` that carries any `text`, and a text reply that carries any
+`summary`. The prompt in `route.ts` never mentions either rule. Gemini, told to fill a
+flat schema with every field required, filled them all — so real reply after real reply
+was thrown away as "The AI's answer didn't hold together." Every one of the 631 unit
+tests passed throughout, because they feed `parseReply` hand-written wire objects that
+already obey a contract the model was never told about.
+
+Two changes, and the split between them matters:
+
+- **Rejecting `changes` on a non-plan stays.** That was the requirement as stated: an
+  `answer` arriving with five changes means the model was confused about what it was
+  doing, and silently dropping them could discard what the person actually asked for.
+- **A chatty `text` on a plan, or a stray `summary` on a text reply, is now ignored
+  rather than rejected.** That is not confusion, it is a model adding a friendly
+  sentence. Throwing the whole reply away over it is a worse answer than reading past
+  it.
+- **The prompt now states the shape rules explicitly**, so the model complies anyway
+  and the tolerant path is a safety net rather than the normal case.
+
+The prompt also gains a firmer instruction to ask rather than guess when several rows
+match, which the run showed it guessing through.
