@@ -117,7 +117,7 @@ export interface CalendarSnapshot {
   rows: CalendarSnapshotRow[];
 }
 
-interface Window {
+interface Bounds {
   from: string;
   to: string;
 }
@@ -132,7 +132,7 @@ function startKeyOf(timing: EventTiming): string {
   return timing.kind === 'allDay' ? '' : timing.startTime;
 }
 
-function within(event: CalendarEvent, window: Window): boolean {
+function within(event: CalendarEvent, window: Bounds): boolean {
   return event.date <= window.to && lastDayOf(event) >= window.from;
 }
 
@@ -156,8 +156,8 @@ export function buildCalendarSnapshot(
 ): { snapshot: CalendarSnapshot; map: HandleMap } {
   const mine = ordered(rows.filter((event) => event.owner === owner));
 
-  const wide: Window = { from: addDays(today, -WIDE_BACK), to: addDays(today, WIDE_AHEAD) };
-  const narrow: Window = { from: addDays(today, -NARROW_BACK), to: addDays(today, NARROW_AHEAD) };
+  const wide: Bounds = { from: addDays(today, -WIDE_BACK), to: addDays(today, WIDE_AHEAD) };
+  const narrow: Bounds = { from: addDays(today, -NARROW_BACK), to: addDays(today, NARROW_AHEAD) };
 
   const inWide = mine.filter((event) => within(event, wide));
   const window = inWide.length > MAX_EVENT_ROWS ? narrow : wide;
