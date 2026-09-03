@@ -18,6 +18,8 @@ import {
   updateEvent,
 } from '@/lib/calendarRepo';
 import type { Category } from '@/lib/categories';
+import type { ColourSwatch } from '@/lib/colourPalette';
+import { fetchPalette } from '@/lib/colourRepo';
 import { addDays, addMonths, monthOf, timeISO, todayISO } from '@/lib/dates';
 import { toTiming, type EventDraft } from '@/lib/eventForm';
 import { isUserName, type UserName } from '@/lib/identity';
@@ -84,6 +86,7 @@ export default function CalendarBoard() {
 
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [swatches, setSwatches] = useState<ColourSwatch[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [failed, setFailed] = useState(false);
 
@@ -113,22 +116,28 @@ export default function CalendarBoard() {
   }, [mounted]);
 
   const load = useCallback(async () => {
-    const [rows, cats] = await Promise.all([fetchEvents(), fetchCategories()]);
-    if (rows === null || cats === null) {
+    if (today === '') return;
+    const [rows, cats, palette] = await Promise.all([
+      fetchEvents(),
+      fetchCategories(),
+      fetchPalette(signedInAs, 'calendar'),
+    ]);
+    if (rows === null || cats === null || palette === null) {
       setFailed(true);
       return;
     }
     setEvents(rows);
     setCategories(cats);
+    setSwatches(palette);
     setLoaded(true);
-  }, []);
+  }, [signedInAs, today]);
 
   useEffect(() => {
-    if (!mounted) return;
+    if (!mounted || today === '') return;
     queueMicrotask(() => {
       load();
     });
-  }, [mounted, load]);
+  }, [mounted, load, today]);
 
   const visible = useMemo(
     () => applyFilters(events, { owner, categoryIds }),
@@ -407,10 +416,13 @@ export default function CalendarBoard() {
         <CategoryManager
           categories={categories}
           events={events}
+          swatches={swatches}
+          owner={signedInAs}
           isSaving={isSaving}
           onAdd={handleAddCategory}
           onRename={handleRenameCategory}
           onDelete={handleDeleteCategory}
+          onSwatchesChange={setSwatches}
           onClose={() => {
             setManagingCategories(false);
             load();
