@@ -1,9 +1,9 @@
-export interface TimetableEntry {
+export interface TimelineEntry {
   time: string;
   activity: string;
 }
 
-export function normalizeEntries(entries: TimetableEntry[]): TimetableEntry[] {
+export function normalizeEntries(entries: TimelineEntry[]): TimelineEntry[] {
   return entries
     .map((entry) => ({
       time: entry.time.trim(),

@@ -75,3 +75,19 @@ describe('category swatches', () => {
     }
   });
 });
+
+const MIN_BLOCK_TEXT_CONTRAST = 4.5;
+
+describe('swatches as timetable blocks', () => {
+  const swatches = readSwatches();
+
+  it('carries white body text on every swatch', () => {
+    swatches.forEach((swatch, index) => {
+      const ratio = contrastRatio(swatch, WHITE);
+      expect(
+        ratio,
+        `--mac-tag-${index + 1} (${swatch}) behind white text`,
+      ).toBeGreaterThanOrEqual(MIN_BLOCK_TEXT_CONTRAST);
+    });
+  });
+});

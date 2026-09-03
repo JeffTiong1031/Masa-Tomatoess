@@ -18,13 +18,15 @@ create table focus_sessions (
 );
 ```
 
-Supabase Schema for timetables (one row per person, replaced whole on save):
+Supabase Schema for timetables (one row per person per weekday):
 
 ```sql
 create table timetables (
-  user_name  text primary key,
+  user_name  text not null,
+  weekday    smallint not null check (weekday between 0 and 6),
   entries    jsonb not null default '[]' check (jsonb_typeof(entries) = 'array'),
-  updated_at timestamptz not null default now()
+  updated_at timestamptz not null default now(),
+  primary key (user_name, weekday)
 );
 
 alter table timetables enable row level security;
@@ -37,6 +39,22 @@ create policy "anon inserts timetables"
 
 create policy "anon updates timetables"
   on timetables for update to anon using (true) with check (true);
+```
+
+Supabase Schema for timetable_rules (one row per recurring class):
+
+```sql
+create table timetable_rules (
+  id         uuid primary key default gen_random_uuid(),
+  owner      text not null,
+  weekday    smallint not null check (weekday between 0 and 6),
+  title      text not null,
+  start_time time not null,
+  end_time   time not null,
+  swatch     smallint not null check (swatch between 1 and 8),
+  created_at timestamptz not null default now(),
+  check (end_time > start_time)
+);
 ```
 
 Supabase schema for cycle tracking (cycle spec §3). No user_name column:

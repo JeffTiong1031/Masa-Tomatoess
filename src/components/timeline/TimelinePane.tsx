@@ -1,13 +1,13 @@
 import { Fragment, type ReactNode } from 'react';
 import Card from '@/components/ui/Card';
-import type { TimetableEntry } from '@/lib/timetable';
+import type { TimelineEntry } from '@/lib/timeline';
 
 export type PaneState =
   | { status: 'loading' }
   | { status: 'error' }
-  | { status: 'ready'; entries: TimetableEntry[] };
+  | { status: 'ready'; entries: TimelineEntry[] };
 
-export default function TimetablePane({
+export default function TimelinePane({
   name,
   isMine,
   state,

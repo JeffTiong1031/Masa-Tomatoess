@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { X } from 'lucide-react';
-import { normalizeEntries, type TimetableEntry } from '@/lib/timetable';
+import { normalizeEntries, type TimelineEntry } from '@/lib/timeline';
 
 interface DraftRow {
   id: number;
@@ -8,18 +8,18 @@ interface DraftRow {
   activity: string;
 }
 
-export default function TimetableEditor({
+export default function TimelineEditor({
   initialEntries,
   isSaving,
   error,
   onCancel,
   onSave,
 }: {
-  initialEntries: TimetableEntry[];
+  initialEntries: TimelineEntry[];
   isSaving: boolean;
   error: string | null;
   onCancel: () => void;
-  onSave: (entries: TimetableEntry[]) => void;
+  onSave: (entries: TimelineEntry[]) => void;
 }) {
   const [rows, setRows] = useState<DraftRow[]>(() =>
     initialEntries.length > 0

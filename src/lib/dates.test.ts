@@ -10,7 +10,10 @@ import {
   monthOf,
   timeISO,
   todayISO,
+  todayWeekday,
+  WEEKDAYS,
   WEEKDAYS_SHORT,
+  weekdayIndex,
 } from './dates';
 
 describe('todayISO', () => {
@@ -116,5 +119,32 @@ describe('formatting', () => {
   it('lists weekdays Monday first', () => {
     expect(WEEKDAYS_SHORT[0]).toBe('Mon');
     expect(WEEKDAYS_SHORT[6]).toBe('Sun');
+  });
+});
+
+describe('todayWeekday', () => {
+  it('makes Monday 0, not 1', () => {
+    expect(todayWeekday(new Date(2026, 8, 7))).toBe(0);
+  });
+
+  it('makes Sunday 6, not 0', () => {
+    expect(todayWeekday(new Date(2026, 8, 13))).toBe(6);
+  });
+
+  it('agrees with weekdayIndex for the same day', () => {
+    expect(todayWeekday(new Date(2026, 8, 3))).toBe(weekdayIndex('2026-09-03'));
+  });
+
+  it('reads local parts, so a late evening does not roll forward', () => {
+    expect(todayWeekday(new Date(2026, 8, 7, 23, 30))).toBe(0);
+  });
+});
+
+describe('WEEKDAYS', () => {
+  it('lines up with WEEKDAYS_SHORT', () => {
+    expect(WEEKDAYS).toHaveLength(WEEKDAYS_SHORT.length);
+    WEEKDAYS.forEach((name, index) => {
+      expect(name.startsWith(WEEKDAYS_SHORT[index])).toBe(true);
+    });
   });
 });

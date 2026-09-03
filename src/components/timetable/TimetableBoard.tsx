@@ -1,144 +1,164 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Pencil } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
-import { USERS, isUserName, partnerOf, type UserName } from '@/lib/identity';
-import type { TimetableEntry } from '@/lib/timetable';
+import Card from '@/components/ui/Card';
+import { todayWeekday } from '@/lib/dates';
+import { isUserName, USERS, type UserName } from '@/lib/identity';
+import { gridHours, rulesByWeekday } from '@/lib/timetableGrid';
+import {
+  deleteRule,
+  deleteRulesOf,
+  fetchRules,
+  insertRule,
+  updateRule,
+} from '@/lib/timetableRepo';
+import type { RuleDraft, TimetableRule } from '@/lib/timetableRule';
 import { useHasMounted } from '@/hooks/useHasMounted';
-import TimetablePane, { type PaneState } from './TimetablePane';
-import TimetableEditor from './TimetableEditor';
+import RecurringList from './RecurringList';
+import RuleModal from './RuleModal';
+import TimetableGrid from './TimetableGrid';
 
-interface TimetableRow {
-  user_name: UserName;
-  entries: TimetableEntry[];
-}
-
-type Entries = Record<UserName, TimetableEntry[]>;
+type Editing = { rule: TimetableRule | null } | null;
 
 export default function TimetableBoard() {
   const mounted = useHasMounted();
   const stored = mounted ? localStorage.getItem('user_name') : null;
   const me = isUserName(stored) ? stored : null;
 
-  const [entries, setEntries] = useState<Entries | null>(null);
+  const [shown, setShown] = useState<UserName | null>(me);
+  const [rules, setRules] = useState<TimetableRule[] | null>(null);
   const [failed, setFailed] = useState(false);
-  const [editing, setEditing] = useState(false);
+  const [editing, setEditing] = useState<Editing>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    const { data, error } = await supabase
-      .from('timetables')
-      .select('user_name, entries')
-      .in('user_name', [...USERS]);
-
-    if (error) {
-      console.error('Failed to load timetables:', error);
+    const loaded = await fetchRules();
+    if (loaded === null) {
       setFailed(true);
       return;
     }
-
-    const rows = (data || []) as TimetableRow[];
-    const next: Entries = { Jeff: [], Rachel: [] };
-    for (const row of rows) next[row.user_name] = row.entries;
-    setEntries(next);
-  }, [setEntries, setFailed]);
+    setRules(loaded);
+  }, []);
 
   useEffect(() => {
-    if (!me) return;
+    if (me === null) return;
     (async () => {
       await load();
     })();
   }, [me, load]);
 
-  if (!me) return null;
+  if (me === null || shown === null) return null;
 
-  const stateFor = (user: UserName): PaneState => {
-    if (failed) return { status: 'error' };
-    if (!entries) return { status: 'loading' };
-    return { status: 'ready', entries: entries[user] };
-  };
+  const isMine = shown === me;
+  const visible = (rules ?? []).filter((rule) => rule.owner === shown);
+  const hours = gridHours(visible);
 
-  const retry = () => {
-    setFailed(false);
-    setEntries(null);
-    setEditing(false);
-    setSaveError(null);
-    load();
-  };
-
-  const myState = stateFor(me);
-  const partner = partnerOf(me);
-
-  const handleSave = async (saved: TimetableEntry[]) => {
+  const commit = async (run: () => Promise<boolean>) => {
     setIsSaving(true);
     setSaveError(null);
-
-    const { error } = await supabase.from('timetables').upsert(
-      {
-        user_name: me,
-        entries: saved,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'user_name' },
-    );
-
+    const ok = await run();
     setIsSaving(false);
-
-    if (error) {
-      console.error('Failed to save timetable:', error);
+    if (!ok) {
       setSaveError('Could not save. Check your connection and try again.');
       return;
     }
-
-    setEntries((current) => ({ ...current!, [me]: saved }));
-    setEditing(false);
+    setEditing(null);
+    await load();
   };
 
   return (
-    <div className="mb-4">
-      <TimetablePane
-        name={me}
-        isMine
-        state={myState}
-        onRetry={retry}
-        action={
-          !editing && myState.status === 'ready' ? (
+    <>
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <div className="inline-flex overflow-hidden rounded-full border border-[var(--mt-border)]">
+          {USERS.map((user) => (
+            <button
+              key={user}
+              type="button"
+              onClick={() => setShown(user)}
+              aria-pressed={shown === user}
+              className={`min-h-11 px-4 text-sm ${
+                shown === user
+                  ? 'bg-[var(--mt-text)] font-semibold text-[var(--mt-surface)]'
+                  : 'text-[var(--mt-text-muted)]'
+              }`}
+            >
+              {user === me ? 'Me' : user}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <Card className="mb-4">
+        {failed ? (
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm text-[var(--mt-danger)]" role="alert">
+              Couldn&apos;t load the timetable.
+            </p>
             <button
               type="button"
               onClick={() => {
-                setSaveError(null);
-                setEditing(true);
+                setFailed(false);
+                setRules(null);
+                load();
               }}
-              className="inline-flex min-h-11 items-center gap-2 rounded-xl px-3 text-sm font-semibold text-[var(--mt-text)] hover:bg-[color-mix(in_srgb,var(--mt-text)_6%,transparent)]"
+              className="min-h-11 rounded-xl border border-[var(--mt-border)] px-4 text-sm font-semibold text-[var(--mt-text)]"
             >
-              <Pencil size={16} aria-hidden />
-              Edit
+              Retry
             </button>
-          ) : undefined
-        }
-        body={
-          editing && myState.status === 'ready' ? (
-            <TimetableEditor
-              initialEntries={myState.entries}
-              isSaving={isSaving}
-              error={saveError}
-              onCancel={() => {
-                setEditing(false);
-                setSaveError(null);
-              }}
-              onSave={handleSave}
-            />
-          ) : undefined
-        }
-      />
-      <TimetablePane
-        name={partner}
-        isMine={false}
-        state={stateFor(partner)}
-        onRetry={retry}
-      />
-    </div>
+          </div>
+        ) : rules === null ? (
+          <div className="h-40 rounded-xl bg-[color-mix(in_srgb,var(--mt-text)_6%,transparent)]" aria-busy>
+            <span className="sr-only">Loading the timetable</span>
+          </div>
+        ) : (
+          <TimetableGrid
+            days={rulesByWeekday(visible)}
+            hours={hours}
+            today={todayWeekday()}
+            onPick={(rule) => isMine && setEditing({ rule })}
+          />
+        )}
+      </Card>
+
+      {rules !== null && !failed && (
+        <RecurringList
+          rules={visible}
+          isMine={isMine}
+          onAdd={() => {
+            setSaveError(null);
+            setEditing({ rule: null });
+          }}
+          onEdit={(rule) => {
+            setSaveError(null);
+            setEditing({ rule });
+          }}
+          onClearAll={() => {
+            if (!confirm(`Delete all ${visible.length} recurring events? This cannot be undone.`)) return;
+            commit(() => deleteRulesOf(shown));
+          }}
+        />
+      )}
+
+      {editing !== null && (
+        <RuleModal
+          open
+          owner={shown}
+          editing={editing.rule}
+          rules={rules ?? []}
+          isSaving={isSaving}
+          error={saveError}
+          onClose={() => setEditing(null)}
+          onSave={(draft: RuleDraft) =>
+            commit(() =>
+              editing.rule === null
+                ? insertRule(shown, draft)
+                : updateRule(editing.rule.id, draft),
+            )
+          }
+          onDelete={(id) => commit(() => deleteRule(id))}
+        />
+      )}
+    </>
   );
 }

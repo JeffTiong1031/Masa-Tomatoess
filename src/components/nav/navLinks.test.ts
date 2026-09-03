@@ -144,7 +144,7 @@ describe('isFocusRoute', () => {
   });
 
   /* FocusPill renders on exactly these routes and returns null
-     elsewhere. Calendar and Timeline are inside Study but outside
+     elsewhere. Calendar and Timetable are inside Study but outside
      Focus, and they use .mt-page-pad -- which carries its own hamburger
      clearance. A page that wore .mt-page-pad-focus without the pill
      above it would slide under the fixed hamburger. */
