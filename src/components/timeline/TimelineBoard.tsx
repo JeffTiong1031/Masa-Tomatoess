@@ -4,19 +4,19 @@ import { useCallback, useEffect, useState } from 'react';
 import { Pencil } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { USERS, isUserName, partnerOf, type UserName } from '@/lib/identity';
-import type { TimetableEntry } from '@/lib/timetable';
+import type { TimelineEntry } from '@/lib/timeline';
 import { useHasMounted } from '@/hooks/useHasMounted';
-import TimetablePane, { type PaneState } from './TimetablePane';
-import TimetableEditor from './TimetableEditor';
+import TimelinePane, { type PaneState } from './TimelinePane';
+import TimelineEditor from './TimelineEditor';
 
 interface TimetableRow {
   user_name: UserName;
-  entries: TimetableEntry[];
+  entries: TimelineEntry[];
 }
 
-type Entries = Record<UserName, TimetableEntry[]>;
+type Entries = Record<UserName, TimelineEntry[]>;
 
-export default function TimetableBoard() {
+export default function TimelineBoard() {
   const mounted = useHasMounted();
   const stored = mounted ? localStorage.getItem('user_name') : null;
   const me = isUserName(stored) ? stored : null;
@@ -71,7 +71,7 @@ export default function TimetableBoard() {
   const myState = stateFor(me);
   const partner = partnerOf(me);
 
-  const handleSave = async (saved: TimetableEntry[]) => {
+  const handleSave = async (saved: TimelineEntry[]) => {
     setIsSaving(true);
     setSaveError(null);
 
@@ -98,7 +98,7 @@ export default function TimetableBoard() {
 
   return (
     <div className="mb-4">
-      <TimetablePane
+      <TimelinePane
         name={me}
         isMine
         state={myState}
@@ -120,7 +120,7 @@ export default function TimetableBoard() {
         }
         body={
           editing && myState.status === 'ready' ? (
-            <TimetableEditor
+            <TimelineEditor
               initialEntries={myState.entries}
               isSaving={isSaving}
               error={saveError}
@@ -133,7 +133,7 @@ export default function TimetableBoard() {
           ) : undefined
         }
       />
-      <TimetablePane
+      <TimelinePane
         name={partner}
         isMine={false}
         state={stateFor(partner)}

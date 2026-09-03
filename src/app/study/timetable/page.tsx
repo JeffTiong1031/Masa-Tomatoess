@@ -1,5 +1,5 @@
 import PageShell from '@/components/ui/PageShell';
-import TimetableBoard from '@/components/timetable/TimetableBoard';
+import TimelineBoard from '@/components/timeline/TimelineBoard';
 
 export default function TimetablePage() {
   return (
@@ -8,7 +8,7 @@ export default function TimetablePage() {
       subtitle="What we're each doing tomorrow"
       accent="timetable"
     >
-      <TimetableBoard />
+      <TimelineBoard />
     </PageShell>
   );
 }

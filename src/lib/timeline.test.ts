@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { normalizeEntries } from './timetable';
+import { normalizeEntries } from './timeline';
 
 describe('normalizeEntries', () => {
   it('trims whitespace from both fields', () => {
