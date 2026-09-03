@@ -1,19 +1,32 @@
 import { WEEKDAYS_SHORT, type Weekday } from '@/lib/dates';
-import { swatchToken, type SwatchIndex } from '@/lib/categories';
+import {
+  resolveTimetablePaint,
+  type ColourSwatch,
+} from '@/lib/colourPalette';
 import { rowSpanOf } from '@/lib/timetableGrid';
 import type { TimetableRule } from '@/lib/timetableRule';
 
 const HEADER_ROWS = 1;
 
+function paintOf(rule: TimetableRule, swatches: ColourSwatch[]) {
+  const swatch = swatches.find((item) => item.id === rule.swatchId);
+  if (swatch === undefined) {
+    return { fill: 'var(--mt-surface)', text: 'var(--mt-text)' };
+  }
+  return resolveTimetablePaint(swatch, rule.textOverride);
+}
+
 export default function TimetableGrid({
   days,
   hours,
   today,
+  swatches,
   onPick,
 }: {
   days: TimetableRule[][];
   hours: { from: number; to: number };
   today: Weekday;
+  swatches: ColourSwatch[];
   onPick: (rule: TimetableRule) => void;
 }) {
   const rowCount = hours.to - hours.from;
@@ -68,16 +81,18 @@ export default function TimetableGrid({
         {days.map((dayRules, dayIndex) =>
           dayRules.map((rule) => {
             const span = rowSpanOf(rule, hours.from);
+            const paint = paintOf(rule, swatches);
             return (
               <button
                 key={rule.id}
                 type="button"
                 onClick={() => onPick(rule)}
-                className="overflow-hidden rounded-md px-2 py-1 text-left text-[11px] font-semibold leading-tight text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--mt-focus)]"
+                className="overflow-hidden rounded-md px-2 py-1 text-left text-[11px] font-semibold leading-tight focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--mt-focus)]"
                 style={{
                   gridColumn: dayIndex + 2,
                   gridRow: `${span.startRow + HEADER_ROWS} / ${span.endRow + HEADER_ROWS}`,
-                  background: `var(${swatchToken(Number(rule.swatchId) as SwatchIndex)})`,
+                  background: paint.fill,
+                  color: paint.text,
                 }}
               >
                 {rule.title}
