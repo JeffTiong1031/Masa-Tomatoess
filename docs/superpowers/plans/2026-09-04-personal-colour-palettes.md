@@ -364,7 +364,7 @@ alter table calendar_categories
 -- alter table calendar_categories alter column swatch_id set not null;
 ```
 
-Confirm the real categories table name from `calendarRepo.ts` before pasting Part 2; fix the SQL to match.
+Categories table name is `calendar_categories` (confirmed in `calendarRepo.ts`).
 
 - [ ] **Step 2: Implement `colourRepo.ts`**
 
