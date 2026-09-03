@@ -1,6 +1,16 @@
 -- Timetable and timeline — schema
 -- Design: 2026-09-03-timetable-recurring-design.md
 -- Run this in the Supabase SQL editor. The app never creates tables.
+--
+-- The two parts run at DIFFERENT TIMES. Do not paste the whole file at once.
+--
+--   Part 1  Safe now. A new table nothing reads yet; breaks nothing if it sits
+--           unused. Run it whenever.
+--   Part 2  Run only when the new timeline code is ready to ship. It drops the
+--           table the current page uses, and the current page's save
+--           (onConflict: 'user_name') stops working the moment the key becomes
+--           composite. Running this early costs you the ability to save your
+--           daily list until the new code lands.
 
 -- ---------------------------------------------------------------------------
 -- 1. Recurring events — the timetable grid's only content (D80, D81)
