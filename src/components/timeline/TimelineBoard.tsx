@@ -14,6 +14,7 @@ import {
 import { useHasMounted } from '@/hooks/useHasMounted';
 import TimelinePane, { type PaneState } from './TimelinePane';
 import TimelineEditor from './TimelineEditor';
+import DayTabs from './DayTabs';
 
 export default function TimelineBoard() {
   const mounted = useHasMounted();
@@ -99,6 +100,11 @@ export default function TimelineBoard() {
 
   return (
     <div className="mb-4">
+      <DayTabs selected={selected} today={todayWeekday()} onSelect={(day) => {
+        setSelected(day);
+        setEditing(false);
+        setSaveError(null);
+      }} />
       <TimelinePane
         name={me}
         isMine
