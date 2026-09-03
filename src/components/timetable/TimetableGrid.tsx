@@ -1,5 +1,5 @@
 import { WEEKDAYS_SHORT, type Weekday } from '@/lib/dates';
-import { swatchToken } from '@/lib/categories';
+import { swatchToken, type SwatchIndex } from '@/lib/categories';
 import { rowSpanOf } from '@/lib/timetableGrid';
 import type { TimetableRule } from '@/lib/timetableRule';
 
@@ -77,7 +77,7 @@ export default function TimetableGrid({
                 style={{
                   gridColumn: dayIndex + 2,
                   gridRow: `${span.startRow + HEADER_ROWS} / ${span.endRow + HEADER_ROWS}`,
-                  background: `var(${swatchToken(rule.swatch)})`,
+                  background: `var(${swatchToken(Number(rule.swatchId) as SwatchIndex)})`,
                 }}
               >
                 {rule.title}

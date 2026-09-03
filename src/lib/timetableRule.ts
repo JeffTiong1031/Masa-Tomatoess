@@ -1,4 +1,3 @@
-import type { SwatchIndex } from './categories';
 import { WEEKDAYS, type Weekday } from './dates';
 import type { UserName } from './identity';
 
@@ -9,7 +8,8 @@ export interface TimetableRule {
   title: string;
   startTime: string;
   endTime: string;
-  swatch: SwatchIndex;
+  swatchId: string;
+  textOverride: string | null;
 }
 
 export interface RuleDraft {
@@ -17,12 +17,14 @@ export interface RuleDraft {
   title: string;
   startTime: string;
   endTime: string;
-  swatch: SwatchIndex;
+  swatchId: string;
+  textOverride: string | null;
 }
 
 export type RuleError =
   | { kind: 'titleRequired' }
   | { kind: 'endNotAfterStart' }
+  | { kind: 'swatchRequired' }
   | { kind: 'overlaps'; title: string; startTime: string; endTime: string };
 
 export function sortRules(rules: TimetableRule[]): TimetableRule[] {
@@ -41,6 +43,7 @@ export function validateRule(
   editingId: string | null,
 ): RuleError | null {
   if (draft.title.trim() === '') return { kind: 'titleRequired' };
+  if (draft.swatchId === '') return { kind: 'swatchRequired' };
   if (draft.endTime <= draft.startTime) return { kind: 'endNotAfterStart' };
 
   const clash = existing.find(
@@ -67,5 +70,6 @@ export function ruleMessage(error: RuleError, weekday: Weekday): string {
   if (error.kind === 'endNotAfterStart') {
     return 'The end time must be after the start time.';
   }
+  if (error.kind === 'swatchRequired') return 'Pick a colour.';
   return `${error.title} is already at ${error.startTime}–${error.endTime} on ${WEEKDAYS[weekday]}.`;
 }

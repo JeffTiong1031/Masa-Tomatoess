@@ -20,7 +20,7 @@ function toColumns(draft: RuleDraft) {
     title: draft.title.trim(),
     start_time: draft.startTime,
     end_time: draft.endTime,
-    swatch: draft.swatch,
+    swatch: Number(draft.swatchId) as SwatchIndex,
   };
 }
 
@@ -41,7 +41,8 @@ export async function fetchRules(): Promise<TimetableRule[] | null> {
     title: row.title,
     startTime: row.start_time.slice(0, 5),
     endTime: row.end_time.slice(0, 5),
-    swatch: row.swatch,
+    swatchId: String(row.swatch),
+    textOverride: null,
   }));
 }
 

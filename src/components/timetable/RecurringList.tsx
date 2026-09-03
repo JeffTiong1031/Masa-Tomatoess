@@ -1,6 +1,6 @@
 import { Plus, Trash2 } from 'lucide-react';
 import Card from '@/components/ui/Card';
-import { swatchToken } from '@/lib/categories';
+import { swatchToken, type SwatchIndex } from '@/lib/categories';
 import { WEEKDAYS_SHORT } from '@/lib/dates';
 import { sortRules, type TimetableRule } from '@/lib/timetableRule';
 
@@ -55,7 +55,7 @@ export default function RecurringList({
                 <span
                   aria-hidden
                   className="h-3 w-3 shrink-0 rounded-sm"
-                  style={{ background: `var(${swatchToken(rule.swatch)})` }}
+                  style={{ background: `var(${swatchToken(Number(rule.swatchId) as SwatchIndex)})` }}
                 />
                 <span className="w-9 shrink-0 text-xs text-[var(--mt-text-subtle)]">
                   {WEEKDAYS_SHORT[rule.weekday]}

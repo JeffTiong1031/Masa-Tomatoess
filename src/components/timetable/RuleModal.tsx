@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Modal from '@/components/ui/Modal';
-import { SWATCHES, swatchToken, type SwatchIndex } from '@/lib/categories';
+import { SWATCHES, swatchToken } from '@/lib/categories';
 import { WEEKDAYS, type Weekday } from '@/lib/dates';
 import type { UserName } from '@/lib/identity';
 import {
@@ -38,13 +38,21 @@ export default function RuleModal({
 }) {
   const [draft, setDraft] = useState<RuleDraft>(() =>
     editing === null
-      ? { weekday: 0, title: '', startTime: '09:00', endTime: '10:00', swatch: 1 }
+      ? {
+          weekday: 0,
+          title: '',
+          startTime: '09:00',
+          endTime: '10:00',
+          swatchId: '1',
+          textOverride: null,
+        }
       : {
           weekday: editing.weekday,
           title: editing.title,
           startTime: editing.startTime,
           endTime: editing.endTime,
-          swatch: editing.swatch,
+          swatchId: editing.swatchId,
+          textOverride: editing.textOverride,
         },
   );
   const [problem, setProblem] = useState<string | null>(null);
@@ -127,10 +135,10 @@ export default function RuleModal({
                 key={swatch.index}
                 type="button"
                 aria-label={`Colour ${swatch.index}`}
-                aria-pressed={draft.swatch === swatch.index}
-                onClick={() => patch({ swatch: swatch.index as SwatchIndex })}
+                aria-pressed={draft.swatchId === String(swatch.index)}
+                onClick={() => patch({ swatchId: String(swatch.index) })}
                 className={`h-11 w-11 rounded-xl ${
-                  draft.swatch === swatch.index
+                  draft.swatchId === String(swatch.index)
                     ? 'ring-2 ring-[var(--mt-text)] ring-offset-2 ring-offset-[var(--mt-surface)]'
                     : ''
                 }`}

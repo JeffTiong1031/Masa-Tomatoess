@@ -10,7 +10,8 @@ function rule(over: Partial<TimetableRule> = {}): TimetableRule {
     title: 'Maths',
     startTime: '09:00',
     endTime: '11:00',
-    swatch: 1,
+    swatchId: 's1',
+    textOverride: null,
     ...over,
   };
 }
