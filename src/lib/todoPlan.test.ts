@@ -174,7 +174,13 @@ describe('toDraft', () => {
       { op: 'add', handle: '', title: 'Dentist', dueDate: '', dueTime: '' },
       'Jeff',
     );
-    expect(draft).toEqual({ owner: 'Jeff', title: 'Dentist', dueDate: null, dueTime: null });
+    expect(draft).toEqual({
+      owner: 'Jeff',
+      title: 'Dentist',
+      dueDate: null,
+      dueTime: null,
+      priority: false,
+    });
   });
 
   it('keeps a date and time when given', () => {
@@ -187,6 +193,7 @@ describe('toDraft', () => {
       title: 'Dentist',
       dueDate: '2026-09-12',
       dueTime: '15:00',
+      priority: false,
     });
   });
 });
@@ -199,6 +206,7 @@ function row(overrides: Partial<OpenTodo> = {}): OpenTodo {
     dueDate: '2026-09-12',
     dueTime: null,
     sortOrder: 100,
+    priority: false,
     done: false,
     completedAt: null,
     createdAt: '2026-09-01T08:00:00.000Z',

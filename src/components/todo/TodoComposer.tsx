@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, type FormEvent } from 'react';
-import { Plus } from 'lucide-react';
+import { Flag, Plus } from 'lucide-react';
 import type { TodoDraft } from '@/lib/todo';
 import type { UserName } from '@/lib/identity';
 
@@ -15,6 +15,7 @@ export default function TodoComposer({
   const [title, setTitle] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [dueTime, setDueTime] = useState('');
+  const [priority, setPriority] = useState(false);
   const [saving, setSaving] = useState(false);
   const [failed, setFailed] = useState(false);
 
@@ -30,6 +31,7 @@ export default function TodoComposer({
       title: trimmed,
       dueDate: dueDate === '' ? null : dueDate,
       dueTime: dueDate === '' || dueTime === '' ? null : dueTime,
+      priority,
     });
     setSaving(false);
     if (!added) {
@@ -67,6 +69,25 @@ export default function TodoComposer({
             className="min-h-11 rounded-xl bg-[var(--mt-surface)] px-3 text-sm text-[var(--mt-text)]"
           />
         )}
+
+        <button
+          type="button"
+          onClick={() => setPriority((current) => !current)}
+          aria-pressed={priority}
+          aria-label="Priority"
+          className={`min-h-11 min-w-11 inline-flex items-center justify-center rounded-xl ${
+            priority
+              ? 'bg-[color-mix(in_srgb,var(--mt-accent)_28%,transparent)] text-[var(--mt-text)]'
+              : 'text-[var(--mt-text-muted)]'
+          }`}
+        >
+          <Flag
+            size={18}
+            strokeWidth={1.9}
+            fill={priority ? 'currentColor' : 'none'}
+            aria-hidden
+          />
+        </button>
 
         <button
           type="submit"

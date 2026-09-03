@@ -97,6 +97,7 @@ export function toDraft(change: TodoChange, owner: UserName): TodoDraft {
     title: change.title,
     dueDate: change.dueDate === '' ? null : change.dueDate,
     dueTime: change.dueTime === '' ? null : change.dueTime,
+    priority: false,
   };
 }
 

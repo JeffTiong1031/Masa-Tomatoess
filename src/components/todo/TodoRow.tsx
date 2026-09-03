@@ -2,7 +2,7 @@
 
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Check } from 'lucide-react';
+import { Check, Flag } from 'lucide-react';
 import { formatLongDate } from '@/lib/dates';
 import type { Todo } from '@/lib/todo';
 
@@ -11,12 +11,14 @@ export default function TodoRow({
   overdue,
   onToggle,
   onOpen,
+  onPriority,
   sortable = false,
 }: {
   todo: Todo;
   overdue: boolean;
   onToggle: (todo: Todo) => void;
   onOpen: (todo: Todo) => void;
+  onPriority?: (todo: Todo) => void;
   sortable?: boolean;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -28,6 +30,30 @@ export default function TodoRow({
     transform: CSS.Transform.toString(transform),
     transition,
   };
+
+  const body = (
+    <>
+      <span
+        className={`block text-sm ${
+          todo.done
+            ? 'text-[var(--mt-text-muted)] line-through'
+            : 'text-[var(--mt-text)]'
+        }`}
+      >
+        {todo.title}
+      </span>
+      {todo.dueDate === null ? null : (
+        <span
+          className={`block text-xs ${
+            overdue ? 'text-[var(--mt-danger)]' : 'text-[var(--mt-text-muted)]'
+          }`}
+        >
+          {formatLongDate(todo.dueDate)}
+          {todo.dueTime === null ? '' : ` · ${todo.dueTime}`}
+        </span>
+      )}
+    </>
+  );
 
   return (
     <li
@@ -64,25 +90,7 @@ export default function TodoRow({
           {...listeners}
           onClick={() => onOpen(todo)}
         >
-          <span
-            className={`block text-sm ${
-              todo.done
-                ? 'text-[var(--mt-text-muted)] line-through'
-                : 'text-[var(--mt-text)]'
-            }`}
-          >
-            {todo.title}
-          </span>
-          {todo.dueDate === null ? null : (
-            <span
-              className={`block text-xs ${
-                overdue ? 'text-[var(--mt-danger)]' : 'text-[var(--mt-text-muted)]'
-              }`}
-            >
-              {formatLongDate(todo.dueDate)}
-              {todo.dueTime === null ? '' : ` · ${todo.dueTime}`}
-            </span>
-          )}
+          {body}
         </div>
       ) : (
         <button
@@ -90,27 +98,33 @@ export default function TodoRow({
           onClick={() => onOpen(todo)}
           className="min-h-11 flex-1 text-left"
         >
-          <span
-            className={`block text-sm ${
-              todo.done
-                ? 'text-[var(--mt-text-muted)] line-through'
-                : 'text-[var(--mt-text)]'
-            }`}
-          >
-            {todo.title}
-          </span>
-          {todo.dueDate === null ? null : (
-            <span
-              className={`block text-xs ${
-                overdue ? 'text-[var(--mt-danger)]' : 'text-[var(--mt-text-muted)]'
-              }`}
-            >
-              {formatLongDate(todo.dueDate)}
-              {todo.dueTime === null ? '' : ` · ${todo.dueTime}`}
-            </span>
-          )}
+          {body}
         </button>
       )}
+
+      {onPriority && !todo.done ? (
+        <button
+          type="button"
+          onClick={() => onPriority(todo)}
+          onPointerDown={(event) => event.stopPropagation()}
+          aria-pressed={todo.priority}
+          aria-label={todo.priority ? `Unflag ${todo.title}` : `Flag ${todo.title}`}
+          className={`min-h-11 min-w-11 inline-flex shrink-0 items-center justify-center ${
+            todo.priority ? 'text-[var(--mt-text)]' : 'text-[var(--mt-text-muted)]'
+          }`}
+        >
+          <Flag
+            size={16}
+            strokeWidth={1.9}
+            fill={todo.priority ? 'currentColor' : 'none'}
+            aria-hidden
+          />
+        </button>
+      ) : todo.priority ? (
+        <span className="min-h-11 min-w-11 inline-flex shrink-0 items-center justify-center text-[var(--mt-text-muted)]">
+          <Flag size={16} strokeWidth={1.9} fill="currentColor" aria-hidden />
+        </span>
+      ) : null}
     </li>
   );
 }

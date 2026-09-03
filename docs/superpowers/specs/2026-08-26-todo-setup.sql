@@ -5,6 +5,7 @@ create table todos (
   due_date     date,
   due_time     time,
   sort_order   integer not null default 0,
+  priority     boolean not null default false,
   done         boolean not null default false,
   completed_at timestamptz,
   created_at   timestamptz not null default now(),

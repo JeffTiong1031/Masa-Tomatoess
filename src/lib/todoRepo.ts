@@ -9,6 +9,7 @@ interface TodoRow {
   due_date: string | null;
   due_time: string | null;
   sort_order: number;
+  priority: boolean;
   completed_at: string | null;
   created_at: string;
 }
@@ -19,7 +20,7 @@ export type TodoFetch =
   | { status: 'error' };
 
 const COLUMNS =
-  'id, owner, title, due_date, due_time, sort_order, completed_at, created_at';
+  'id, owner, title, due_date, due_time, sort_order, priority, completed_at, created_at';
 
 const MISSING_TABLE_CODES = ['42P01', 'PGRST205'];
 
@@ -31,6 +32,7 @@ function toTodo(row: TodoRow): Todo {
     dueDate: row.due_date,
     dueTime: row.due_time === null ? null : row.due_time.slice(0, 5),
     sortOrder: row.sort_order,
+    priority: row.priority,
     createdAt: row.created_at,
   };
   return row.completed_at === null
@@ -45,6 +47,7 @@ function toRow(draft: TodoDraft, sortOrder: number) {
     due_date: draft.dueDate,
     due_time: draft.dueTime,
     sort_order: sortOrder,
+    priority: draft.priority,
   };
 }
 
@@ -118,6 +121,7 @@ export async function updateTodo(id: string, fields: TodoDraft): Promise<boolean
       title: fields.title.trim(),
       due_date: fields.dueDate,
       due_time: fields.dueTime,
+      priority: fields.priority,
       updated_at: new Date().toISOString(),
     })
     .eq('id', id);
