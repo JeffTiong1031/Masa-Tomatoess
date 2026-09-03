@@ -15,6 +15,7 @@ import { useHasMounted } from '@/hooks/useHasMounted';
 import TimelinePane, { type PaneState } from './TimelinePane';
 import TimelineEditor from './TimelineEditor';
 import DayTabs from './DayTabs';
+import ClearDialog from './ClearDialog';
 
 export default function TimelineBoard() {
   const mounted = useHasMounted();
@@ -25,6 +26,7 @@ export default function TimelineBoard() {
   const [selected, setSelected] = useState<Weekday>(() => todayWeekday());
   const [failed, setFailed] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [clearing, setClearing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
@@ -98,13 +100,46 @@ export default function TimelineBoard() {
     setEditing(false);
   };
 
+  const clearDays = async (days: Weekday[]) => {
+    setIsSaving(true);
+    const { error } = await supabase.from('timetables').upsert(
+      days.map((day) => ({
+        user_name: me,
+        weekday: day,
+        entries: [],
+        updated_at: new Date().toISOString(),
+      })),
+      { onConflict: 'user_name,weekday' },
+    );
+    setIsSaving(false);
+
+    if (error) {
+      console.error('Failed to clear timeline:', error);
+      setSaveError('Could not clear. Check your connection and try again.');
+      return;
+    }
+
+    setClearing(false);
+    setEditing(false);
+    await load();
+  };
+
   return (
     <div className="mb-4">
-      <DayTabs selected={selected} today={todayWeekday()} onSelect={(day) => {
-        setSelected(day);
-        setEditing(false);
-        setSaveError(null);
-      }} />
+      <div className="mb-4 flex items-center gap-3">
+        <DayTabs selected={selected} today={todayWeekday()} onSelect={(day) => {
+          setSelected(day);
+          setEditing(false);
+          setSaveError(null);
+        }} />
+        <button
+          type="button"
+          onClick={() => setClearing(true)}
+          className="min-h-11 rounded-full border border-[var(--mt-border)] px-4 text-sm text-[var(--mt-text-muted)]"
+        >
+          Clear
+        </button>
+      </div>
       <TimelinePane
         name={me}
         isMine
@@ -145,6 +180,14 @@ export default function TimelineBoard() {
         isMine={false}
         state={stateFor(partner)}
         onRetry={retry}
+      />
+      <ClearDialog
+        open={clearing}
+        weekday={selected}
+        isClearing={isSaving}
+        onClose={() => setClearing(false)}
+        onClearDay={() => clearDays([selected])}
+        onClearWeek={() => clearDays([0, 1, 2, 3, 4, 5, 6])}
       />
     </div>
   );
