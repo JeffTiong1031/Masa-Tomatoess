@@ -1,5 +1,5 @@
 import type { CalendarEvent } from '@/lib/calendarEvent';
-import { swatchToken, type Category } from '@/lib/categories';
+import type { Category } from '@/lib/categories';
 
 function timeLabel(event: CalendarEvent): string {
   if (event.timing.kind === 'allDay') return 'All day';
@@ -47,7 +47,7 @@ export default function EventBlock({
         {category && (
           <span
             className="h-2 w-2 shrink-0 rounded-full"
-            style={{ background: `var(${swatchToken(category.swatch)})` }}
+            style={{ background: 'var(--mt-text-muted)' }}
             aria-hidden
           />
         )}

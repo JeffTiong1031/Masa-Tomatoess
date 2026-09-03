@@ -17,7 +17,7 @@ import {
   updateCategory,
   updateEvent,
 } from '@/lib/calendarRepo';
-import type { Category, SwatchIndex } from '@/lib/categories';
+import type { Category } from '@/lib/categories';
 import { addDays, addMonths, monthOf, timeISO, todayISO } from '@/lib/dates';
 import { toTiming, type EventDraft } from '@/lib/eventForm';
 import { isUserName, type UserName } from '@/lib/identity';
@@ -215,9 +215,9 @@ export default function CalendarBoard() {
     closeModal();
   };
 
-  const handleAddCategory = async (name: string, swatch: SwatchIndex) => {
+  const handleAddCategory = async (name: string, swatchId: string) => {
     setIsSaving(true);
-    await insertCategory(name, swatch, categories.length);
+    await insertCategory(name, swatchId, categories.length);
     setIsSaving(false);
     await load();
   };
@@ -225,13 +225,13 @@ export default function CalendarBoard() {
   const handleRenameCategory = async (
     id: string,
     name: string,
-    swatch: SwatchIndex,
+    swatchId: string,
   ) => {
     const previous = categories;
     setCategories((current) =>
       current.map((item) => (item.id === id ? { ...item, name } : item)),
     );
-    const ok = await updateCategory(id, name, swatch);
+    const ok = await updateCategory(id, name, swatchId);
     if (!ok) setCategories(previous);
   };
 

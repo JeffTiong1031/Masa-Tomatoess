@@ -6,12 +6,9 @@ import Modal from '@/components/ui/Modal';
 import type { CalendarEvent } from '@/lib/calendarEvent';
 import {
   CATEGORY_MESSAGES,
-  SWATCHES,
   affectedCount,
-  swatchToken,
   validateCategory,
   type Category,
-  type SwatchIndex,
 } from '@/lib/categories';
 
 export default function CategoryManager({
@@ -26,13 +23,12 @@ export default function CategoryManager({
   categories: Category[];
   events: CalendarEvent[];
   isSaving: boolean;
-  onAdd: (name: string, swatch: SwatchIndex) => void;
-  onRename: (id: string, name: string, swatch: SwatchIndex) => void;
+  onAdd: (name: string, swatchId: string) => void;
+  onRename: (id: string, name: string, swatchId: string) => void;
   onDelete: (id: string) => void;
   onClose: () => void;
 }) {
   const [name, setName] = useState('');
-  const [swatch, setSwatch] = useState<SwatchIndex>(SWATCHES[0].index);
   const [error, setError] = useState<string | null>(null);
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
@@ -41,14 +37,14 @@ export default function CategoryManager({
   );
 
   const handleAdd = () => {
-    const problem = validateCategory({ name, swatch }, categories, null);
+    const problem = validateCategory({ name, swatchId: '' }, categories, null);
     if (problem) {
       setError(CATEGORY_MESSAGES[problem]);
       return;
     }
     setError(null);
     setName('');
-    onAdd(name, swatch);
+    onAdd(name, '');
   };
 
   const commitRename = (category: Category) => {
@@ -56,7 +52,7 @@ export default function CategoryManager({
     if (next === undefined || next === category.name) return;
 
     const problem = validateCategory(
-      { name: next, swatch: category.swatch },
+      { name: next, swatchId: category.swatchId },
       categories,
       category.id,
     );
@@ -71,7 +67,7 @@ export default function CategoryManager({
       delete rest[category.id];
       return rest;
     });
-    onRename(category.id, next, category.swatch);
+    onRename(category.id, next, category.swatchId);
   };
 
   return (
@@ -83,7 +79,7 @@ export default function CategoryManager({
               <div className="flex items-center gap-2">
                 <span
                   className="h-3 w-3 shrink-0 rounded-full"
-                  style={{ background: `var(${swatchToken(category.swatch)})` }}
+                  style={{ background: 'var(--mt-text-muted)' }}
                   aria-hidden
                 />
                 <input
@@ -146,28 +142,6 @@ export default function CategoryManager({
             }}
             className="min-h-11 w-full rounded-xl border border-[var(--mt-border)] bg-[var(--mt-surface)] px-3 text-sm text-[var(--mt-text)]"
           />
-
-          <div className="mt-3 flex flex-wrap gap-2">
-            {SWATCHES.map((option) => (
-              <button
-                key={option.index}
-                type="button"
-                onClick={() => {
-                  setSwatch(option.index);
-                  setConfirmingId(null);
-                }}
-                aria-label={`Colour ${option.index}`}
-                aria-pressed={swatch === option.index}
-                className="h-11 w-11 rounded-full"
-                style={{
-                  background: `var(${option.token})`,
-                  outline:
-                    swatch === option.index ? '2px solid var(--mt-focus)' : undefined,
-                  outlineOffset: '2px',
-                }}
-              />
-            ))}
-          </div>
 
           {error && <p className="mt-2 text-xs text-[var(--mt-danger)]">{error}</p>}
 

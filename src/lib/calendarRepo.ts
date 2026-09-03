@@ -1,7 +1,9 @@
-import { supabase } from './supabase';
+import { legacyIndexToStarterPosition } from './colourPalette';
+import { fetchPalette } from './colourRepo';
 import type { CalendarEvent, EventTiming } from './calendarEvent';
-import type { Category, SwatchIndex } from './categories';
+import type { Category } from './categories';
 import type { UserName } from './identity';
+import { supabase } from './supabase';
 
 interface EventRow {
   id: string;
@@ -19,7 +21,8 @@ interface EventRow {
 interface CategoryRow {
   id: string;
   name: string;
-  swatch: SwatchIndex;
+  swatch: number;
+  swatch_id: string | null;
   position: number;
 }
 
@@ -60,6 +63,15 @@ function toColumns(input: EventInput) {
     countdown: input.countdown,
     category_id: input.categoryId,
     updated_at: new Date().toISOString(),
+  };
+}
+
+function toCategory(row: CategoryRow, swatchId: string): Category {
+  return {
+    id: row.id,
+    name: row.name,
+    swatchId,
+    position: row.position,
   };
 }
 
@@ -127,7 +139,7 @@ export async function deleteEvent(id: string): Promise<boolean> {
 export async function fetchCategories(): Promise<Category[] | null> {
   const { data, error } = await supabase
     .from('calendar_categories')
-    .select('id, name, swatch, position')
+    .select('id, name, swatch, swatch_id, position')
     .order('position', { ascending: true });
 
   if (error) {
@@ -135,17 +147,48 @@ export async function fetchCategories(): Promise<Category[] | null> {
     return null;
   }
 
-  return data as CategoryRow[];
+  const jeffPalette = await fetchPalette('Jeff', 'calendar');
+  const rachelPalette = await fetchPalette('Rachel', 'calendar');
+  if (jeffPalette === null || rachelPalette === null) return null;
+
+  const categories: Category[] = [];
+
+  for (const row of data as CategoryRow[]) {
+    if (row.swatch_id !== null) {
+      categories.push(toCategory(row, row.swatch_id));
+      continue;
+    }
+
+    const position = legacyIndexToStarterPosition(row.swatch);
+    if (position === null) continue;
+
+    const starter = jeffPalette.find((swatch) => swatch.position === position);
+    if (starter === undefined) continue;
+
+    const { error: migrateError } = await supabase
+      .from('calendar_categories')
+      .update({ swatch_id: starter.id })
+      .eq('id', row.id);
+
+    if (migrateError) {
+      console.error('Failed to migrate category colour:', migrateError);
+      return null;
+    }
+
+    categories.push(toCategory(row, starter.id));
+  }
+
+  return categories;
 }
 
 export async function insertCategory(
   name: string,
-  swatch: SwatchIndex,
+  swatchId: string,
   position: number,
 ): Promise<boolean> {
   const { error } = await supabase
     .from('calendar_categories')
-    .insert({ name: name.trim(), swatch, position });
+    .insert({ name: name.trim(), swatch_id: swatchId, position });
 
   if (error) {
     console.error('Failed to add category:', error);
@@ -157,11 +200,11 @@ export async function insertCategory(
 export async function updateCategory(
   id: string,
   name: string,
-  swatch: SwatchIndex,
+  swatchId: string,
 ): Promise<boolean> {
   const { error } = await supabase
     .from('calendar_categories')
-    .update({ name: name.trim(), swatch })
+    .update({ name: name.trim(), swatch_id: swatchId })
     .eq('id', id);
 
   if (error) {

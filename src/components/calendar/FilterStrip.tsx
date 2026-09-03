@@ -1,7 +1,7 @@
 'use client';
 
 import { SlidersHorizontal } from 'lucide-react';
-import { swatchToken, type Category } from '@/lib/categories';
+import type { Category } from '@/lib/categories';
 import type { OwnerFilter } from '@/lib/calendarViews';
 import { USERS } from '@/lib/identity';
 
@@ -65,7 +65,7 @@ export default function FilterStrip({
             >
               <span
                 className="h-2 w-2 rounded-full"
-                style={{ background: `var(${swatchToken(category.swatch)})` }}
+                style={{ background: 'var(--mt-text-muted)' }}
                 aria-hidden
               />
               {category.name}
