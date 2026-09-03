@@ -196,6 +196,7 @@ body {
      above for the full rationale. */
   --mt-text-subtle: color-mix(in srgb, var(--mac-cocoa) 70%, transparent);
   --mt-accent-contrast: var(--mac-cocoa);
+  --mt-accent-ink: var(--mac-cocoa);
   --mt-accent-deep: var(--mac-accent-calendar-deep);
   --mt-accent-meals-deep: var(--mac-accent-meals-deep);
   /* See the :root copies for why these are 94/97 and not 72/88. */
@@ -235,6 +236,7 @@ body {
      muted, not the other way around. */
   --mt-text-subtle: color-mix(in srgb, var(--mac-shell) 55%, transparent);
   --mt-accent-contrast: var(--mac-plum);
+  --mt-accent-ink: var(--mac-cocoa);
   --mt-accent-deep: var(--mac-accent-calendar-deep);
   --mt-accent-meals-deep: var(--mac-accent-meals-deep);
   --mt-glass: color-mix(in srgb, var(--mac-plum) 45%, transparent);
