@@ -46,7 +46,7 @@ export const ALL_LINKS: NavLink[] = [
 export const STUDY_PANEL: NavLink[] = [
   { href: '/study/timer', label: 'Focus', icon: Timer, accent: 'timer' },
   { href: '/study/calendar', label: 'Calendar', icon: CalendarDays, accent: 'calendar' },
-  { href: '/study/timetable', label: 'Timeline', icon: LayoutList, accent: 'timetable' },
+  { href: '/study/timetable', label: 'Timetable', icon: LayoutList, accent: 'timetable' },
 ];
 
 /** The three widgets behind Study's Focus tab, in pill order.
