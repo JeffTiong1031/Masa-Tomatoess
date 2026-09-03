@@ -14,6 +14,13 @@ export const WEEKDAYS_SHORT = [
   'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun',
 ] as const;
 
+export type Weekday = 0 | 1 | 2 | 3 | 4 | 5 | 6;
+
+export const WEEKDAYS = [
+  'Monday', 'Tuesday', 'Wednesday', 'Thursday',
+  'Friday', 'Saturday', 'Sunday',
+] as const;
+
 function pad(value: number): string {
   return `${value}`.padStart(2, '0');
 }
@@ -76,4 +83,8 @@ export function formatShortDate(date: string): string {
 
 export function formatLongDate(date: string): string {
   return `${WEEKDAYS_SHORT[weekdayIndex(date)]} ${formatShortDate(date)}`;
+}
+
+export function todayWeekday(now: Date = new Date()): Weekday {
+  return ((now.getDay() + 6) % 7) as Weekday;
 }
