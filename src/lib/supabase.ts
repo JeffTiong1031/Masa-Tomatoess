@@ -245,4 +245,42 @@ create policy "anon reads todos"
 create policy "anon writes todos"
   on todos for all to anon using (true) with check (true);
 ```
+
+Supabase schema for personal colour palettes (colour palettes spec). Each
+person has a timetable palette and a calendar palette. New columns on
+timetable_rules and calendar_categories sit beside legacy `swatch` until
+the client has filled `swatch_id`.
+
+```sql
+create table colour_swatches (
+  id         uuid primary key default gen_random_uuid(),
+  owner      text not null,
+  kind       text not null check (kind in ('timetable', 'calendar')),
+  fill       text not null,
+  text_color text,
+  position   smallint not null default 0,
+  created_at timestamptz not null default now()
+);
+
+create index colour_swatches_owner_kind_idx
+  on colour_swatches (owner, kind);
+
+alter table colour_swatches enable row level security;
+
+create policy "anon reads colour_swatches"
+  on colour_swatches for select to anon using (true);
+create policy "anon inserts colour_swatches"
+  on colour_swatches for insert to anon with check (true);
+create policy "anon updates colour_swatches"
+  on colour_swatches for update to anon using (true) with check (true);
+create policy "anon deletes colour_swatches"
+  on colour_swatches for delete to anon using (true);
+
+alter table timetable_rules
+  add column if not exists swatch_id uuid,
+  add column if not exists text_override text;
+
+alter table calendar_categories
+  add column if not exists swatch_id uuid;
+```
 */
