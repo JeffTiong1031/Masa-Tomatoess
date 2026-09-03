@@ -18,13 +18,15 @@ create table focus_sessions (
 );
 ```
 
-Supabase Schema for timetables (one row per person, replaced whole on save):
+Supabase Schema for timetables (one row per person per weekday):
 
 ```sql
 create table timetables (
-  user_name  text primary key,
+  user_name  text not null,
+  weekday    smallint not null check (weekday between 0 and 6),
   entries    jsonb not null default '[]' check (jsonb_typeof(entries) = 'array'),
-  updated_at timestamptz not null default now()
+  updated_at timestamptz not null default now(),
+  primary key (user_name, weekday)
 );
 
 alter table timetables enable row level security;

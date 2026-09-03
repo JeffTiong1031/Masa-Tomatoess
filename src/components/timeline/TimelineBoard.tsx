@@ -5,23 +5,23 @@ import { Pencil } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { USERS, isUserName, partnerOf, type UserName } from '@/lib/identity';
 import type { TimelineEntry } from '@/lib/timeline';
+import { todayWeekday, type Weekday } from '@/lib/dates';
+import {
+  weeksFromRows,
+  type TimelineRow,
+  type WeekByUser,
+} from '@/lib/timelineWeek';
 import { useHasMounted } from '@/hooks/useHasMounted';
 import TimelinePane, { type PaneState } from './TimelinePane';
 import TimelineEditor from './TimelineEditor';
-
-interface TimetableRow {
-  user_name: UserName;
-  entries: TimelineEntry[];
-}
-
-type Entries = Record<UserName, TimelineEntry[]>;
 
 export default function TimelineBoard() {
   const mounted = useHasMounted();
   const stored = mounted ? localStorage.getItem('user_name') : null;
   const me = isUserName(stored) ? stored : null;
 
-  const [entries, setEntries] = useState<Entries | null>(null);
+  const [weeks, setWeeks] = useState<WeekByUser | null>(null);
+  const [selected, setSelected] = useState<Weekday>(() => todayWeekday());
   const [failed, setFailed] = useState(false);
   const [editing, setEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -30,20 +30,17 @@ export default function TimelineBoard() {
   const load = useCallback(async () => {
     const { data, error } = await supabase
       .from('timetables')
-      .select('user_name, entries')
+      .select('user_name, weekday, entries')
       .in('user_name', [...USERS]);
 
     if (error) {
-      console.error('Failed to load timetables:', error);
+      console.error('Failed to load timelines:', error);
       setFailed(true);
       return;
     }
 
-    const rows = (data || []) as TimetableRow[];
-    const next: Entries = { Jeff: [], Rachel: [] };
-    for (const row of rows) next[row.user_name] = row.entries;
-    setEntries(next);
-  }, [setEntries, setFailed]);
+    setWeeks(weeksFromRows((data ?? []) as TimelineRow[]));
+  }, []);
 
   useEffect(() => {
     if (!me) return;
@@ -56,13 +53,13 @@ export default function TimelineBoard() {
 
   const stateFor = (user: UserName): PaneState => {
     if (failed) return { status: 'error' };
-    if (!entries) return { status: 'loading' };
-    return { status: 'ready', entries: entries[user] };
+    if (weeks === null) return { status: 'loading' };
+    return { status: 'ready', entries: weeks[user][selected] };
   };
 
   const retry = () => {
     setFailed(false);
-    setEntries(null);
+    setWeeks(null);
     setEditing(false);
     setSaveError(null);
     load();
@@ -78,21 +75,25 @@ export default function TimelineBoard() {
     const { error } = await supabase.from('timetables').upsert(
       {
         user_name: me,
+        weekday: selected,
         entries: saved,
         updated_at: new Date().toISOString(),
       },
-      { onConflict: 'user_name' },
+      { onConflict: 'user_name,weekday' },
     );
 
     setIsSaving(false);
 
     if (error) {
-      console.error('Failed to save timetable:', error);
+      console.error('Failed to save timeline:', error);
       setSaveError('Could not save. Check your connection and try again.');
       return;
     }
 
-    setEntries((current) => ({ ...current!, [me]: saved }));
+    setWeeks((current) => ({
+      ...current!,
+      [me]: { ...current![me], [selected]: saved },
+    }));
     setEditing(false);
   };
 
