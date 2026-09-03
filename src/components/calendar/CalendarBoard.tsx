@@ -17,12 +17,12 @@ import {
   updateCategory,
   updateEvent,
 } from '@/lib/calendarRepo';
-import type { Category } from '@/lib/categories';
+import { withCategoryFills, type Category } from '@/lib/categories';
 import type { ColourSwatch } from '@/lib/colourPalette';
 import { fetchPalette } from '@/lib/colourRepo';
 import { addDays, addMonths, monthOf, timeISO, todayISO } from '@/lib/dates';
 import { toTiming, type EventDraft } from '@/lib/eventForm';
-import { isUserName, type UserName } from '@/lib/identity';
+import { isUserName, partnerOf, type UserName } from '@/lib/identity';
 import AssistantButton from '@/components/assistant/AssistantButton';
 import { calendarSection } from '@/components/assistant/calendarSection';
 import CategoryManager from './CategoryManager';
@@ -87,6 +87,7 @@ export default function CalendarBoard() {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [swatches, setSwatches] = useState<ColourSwatch[]>([]);
+  const [partnerSwatches, setPartnerSwatches] = useState<ColourSwatch[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [failed, setFailed] = useState(false);
 
@@ -117,18 +118,20 @@ export default function CalendarBoard() {
 
   const load = useCallback(async () => {
     if (today === '') return;
-    const [rows, cats, palette] = await Promise.all([
+    const [rows, cats, mine, theirs] = await Promise.all([
       fetchEvents(),
       fetchCategories(),
       fetchPalette(signedInAs, 'calendar'),
+      fetchPalette(partnerOf(signedInAs), 'calendar'),
     ]);
-    if (rows === null || cats === null || palette === null) {
+    if (rows === null || cats === null || mine === null || theirs === null) {
       setFailed(true);
       return;
     }
     setEvents(rows);
     setCategories(cats);
-    setSwatches(palette);
+    setSwatches(mine);
+    setPartnerSwatches(theirs);
     setLoaded(true);
   }, [signedInAs, today]);
 
@@ -160,6 +163,11 @@ export default function CalendarBoard() {
   );
 
   const section = useMemo(() => calendarSection({ categories, month }), [categories, month]);
+
+  const categoryViews = useMemo(
+    () => withCategoryFills(categories, [...swatches, ...partnerSwatches]),
+    [categories, swatches, partnerSwatches],
+  );
 
   const openAdd = () => {
     setDraft(blankDraft(selectedDate));
@@ -291,7 +299,7 @@ export default function CalendarBoard() {
 
       <FilterStrip
         owner={owner}
-        categories={categories}
+        categories={categoryViews}
         categoryIds={categoryIds}
         onOwner={setOwner}
         onToggleCategory={(id) =>
@@ -320,7 +328,7 @@ export default function CalendarBoard() {
           <SearchResults
             groups={matches}
             today={today}
-            categories={categories}
+            categories={categoryViews}
             signedInAs={signedInAs}
             onOpen={openEvent}
           />
@@ -379,7 +387,7 @@ export default function CalendarBoard() {
             <DayPanel
               date={selectedDate}
               events={dayEvents}
-              categories={categories}
+              categories={categoryViews}
               signedInAs={signedInAs}
               onOpen={openEvent}
             />
@@ -399,7 +407,7 @@ export default function CalendarBoard() {
       {modal && draft && (
         <EventModal
           draft={draft}
-          categories={categories}
+          categories={categoryViews}
           owner={modal.mode === 'edit' ? modal.event.owner : signedInAs}
           canEdit={modal.mode === 'add' || modal.event.owner === signedInAs}
           isEditing={modal.mode === 'edit'}

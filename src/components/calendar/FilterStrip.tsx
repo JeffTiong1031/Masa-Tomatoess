@@ -1,7 +1,7 @@
 'use client';
 
 import { SlidersHorizontal } from 'lucide-react';
-import type { Category } from '@/lib/categories';
+import type { CategoryView } from '@/lib/categories';
 import type { OwnerFilter } from '@/lib/calendarViews';
 import { USERS } from '@/lib/identity';
 
@@ -14,7 +14,7 @@ export default function FilterStrip({
   onManage,
 }: {
   owner: OwnerFilter;
-  categories: Category[];
+  categories: CategoryView[];
   categoryIds: string[];
   onOwner: (owner: OwnerFilter) => void;
   onToggleCategory: (id: string) => void;
@@ -65,7 +65,7 @@ export default function FilterStrip({
             >
               <span
                 className="h-2 w-2 rounded-full"
-                style={{ background: 'var(--mt-text-muted)' }}
+                style={{ background: category.fill }}
                 aria-hidden
               />
               {category.name}

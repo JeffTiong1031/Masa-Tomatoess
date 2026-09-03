@@ -1,5 +1,5 @@
 import type { CalendarEvent } from '@/lib/calendarEvent';
-import type { Category } from '@/lib/categories';
+import type { CategoryView } from '@/lib/categories';
 
 function timeLabel(event: CalendarEvent): string {
   if (event.timing.kind === 'allDay') return 'All day';
@@ -16,7 +16,7 @@ export default function EventBlock({
   onOpen,
 }: {
   event: CalendarEvent;
-  category: Category | null;
+  category: CategoryView | null;
   isOwn: boolean;
   dense?: boolean;
   className?: string;
@@ -47,7 +47,7 @@ export default function EventBlock({
         {category && (
           <span
             className="h-2 w-2 shrink-0 rounded-full"
-            style={{ background: 'var(--mt-text-muted)' }}
+            style={{ background: category.fill }}
             aria-hidden
           />
         )}

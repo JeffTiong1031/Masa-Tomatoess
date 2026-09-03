@@ -1,6 +1,6 @@
 import type { DateGroup } from '@/lib/calendarSearch';
 import type { CalendarEvent } from '@/lib/calendarEvent';
-import type { Category } from '@/lib/categories';
+import type { CategoryView } from '@/lib/categories';
 import { formatLongDate } from '@/lib/dates';
 import type { UserName } from '@/lib/identity';
 import EventBlock from './EventBlock';
@@ -14,7 +14,7 @@ export default function SearchResults({
 }: {
   groups: DateGroup[];
   today: string;
-  categories: Category[];
+  categories: CategoryView[];
   signedInAs: UserName;
   onOpen: (event: CalendarEvent) => void;
 }) {

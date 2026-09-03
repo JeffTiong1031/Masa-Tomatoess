@@ -3,6 +3,7 @@ import {
   CATEGORY_MESSAGES,
   affectedCount,
   validateCategory,
+  withCategoryFills,
   type Category,
 } from './categories';
 import type { CalendarEvent } from './calendarEvent';
@@ -103,5 +104,26 @@ describe('affectedCount', () => {
 
   it('never counts untagged events', () => {
     expect(affectedCount(events, 'c')).toBe(0);
+  });
+});
+
+describe('withCategoryFills', () => {
+  const cats = [category('a', 'Study', 's1'), category('b', 'Health', 's2')];
+  const swatches = [
+    { id: 's1', fill: '#B83A3A' },
+    { id: 's2', fill: '#2C5FA8' },
+  ];
+
+  it('attaches each category’s fill from the matching swatch', () => {
+    expect(withCategoryFills(cats, swatches)).toEqual([
+      { ...cats[0], fill: '#B83A3A' },
+      { ...cats[1], fill: '#2C5FA8' },
+    ]);
+  });
+
+  it('falls back to muted when the swatch is not in the map', () => {
+    expect(withCategoryFills([cats[0]], []).map((item) => item.fill)).toEqual([
+      'var(--mt-text-muted)',
+    ]);
   });
 });

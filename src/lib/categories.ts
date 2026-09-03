@@ -46,3 +46,16 @@ export function affectedCount(
 ): number {
   return events.filter((event) => event.categoryId === categoryId).length;
 }
+
+export type CategoryView = Category & { fill: string };
+
+export function withCategoryFills(
+  categories: Category[],
+  swatches: { id: string; fill: string }[],
+): CategoryView[] {
+  const fills = new Map(swatches.map((swatch) => [swatch.id, swatch.fill]));
+  return categories.map((category) => ({
+    ...category,
+    fill: fills.get(category.swatchId) ?? 'var(--mt-text-muted)',
+  }));
+}
