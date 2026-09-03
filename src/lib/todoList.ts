@@ -29,6 +29,7 @@ export function groupOf(todo: Todo, today: string, now: string): TodoGroupName {
 }
 
 export function compareTodos(a: Todo, b: Todo): number {
+  if (a.priority !== b.priority) return a.priority ? -1 : 1;
   if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder;
   return a.createdAt.localeCompare(b.createdAt);
 }
@@ -68,6 +69,37 @@ export function reorderInGroup(todos: Todo[], activeId: string, overId: string):
   const [moved] = next.splice(from, 1);
   next.splice(to, 0, moved);
   return next;
+}
+
+export function clampReorderInGroup(
+  todos: Todo[],
+  activeId: string,
+  overId: string,
+): string[] {
+  const from = todos.findIndex((todo) => todo.id === activeId);
+  const to = todos.findIndex((todo) => todo.id === overId);
+  if (from === -1 || to === -1 || from === to) {
+    return todos.map((todo) => todo.id);
+  }
+
+  const priorityCount = todos.filter((todo) => todo.priority).length;
+  const clampedTo = todos[from].priority
+    ? Math.min(to, priorityCount - 1)
+    : Math.max(to, priorityCount);
+
+  return reorderInGroup(todos, activeId, todos[clampedTo].id);
+}
+
+export function placeInPriorityFence(
+  groupTodos: Todo[],
+  id: string,
+  priority: boolean,
+): string[] {
+  void priority;
+  const others = groupTodos.filter((todo) => todo.id !== id);
+  const flagged = others.filter((todo) => todo.priority).map((todo) => todo.id);
+  const unflagged = others.filter((todo) => !todo.priority).map((todo) => todo.id);
+  return [...flagged, id, ...unflagged];
 }
 
 export function sortOrdersForOrder(

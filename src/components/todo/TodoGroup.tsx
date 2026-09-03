@@ -9,12 +9,14 @@ export default function TodoGroup({
   group,
   onToggle,
   onOpen,
+  onPriority,
   onDeleteCompleted,
   sortable = true,
 }: {
   group: { name: string; todos: Todo[] };
   onToggle: (todo: Todo) => void;
   onOpen: (todo: Todo) => void;
+  onPriority?: (todo: Todo) => void;
   onDeleteCompleted?: () => void;
   sortable?: boolean;
 }) {
@@ -49,6 +51,7 @@ export default function TodoGroup({
               overdue={group.name === 'Overdue'}
               onToggle={onToggle}
               onOpen={onOpen}
+              onPriority={onPriority}
               sortable={sortable}
             />
           ))}

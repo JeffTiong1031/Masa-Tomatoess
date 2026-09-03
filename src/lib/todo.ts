@@ -7,6 +7,7 @@ interface TodoBase {
   dueDate: string | null;
   dueTime: string | null;
   sortOrder: number;
+  priority: boolean;
   createdAt: string;
 }
 
@@ -27,6 +28,7 @@ export interface TodoDraft {
   title: string;
   dueDate: string | null;
   dueTime: string | null;
+  priority: boolean;
 }
 
 export type TodoGroupName =

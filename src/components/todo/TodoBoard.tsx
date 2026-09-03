@@ -25,7 +25,8 @@ import {
   completedTodos,
   groupTodos,
   nextWakeDelayMs,
-  reorderInGroup,
+  clampReorderInGroup,
+  placeInPriorityFence,
   sortOrdersForOrder,
 } from '@/lib/todoList';
 import type { Todo, TodoDraft } from '@/lib/todo';
@@ -129,11 +130,23 @@ export default function TodoBoard() {
       setNotice({ text: 'That task did not save. Try again.', tone: 'problem' });
       return false;
     }
+
+    if (draft.priority && viewing === draft.owner) {
+      const withCreated = [...todos, created];
+      const target = groupTodos(withCreated, clock.today, clock.now).find((group) =>
+        group.todos.some((todo) => todo.id === created.id),
+      );
+      if (target !== undefined) {
+        const orderedIds = placeInPriorityFence(target.todos, created.id, true);
+        await reorderTodos(sortOrdersForOrder(orderedIds));
+      }
+    }
+
     setNotice(null);
     setChosenView(draft.owner);
     setReloadToken((token) => token + 1);
     return true;
-  }, []);
+  }, [todos, clock, viewing]);
 
   const handleToggle = useCallback(async (todo: Todo) => {
     const next = !todo.done;
@@ -156,16 +169,107 @@ export default function TodoBoard() {
     setNotice({ text: 'That change did not save.', tone: 'problem' });
   }, []);
 
-  const handleSave = useCallback(async (id: string, draft: TodoDraft) => {
-    const saved = await updateTodo(id, draft);
-    if (!saved) {
-      setNotice({ text: 'That edit did not save.', tone: 'problem' });
-      return false;
-    }
-    setNotice(null);
-    setReloadToken((token) => token + 1);
-    return true;
-  }, []);
+  const applyFenceOrder = useCallback(
+    async (
+      list: Todo[],
+      id: string,
+      priority: boolean,
+    ): Promise<{ list: Todo[]; saved: boolean }> => {
+      const target = groupTodos(list, clock.today, clock.now).find((group) =>
+        group.todos.some((todo) => todo.id === id),
+      );
+      if (target === undefined) return { list, saved: true };
+
+      const orderedIds = placeInPriorityFence(target.todos, id, priority);
+      const updates = sortOrdersForOrder(orderedIds);
+      const byId = new Map(updates.map((update) => [update.id, update.sortOrder]));
+      const nextList = list.map((todo) =>
+        byId.has(todo.id) ? { ...todo, sortOrder: byId.get(todo.id) as number } : todo,
+      );
+      const saved = await reorderTodos(updates);
+      return { list: nextList, saved };
+    },
+    [clock],
+  );
+
+  const handlePriority = useCallback(
+    async (todo: Todo) => {
+      if (todo.done) return;
+      const nextPriority = !todo.priority;
+      const previous = todos;
+      const drafted: TodoDraft = {
+        owner: todo.owner,
+        title: todo.title,
+        dueDate: todo.dueDate,
+        dueTime: todo.dueTime,
+        priority: nextPriority,
+      };
+      const withFlag = todos.map((row) =>
+        row.id === todo.id ? { ...row, priority: nextPriority } : row,
+      );
+
+      setTodos(withFlag);
+      setNotice(null);
+
+      const savedFields = await updateTodo(todo.id, drafted);
+      if (!savedFields) {
+        setTodos(previous);
+        setNotice({ text: 'That change did not save.', tone: 'problem' });
+        return;
+      }
+
+      const fenced = await applyFenceOrder(withFlag, todo.id, nextPriority);
+      if (!fenced.saved) {
+        setReloadToken((token) => token + 1);
+        setNotice({ text: 'That order did not save.', tone: 'problem' });
+        return;
+      }
+      setTodos(fenced.list);
+    },
+    [todos, applyFenceOrder],
+  );
+
+  const handleSave = useCallback(
+    async (id: string, draft: TodoDraft) => {
+      const existing = todos.find((todo) => todo.id === id);
+      if (existing === undefined) return false;
+
+      const priorityChanged = existing.priority !== draft.priority;
+      const dueChanged =
+        existing.dueDate !== draft.dueDate || existing.dueTime !== draft.dueTime;
+      const needsFence = priorityChanged || (draft.priority && dueChanged);
+
+      const saved = await updateTodo(id, draft);
+      if (!saved) {
+        setNotice({ text: 'That edit did not save.', tone: 'problem' });
+        return false;
+      }
+
+      if (needsFence) {
+        const withEdit = todos.map((todo) =>
+          todo.id === id
+            ? {
+                ...todo,
+                title: draft.title.trim(),
+                dueDate: draft.dueDate,
+                dueTime: draft.dueTime,
+                priority: draft.priority,
+              }
+            : todo,
+        );
+        const fenced = await applyFenceOrder(withEdit, id, draft.priority);
+        if (!fenced.saved) {
+          setNotice({ text: 'That edit did not save.', tone: 'problem' });
+          return false;
+        }
+      }
+
+      setNotice(null);
+      setReloadToken((token) => token + 1);
+      return true;
+    },
+    [todos, applyFenceOrder],
+  );
 
   const handleDelete = useCallback(async (id: string) => {
     const removed = await deleteTodo(id);
@@ -214,7 +318,7 @@ export default function TodoBoard() {
       if (group === undefined) return;
 
       const previous = todos;
-      const orderedIds = reorderInGroup(group.todos, activeId, overId);
+      const orderedIds = clampReorderInGroup(group.todos, activeId, overId);
       const updates = sortOrdersForOrder(orderedIds);
       const byId = new Map(updates.map((update) => [update.id, update.sortOrder]));
 
@@ -313,6 +417,7 @@ export default function TodoBoard() {
             group={group}
             onToggle={handleToggle}
             onOpen={setEditing}
+            onPriority={handlePriority}
           />
         </DndContext>
       ))}

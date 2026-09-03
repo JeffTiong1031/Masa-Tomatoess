@@ -10,6 +10,8 @@ import {
   nextWakeDelayMs,
   OVERDUE_WAKE_SLACK_MS,
   reorderInGroup,
+  clampReorderInGroup,
+  placeInPriorityFence,
   sortOrdersForOrder,
   SORT_ORDER_GAP,
 } from './todoList';
@@ -24,6 +26,7 @@ function open(overrides: Partial<OpenTodo> = {}): OpenTodo {
     dueDate: null,
     dueTime: null,
     sortOrder: 100,
+    priority: false,
     done: false,
     completedAt: null,
     createdAt: '2026-08-26T08:00:00.000Z',
@@ -101,6 +104,66 @@ describe('compareTodos', () => {
     const lateTimeFirst = open({ id: 'late', dueDate: TODAY, dueTime: '17:00', sortOrder: 100 });
     const earlyTimeSecond = open({ id: 'early', dueDate: TODAY, dueTime: '09:00', sortOrder: 200 });
     expect(compareTodos(lateTimeFirst, earlyTimeSecond)).toBeLessThan(0);
+  });
+
+  it('puts flagged tasks before unflagged ones even when sortOrder is later', () => {
+    const flagged = open({ id: 'flagged', sortOrder: 300, priority: true });
+    const plain = open({ id: 'plain', sortOrder: 100, priority: false });
+    expect(compareTodos(flagged, plain)).toBeLessThan(0);
+  });
+});
+
+describe('clampReorderInGroup', () => {
+  const group = [
+    open({ id: 'p1', sortOrder: 100, priority: true }),
+    open({ id: 'p2', sortOrder: 200, priority: true }),
+    open({ id: 'u1', sortOrder: 300, priority: false }),
+    open({ id: 'u2', sortOrder: 400, priority: false }),
+  ];
+
+  it('lets flagged tasks reorder among flagged ones', () => {
+    expect(clampReorderInGroup(group, 'p2', 'p1')).toEqual(['p2', 'p1', 'u1', 'u2']);
+  });
+
+  it('snaps a flagged task dragged onto unflagged to the last flagged slot', () => {
+    expect(clampReorderInGroup(group, 'p1', 'u1')).toEqual(['p2', 'p1', 'u1', 'u2']);
+  });
+
+  it('lets unflagged tasks reorder among unflagged ones', () => {
+    expect(clampReorderInGroup(group, 'u2', 'u1')).toEqual(['p1', 'p2', 'u2', 'u1']);
+  });
+
+  it('snaps an unflagged task dragged onto flagged to the first unflagged slot', () => {
+    expect(clampReorderInGroup(group, 'u2', 'p1')).toEqual(['p1', 'p2', 'u2', 'u1']);
+  });
+});
+
+describe('placeInPriorityFence', () => {
+  const group = [
+    open({ id: 'p1', sortOrder: 100, priority: true }),
+    open({ id: 'p2', sortOrder: 200, priority: true }),
+    open({ id: 'u1', sortOrder: 300, priority: false }),
+    open({ id: 'u2', sortOrder: 400, priority: false }),
+  ];
+
+  it('puts a newly flagged task after the existing flagged block', () => {
+    expect(placeInPriorityFence(group, 'u1', true)).toEqual(['p1', 'p2', 'u1', 'u2']);
+  });
+
+  it('puts an unflagged task at the top of the unflagged block', () => {
+    expect(placeInPriorityFence(group, 'p1', false)).toEqual(['p2', 'p1', 'u1', 'u2']);
+  });
+
+  it('places a flagged task arriving from another section at the end of that section flagged block', () => {
+    const destination = [
+      open({ id: 'p1', sortOrder: 100, priority: true }),
+      open({ id: 'u1', sortOrder: 200, priority: false }),
+    ];
+    expect(placeInPriorityFence(destination, 'incoming', true)).toEqual([
+      'p1',
+      'incoming',
+      'u1',
+    ]);
   });
 });
 
