@@ -15,7 +15,8 @@ function rule(over: Partial<TimetableRule> = {}): TimetableRule {
     title: 'Maths',
     startTime: '09:00',
     endTime: '11:00',
-    swatch: 1,
+    swatchId: 's1',
+    textOverride: null,
     ...over,
   };
 }
@@ -26,10 +27,13 @@ function draft(over: Partial<RuleDraft> = {}): RuleDraft {
     title: 'Physics',
     startTime: '13:00',
     endTime: '15:00',
-    swatch: 2,
+    swatchId: 's1',
+    textOverride: null,
     ...over,
   };
 }
+
+const validDraft = draft();
 
 describe('validateRule', () => {
   it('rejects an empty title', () => {
@@ -102,6 +106,11 @@ describe('validateRule', () => {
     const same = draft({ startTime: '09:00', endTime: '11:00' });
     expect(validateRule(same, 'Jeff', [rule()], 'r1')).toBeNull();
   });
+
+  it('refuses a missing swatch', () => {
+    const draft = { ...validDraft, swatchId: '' };
+    expect(validateRule(draft, 'Jeff', [], null)?.kind).toBe('swatchRequired');
+  });
 });
 
 describe('ruleMessage', () => {
@@ -120,6 +129,7 @@ describe('ruleMessage', () => {
   it('has a sentence for every error kind', () => {
     expect(ruleMessage({ kind: 'titleRequired' }, 0)).toMatch(/name/i);
     expect(ruleMessage({ kind: 'endNotAfterStart' }, 0)).toMatch(/after/i);
+    expect(ruleMessage({ kind: 'swatchRequired' }, 0)).toBe('Pick a colour.');
   });
 });
 

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Modal from '@/components/ui/Modal';
-import { swatchToken, type Category } from '@/lib/categories';
+import type { CategoryView } from '@/lib/categories';
 import { validate, type EventDraft, type EventField } from '@/lib/eventForm';
 import type { UserName } from '@/lib/identity';
 
@@ -26,7 +26,7 @@ export default function EventModal({
   onClose,
 }: {
   draft: EventDraft;
-  categories: Category[];
+  categories: CategoryView[];
   owner: UserName;
   canEdit: boolean;
   isEditing: boolean;
@@ -256,7 +256,7 @@ export default function EventModal({
               >
                 <span
                   className="h-2 w-2 rounded-full"
-                  style={{ background: `var(${swatchToken(category.swatch)})` }}
+                  style={{ background: category.fill }}
                   aria-hidden
                 />
                 {category.name}

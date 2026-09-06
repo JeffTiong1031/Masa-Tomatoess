@@ -1,19 +1,34 @@
 import { WEEKDAYS_SHORT, type Weekday } from '@/lib/dates';
-import { swatchToken } from '@/lib/categories';
+import {
+  resolveTimetablePaint,
+  type ColourSwatch,
+} from '@/lib/colourPalette';
 import { rowSpanOf } from '@/lib/timetableGrid';
 import type { TimetableRule } from '@/lib/timetableRule';
 
 const HEADER_ROWS = 1;
+const LINE =
+  'border-r border-b border-[color-mix(in_srgb,var(--mt-text)_28%,var(--mt-surface))]';
+
+function paintOf(rule: TimetableRule, swatches: ColourSwatch[]) {
+  const swatch = swatches.find((item) => item.id === rule.swatchId);
+  if (swatch === undefined) {
+    return { fill: 'var(--mt-surface)', text: 'var(--mt-text)' };
+  }
+  return resolveTimetablePaint(swatch, rule.textOverride);
+}
 
 export default function TimetableGrid({
   days,
   hours,
   today,
+  swatches,
   onPick,
 }: {
   days: TimetableRule[][];
   hours: { from: number; to: number };
   today: Weekday;
+  swatches: ColourSwatch[];
   onPick: (rule: TimetableRule) => void;
 }) {
   const rowCount = hours.to - hours.from;
@@ -21,17 +36,17 @@ export default function TimetableGrid({
   return (
     <div className="overflow-x-auto">
       <div
-        className="grid min-w-[45rem] gap-px"
+        className={`grid min-w-[45rem] border-l border-t border-[color-mix(in_srgb,var(--mt-text)_28%,var(--mt-surface))]`}
         style={{
           gridTemplateColumns: '2.75rem repeat(7, minmax(6rem, 1fr))',
           gridTemplateRows: `auto repeat(${rowCount}, 2.75rem)`,
         }}
       >
-        <div />
+        <div className={`bg-[var(--mt-surface)] ${LINE}`} />
         {WEEKDAYS_SHORT.map((name, index) => (
           <div
             key={name}
-            className={`pb-2 text-center text-xs font-semibold ${
+            className={`bg-[var(--mt-surface)] pb-2 text-center text-xs font-semibold ${LINE} ${
               index === today
                 ? 'text-[var(--mt-accent-ink)]'
                 : 'text-[var(--mt-text)]'
@@ -44,7 +59,7 @@ export default function TimetableGrid({
         {Array.from({ length: rowCount }, (_, index) => (
           <div
             key={`hour-${index}`}
-            className="pr-2 text-right text-[10px] leading-[2.75rem] text-[var(--mt-text-subtle)]"
+            className={`bg-[var(--mt-surface)] pr-2 text-right text-[10px] leading-[2.75rem] text-[var(--mt-text-subtle)] ${LINE}`}
             style={{ gridColumn: 1, gridRow: index + 1 + HEADER_ROWS }}
           >
             {`${hours.from + index}`.padStart(2, '0')}
@@ -55,7 +70,7 @@ export default function TimetableGrid({
           Array.from({ length: rowCount }, (_, index) => (
             <div
               key={`cell-${dayIndex}-${index}`}
-              className={`rounded-sm ${
+              className={`${LINE} ${
                 dayIndex === today
                   ? 'bg-[color-mix(in_srgb,var(--mt-accent)_12%,var(--mt-surface))]'
                   : 'bg-[var(--mt-surface)]'
@@ -68,16 +83,18 @@ export default function TimetableGrid({
         {days.map((dayRules, dayIndex) =>
           dayRules.map((rule) => {
             const span = rowSpanOf(rule, hours.from);
+            const paint = paintOf(rule, swatches);
             return (
               <button
                 key={rule.id}
                 type="button"
                 onClick={() => onPick(rule)}
-                className="overflow-hidden rounded-md px-2 py-1 text-left text-[11px] font-semibold leading-tight text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--mt-focus)]"
+                className="z-[1] m-px overflow-hidden rounded-md px-2 py-1 text-left text-[11px] font-semibold leading-tight focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--mt-focus)]"
                 style={{
                   gridColumn: dayIndex + 2,
                   gridRow: `${span.startRow + HEADER_ROWS} / ${span.endRow + HEADER_ROWS}`,
-                  background: `var(${swatchToken(rule.swatch)})`,
+                  background: paint.fill,
+                  color: paint.text,
                 }}
               >
                 {rule.title}

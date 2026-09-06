@@ -170,8 +170,8 @@ const CAL_TODAY = '2026-09-02';
 const CAL_NOW = '14:30:00';
 
 const CATS: Category[] = [
-  { id: 'c-work', name: 'Work', swatch: 1, position: 0 },
-  { id: 'c-sport', name: 'Sport', swatch: 2, position: 1 },
+  { id: 'c-work', name: 'Work', swatchId: 's1', position: 0 },
+  { id: 'c-sport', name: 'Sport', swatchId: 's2', position: 1 },
 ];
 
 function ev(over: Partial<CalendarEvent> & { id: string }): CalendarEvent {

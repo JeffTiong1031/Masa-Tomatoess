@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Card from '@/components/ui/Card';
+import type { ColourSwatch } from '@/lib/colourPalette';
+import { fetchPalette } from '@/lib/colourRepo';
 import { todayWeekday } from '@/lib/dates';
 import { isUserName, USERS, type UserName } from '@/lib/identity';
 import { gridHours, rulesByWeekday } from '@/lib/timetableGrid';
@@ -25,34 +27,44 @@ export default function TimetableBoard() {
   const stored = mounted ? localStorage.getItem('user_name') : null;
   const me = isUserName(stored) ? stored : null;
 
-  const [shown, setShown] = useState<UserName | null>(me);
+  const [shownOverride, setShownOverride] = useState<UserName | null>(null);
+  const shown = shownOverride ?? me;
   const [rules, setRules] = useState<TimetableRule[] | null>(null);
+  const [swatches, setSwatches] = useState<ColourSwatch[] | null>(null);
+  const [paletteOwner, setPaletteOwner] = useState<UserName | null>(null);
   const [failed, setFailed] = useState(false);
   const [editing, setEditing] = useState<Editing>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    const loaded = await fetchRules();
-    if (loaded === null) {
+  const load = useCallback(async (owner: UserName) => {
+    const [loaded, palette] = await Promise.all([
+      fetchRules(),
+      fetchPalette(owner, 'timetable'),
+    ]);
+    if (loaded === null || palette === null) {
       setFailed(true);
       return;
     }
+    setFailed(false);
     setRules(loaded);
+    setSwatches(palette);
+    setPaletteOwner(owner);
   }, []);
 
   useEffect(() => {
-    if (me === null) return;
+    if (me === null || shown === null) return;
     (async () => {
-      await load();
+      await load(shown);
     })();
-  }, [me, load]);
+  }, [me, shown, load]);
 
   if (me === null || shown === null) return null;
 
   const isMine = shown === me;
   const visible = (rules ?? []).filter((rule) => rule.owner === shown);
   const hours = gridHours(visible);
+  const palette = swatches ?? [];
 
   const commit = async (run: () => Promise<boolean>) => {
     setIsSaving(true);
@@ -64,8 +76,14 @@ export default function TimetableBoard() {
       return;
     }
     setEditing(null);
-    await load();
+    await load(shown);
   };
+
+  const ready =
+    rules !== null &&
+    swatches !== null &&
+    paletteOwner === shown &&
+    !failed;
 
   return (
     <>
@@ -75,7 +93,10 @@ export default function TimetableBoard() {
             <button
               key={user}
               type="button"
-              onClick={() => setShown(user)}
+              onClick={() => {
+                setEditing(null);
+                setShownOverride(user);
+              }}
               aria-pressed={shown === user}
               className={`min-h-11 px-4 text-sm ${
                 shown === user
@@ -100,14 +121,16 @@ export default function TimetableBoard() {
               onClick={() => {
                 setFailed(false);
                 setRules(null);
-                load();
+                setSwatches(null);
+                setPaletteOwner(null);
+                void load(shown);
               }}
               className="min-h-11 rounded-xl border border-[var(--mt-border)] px-4 text-sm font-semibold text-[var(--mt-text)]"
             >
               Retry
             </button>
           </div>
-        ) : rules === null ? (
+        ) : !ready ? (
           <div className="h-40 rounded-xl bg-[color-mix(in_srgb,var(--mt-text)_6%,transparent)]" aria-busy>
             <span className="sr-only">Loading the timetable</span>
           </div>
@@ -116,14 +139,16 @@ export default function TimetableBoard() {
             days={rulesByWeekday(visible)}
             hours={hours}
             today={todayWeekday()}
+            swatches={palette}
             onPick={(rule) => isMine && setEditing({ rule })}
           />
         )}
       </Card>
 
-      {rules !== null && !failed && (
+      {ready && (
         <RecurringList
           rules={visible}
+          swatches={palette}
           isMine={isMine}
           onAdd={() => {
             setSaveError(null);
@@ -140,15 +165,20 @@ export default function TimetableBoard() {
         />
       )}
 
-      {editing !== null && (
+      {editing !== null && swatches !== null && paletteOwner === shown && (
         <RuleModal
+          key={editing.rule?.id ?? 'new'}
           open
           owner={shown}
           editing={editing.rule}
-          rules={rules ?? []}
+          rules={visible}
+          swatches={swatches}
+          isMine={isMine}
           isSaving={isSaving}
           error={saveError}
           onClose={() => setEditing(null)}
+          onSwatchesChange={setSwatches}
+          onRefresh={() => load(shown)}
           onSave={(draft: RuleDraft) =>
             commit(() =>
               editing.rule === null

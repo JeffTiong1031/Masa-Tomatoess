@@ -1,17 +1,24 @@
 import { Plus, Trash2 } from 'lucide-react';
 import Card from '@/components/ui/Card';
-import { swatchToken } from '@/lib/categories';
+import type { ColourSwatch } from '@/lib/colourPalette';
 import { WEEKDAYS_SHORT } from '@/lib/dates';
 import { sortRules, type TimetableRule } from '@/lib/timetableRule';
 
+function fillOf(rule: TimetableRule, swatches: ColourSwatch[]) {
+  const swatch = swatches.find((item) => item.id === rule.swatchId);
+  return swatch === undefined ? 'var(--mt-surface)' : swatch.fill;
+}
+
 export default function RecurringList({
   rules,
+  swatches,
   isMine,
   onAdd,
   onEdit,
   onClearAll,
 }: {
   rules: TimetableRule[];
+  swatches: ColourSwatch[];
   isMine: boolean;
   onAdd: () => void;
   onEdit: (rule: TimetableRule) => void;
@@ -55,7 +62,7 @@ export default function RecurringList({
                 <span
                   aria-hidden
                   className="h-3 w-3 shrink-0 rounded-sm"
-                  style={{ background: `var(${swatchToken(rule.swatch)})` }}
+                  style={{ background: fillOf(rule, swatches) }}
                 />
                 <span className="w-9 shrink-0 text-xs text-[var(--mt-text-subtle)]">
                   {WEEKDAYS_SHORT[rule.weekday]}

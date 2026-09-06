@@ -126,7 +126,7 @@ export default function TimelineBoard() {
 
   return (
     <div className="mb-4">
-      <div className="mb-4 flex items-center gap-3">
+      <div className="mb-4 flex w-full items-center gap-3">
         <DayTabs selected={selected} today={todayWeekday()} onSelect={(day) => {
           setSelected(day);
           setEditing(false);
@@ -135,7 +135,7 @@ export default function TimelineBoard() {
         <button
           type="button"
           onClick={() => setClearing(true)}
-          className="min-h-11 rounded-full border border-[var(--mt-border)] px-4 text-sm text-[var(--mt-text-muted)]"
+          className="min-h-11 shrink-0 rounded-full border border-[var(--mt-border)] px-4 text-sm text-[var(--mt-text-muted)]"
         >
           Clear
         </button>

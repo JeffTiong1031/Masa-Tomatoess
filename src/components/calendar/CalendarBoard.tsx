@@ -17,10 +17,12 @@ import {
   updateCategory,
   updateEvent,
 } from '@/lib/calendarRepo';
-import type { Category, SwatchIndex } from '@/lib/categories';
+import { withCategoryFills, type Category } from '@/lib/categories';
+import type { ColourSwatch } from '@/lib/colourPalette';
+import { fetchPalette } from '@/lib/colourRepo';
 import { addDays, addMonths, monthOf, timeISO, todayISO } from '@/lib/dates';
 import { toTiming, type EventDraft } from '@/lib/eventForm';
-import { isUserName, type UserName } from '@/lib/identity';
+import { isUserName, partnerOf, type UserName } from '@/lib/identity';
 import AssistantButton from '@/components/assistant/AssistantButton';
 import { calendarSection } from '@/components/assistant/calendarSection';
 import CategoryManager from './CategoryManager';
@@ -84,6 +86,8 @@ export default function CalendarBoard() {
 
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [swatches, setSwatches] = useState<ColourSwatch[]>([]);
+  const [partnerSwatches, setPartnerSwatches] = useState<ColourSwatch[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [failed, setFailed] = useState(false);
 
@@ -113,22 +117,30 @@ export default function CalendarBoard() {
   }, [mounted]);
 
   const load = useCallback(async () => {
-    const [rows, cats] = await Promise.all([fetchEvents(), fetchCategories()]);
-    if (rows === null || cats === null) {
+    if (today === '') return;
+    const [rows, cats, mine, theirs] = await Promise.all([
+      fetchEvents(),
+      fetchCategories(),
+      fetchPalette(signedInAs, 'calendar'),
+      fetchPalette(partnerOf(signedInAs), 'calendar'),
+    ]);
+    if (rows === null || cats === null || mine === null || theirs === null) {
       setFailed(true);
       return;
     }
     setEvents(rows);
     setCategories(cats);
+    setSwatches(mine);
+    setPartnerSwatches(theirs);
     setLoaded(true);
-  }, []);
+  }, [signedInAs, today]);
 
   useEffect(() => {
-    if (!mounted) return;
+    if (!mounted || today === '') return;
     queueMicrotask(() => {
       load();
     });
-  }, [mounted, load]);
+  }, [mounted, load, today]);
 
   const visible = useMemo(
     () => applyFilters(events, { owner, categoryIds }),
@@ -151,6 +163,11 @@ export default function CalendarBoard() {
   );
 
   const section = useMemo(() => calendarSection({ categories, month }), [categories, month]);
+
+  const categoryViews = useMemo(
+    () => withCategoryFills(categories, [...swatches, ...partnerSwatches]),
+    [categories, swatches, partnerSwatches],
+  );
 
   const openAdd = () => {
     setDraft(blankDraft(selectedDate));
@@ -215,9 +232,9 @@ export default function CalendarBoard() {
     closeModal();
   };
 
-  const handleAddCategory = async (name: string, swatch: SwatchIndex) => {
+  const handleAddCategory = async (name: string, swatchId: string) => {
     setIsSaving(true);
-    await insertCategory(name, swatch, categories.length);
+    await insertCategory(name, swatchId, categories.length);
     setIsSaving(false);
     await load();
   };
@@ -225,13 +242,13 @@ export default function CalendarBoard() {
   const handleRenameCategory = async (
     id: string,
     name: string,
-    swatch: SwatchIndex,
+    swatchId: string,
   ) => {
     const previous = categories;
     setCategories((current) =>
       current.map((item) => (item.id === id ? { ...item, name } : item)),
     );
-    const ok = await updateCategory(id, name, swatch);
+    const ok = await updateCategory(id, name, swatchId);
     if (!ok) setCategories(previous);
   };
 
@@ -282,7 +299,7 @@ export default function CalendarBoard() {
 
       <FilterStrip
         owner={owner}
-        categories={categories}
+        categories={categoryViews}
         categoryIds={categoryIds}
         onOwner={setOwner}
         onToggleCategory={(id) =>
@@ -311,7 +328,7 @@ export default function CalendarBoard() {
           <SearchResults
             groups={matches}
             today={today}
-            categories={categories}
+            categories={categoryViews}
             signedInAs={signedInAs}
             onOpen={openEvent}
           />
@@ -370,7 +387,7 @@ export default function CalendarBoard() {
             <DayPanel
               date={selectedDate}
               events={dayEvents}
-              categories={categories}
+              categories={categoryViews}
               signedInAs={signedInAs}
               onOpen={openEvent}
             />
@@ -390,7 +407,7 @@ export default function CalendarBoard() {
       {modal && draft && (
         <EventModal
           draft={draft}
-          categories={categories}
+          categories={categoryViews}
           owner={modal.mode === 'edit' ? modal.event.owner : signedInAs}
           canEdit={modal.mode === 'add' || modal.event.owner === signedInAs}
           isEditing={modal.mode === 'edit'}
@@ -407,10 +424,13 @@ export default function CalendarBoard() {
         <CategoryManager
           categories={categories}
           events={events}
+          swatches={swatches}
+          owner={signedInAs}
           isSaving={isSaving}
           onAdd={handleAddCategory}
           onRename={handleRenameCategory}
           onDelete={handleDeleteCategory}
+          onSwatchesChange={setSwatches}
           onClose={() => {
             setManagingCategories(false);
             load();
