@@ -8,6 +8,7 @@ import {
   type KeyboardEvent,
   type PointerEvent,
 } from 'react';
+import { isHexColor } from '@/lib/colourPalette';
 import { hexToHsv, hsvToHex } from '@/lib/colourWheel';
 
 const HUE_RAMP =
@@ -15,6 +16,13 @@ const HUE_RAMP =
 
 function clamp01(n: number): number {
   return Math.min(1, Math.max(0, n));
+}
+
+function normalizeHexInput(raw: string): string | null {
+  const trimmed = raw.trim();
+  const withHash = trimmed.startsWith('#') ? trimmed : `#${trimmed}`;
+  const upper = withHash.toUpperCase();
+  return isHexColor(upper) ? upper : null;
 }
 
 export default function ColourWheel({
@@ -26,13 +34,17 @@ export default function ColourWheel({
 }) {
   const parsed = hexToHsv(value);
   const [heldHue, setHeldHue] = useState(parsed.h);
+  const [hexEditing, setHexEditing] = useState(false);
+  const [hexDraft, setHexDraft] = useState(value.toUpperCase());
   if (parsed.s > 0 && heldHue !== parsed.h) {
     setHeldHue(parsed.h);
   }
   const hue = parsed.s === 0 ? heldHue : parsed.h;
+  const hexShown = hexEditing ? hexDraft : value.toUpperCase();
   const squareRef = useRef<HTMLDivElement>(null);
   const hueId = useId();
   const svId = useId();
+  const hexId = useId();
 
   const emit = useCallback(
     (h: number, s: number, v: number) => {
@@ -41,6 +53,17 @@ export default function ColourWheel({
     },
     [onChange],
   );
+
+  const commitHex = () => {
+    const next = normalizeHexInput(hexDraft);
+    setHexEditing(false);
+    if (next === null) {
+      setHexDraft(value.toUpperCase());
+      return;
+    }
+    setHexDraft(next);
+    onChange(next);
+  };
 
   const pickSv = useCallback(
     (clientX: number, clientY: number) => {
@@ -134,6 +157,33 @@ export default function ColourWheel({
             />
           </div>
         </div>
+        <label
+          htmlFor={hexId}
+          className="block text-xs font-semibold text-[var(--mt-text-muted)]"
+        >
+          Hex
+          <input
+            id={hexId}
+            value={hexShown}
+            spellCheck={false}
+            autoCapitalize="characters"
+            autoCorrect="off"
+            onFocus={() => {
+              setHexDraft(value.toUpperCase());
+              setHexEditing(true);
+            }}
+            onChange={(e) => setHexDraft(e.target.value)}
+            onBlur={commitHex}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                commitHex();
+              }
+            }}
+            className="mt-1 min-h-11 w-full rounded-xl border border-[var(--mt-border)] bg-[var(--mt-surface)] px-3 font-mono text-sm text-[var(--mt-text)] focus:outline-none focus:ring-2 focus:ring-[var(--mt-accent)]"
+            placeholder="#FF0000"
+          />
+        </label>
       </div>
     </div>
   );

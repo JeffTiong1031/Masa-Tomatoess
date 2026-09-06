@@ -12,7 +12,7 @@ export default function DayTabs({
   onSelect: (day: Weekday) => void;
 }) {
   return (
-    <div className="mb-4 grid grid-cols-7 gap-1.5" role="tablist">
+    <div className="grid w-full min-w-0 flex-1 grid-cols-7 gap-1.5" role="tablist">
       {DAYS.map((day) => (
         <button
           key={day}
@@ -21,7 +21,7 @@ export default function DayTabs({
           aria-selected={selected === day}
           aria-label={day === today ? `${WEEKDAYS[day]}, today` : WEEKDAYS[day]}
           onClick={() => onSelect(day)}
-          className={`min-h-11 rounded-xl border text-sm font-semibold transition-colors ${
+          className={`min-h-11 w-full rounded-xl border text-sm font-semibold transition-colors ${
             selected === day
               ? 'border-[var(--mt-text)] bg-[var(--mt-text)] text-[var(--mt-surface)]'
               : day === today
