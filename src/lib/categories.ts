@@ -7,6 +7,29 @@ export interface Category {
   position: number;
 }
 
+export interface CategorySwatchRow {
+  id: string;
+  name: string;
+  swatch_id: string | null;
+  position: number;
+}
+
+export function categoriesFromSwatchRows(
+  rows: CategorySwatchRow[],
+): Category[] {
+  const categories: Category[] = [];
+  for (const row of rows) {
+    if (row.swatch_id === null) continue;
+    categories.push({
+      id: row.id,
+      name: row.name,
+      swatchId: row.swatch_id,
+      position: row.position,
+    });
+  }
+  return categories;
+}
+
 export interface CategoryDraft {
   name: string;
   swatchId: string;

@@ -12,6 +12,35 @@ export interface TimetableRule {
   textOverride: string | null;
 }
 
+export interface RuleSwatchRow {
+  id: string;
+  owner: UserName;
+  weekday: Weekday;
+  title: string;
+  start_time: string;
+  end_time: string;
+  swatch_id: string | null;
+  text_override: string | null;
+}
+
+export function rulesFromSwatchRows(rows: RuleSwatchRow[]): TimetableRule[] {
+  const rules: TimetableRule[] = [];
+  for (const row of rows) {
+    if (row.swatch_id === null) continue;
+    rules.push({
+      id: row.id,
+      owner: row.owner,
+      weekday: row.weekday,
+      title: row.title,
+      startTime: row.start_time.slice(0, 5),
+      endTime: row.end_time.slice(0, 5),
+      swatchId: row.swatch_id,
+      textOverride: row.text_override,
+    });
+  }
+  return rules;
+}
+
 export interface RuleDraft {
   weekday: Weekday;
   title: string;
