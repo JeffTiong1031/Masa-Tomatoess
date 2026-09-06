@@ -182,6 +182,7 @@ body {
 }
 
 [data-mood='light'] {
+  color-scheme: light;
   --mt-bg: var(--mac-cream);
   --mt-surface: var(--mac-white);
   --mt-surface-raised: var(--mac-white);
@@ -220,6 +221,7 @@ body {
 }
 
 [data-mood='dark'] {
+  color-scheme: dark;
   --mt-bg: var(--mac-plum);
   --mt-surface: var(--mac-plum-raised);
   --mt-surface-raised: color-mix(in srgb, var(--mac-plum-raised) 80%, var(--mac-shell) 6%);
