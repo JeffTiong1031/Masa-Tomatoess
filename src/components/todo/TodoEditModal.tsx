@@ -1,9 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { Flag, Trash2 } from 'lucide-react';
+import { Flag, Trash2, Calendar } from 'lucide-react';
 import Modal from '@/components/ui/Modal';
 import type { Todo, TodoDraft } from '@/lib/todo';
+import { formatDateInputDisplay } from '@/lib/dateInputHint';
 
 export default function TodoEditModal({
   todo,
@@ -22,6 +23,8 @@ export default function TodoEditModal({
   const [priority, setPriority] = useState(todo.priority);
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
+  const dateLabel = formatDateInputDisplay(dueDate);
+  const dateEmpty = dueDate === '';
 
   const save = async () => {
     const trimmed = title.trim();
@@ -91,13 +94,34 @@ export default function TodoEditModal({
           className="min-h-11 w-full rounded-xl bg-[var(--mt-bg)] px-3 text-[var(--mt-text)]"
         />
         <div className="flex flex-wrap items-center gap-2">
-          <input
-            type="date"
-            value={dueDate}
-            onChange={(event) => setDueDate(event.target.value)}
-            aria-label="Due date"
-            className="min-h-11 rounded-xl bg-[var(--mt-bg)] px-3 text-sm text-[var(--mt-text)]"
-          />
+          <div className="relative min-h-11 min-w-[11rem]">
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-0 z-10 flex items-center gap-2 rounded-xl bg-[var(--mt-bg)] px-3 text-sm"
+            >
+              <span
+                className={
+                  dateEmpty
+                    ? 'text-[var(--mt-text-muted)]'
+                    : 'text-[var(--mt-text)]'
+                }
+              >
+                {dateLabel}
+              </span>
+              <Calendar
+                size={16}
+                strokeWidth={1.9}
+                className="ml-auto text-[var(--mt-text-muted)]"
+              />
+            </div>
+            <input
+              type="date"
+              value={dueDate}
+              onChange={(event) => setDueDate(event.target.value)}
+              aria-label="Due date"
+              className="absolute inset-0 z-20 min-h-11 w-full cursor-pointer opacity-0"
+            />
+          </div>
           {dueDate === '' ? null : (
             <input
               type="time"
