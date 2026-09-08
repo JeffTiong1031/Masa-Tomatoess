@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Flag, Trash2, Calendar } from 'lucide-react';
 import Modal from '@/components/ui/Modal';
 import type { Todo, TodoDraft } from '@/lib/todo';
-import { formatDateInputDisplay } from '@/lib/dateInputHint';
+import { formatDateInputDisplay, revealDatePicker } from '@/lib/dateInputHint';
 
 export default function TodoEditModal({
   todo,
@@ -118,6 +118,7 @@ export default function TodoEditModal({
               type="date"
               value={dueDate}
               onChange={(event) => setDueDate(event.target.value)}
+              onClick={(event) => revealDatePicker(event.currentTarget)}
               aria-label="Due date"
               className="absolute inset-0 z-20 min-h-11 w-full cursor-pointer opacity-0"
             />
