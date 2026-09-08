@@ -5,3 +5,7 @@ export function formatDateInputDisplay(isoDate: string): string {
   const [year, month, day] = isoDate.split('-');
   return `${day}/${month}/${year}`;
 }
+
+export function revealDatePicker(input: { showPicker?: () => void }) {
+  input.showPicker?.();
+}

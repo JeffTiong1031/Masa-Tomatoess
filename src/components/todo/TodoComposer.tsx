@@ -4,7 +4,7 @@ import { useState, type FormEvent } from 'react';
 import { Flag, Plus, Calendar } from 'lucide-react';
 import type { TodoDraft } from '@/lib/todo';
 import type { UserName } from '@/lib/identity';
-import { formatDateInputDisplay } from '@/lib/dateInputHint';
+import { formatDateInputDisplay, revealDatePicker } from '@/lib/dateInputHint';
 
 export default function TodoComposer({
   owner,
@@ -79,6 +79,7 @@ export default function TodoComposer({
             type="date"
             value={dueDate}
             onChange={(event) => setDueDate(event.target.value)}
+            onClick={(event) => revealDatePicker(event.currentTarget)}
             aria-label="Due date"
             className="absolute inset-0 z-20 min-h-11 w-full cursor-pointer opacity-0"
           />
