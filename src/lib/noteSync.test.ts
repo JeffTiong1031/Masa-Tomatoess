@@ -99,4 +99,17 @@ describe('reconcileNotes', () => {
     expect(mocks.saveNote).toHaveBeenCalledOnce();
     expect(mocks.upsertNote).not.toHaveBeenCalled();
   });
+
+  it('does not contact the cloud when the notes table is missing', async () => {
+    const local = note({ id: 'local', body: 'device' });
+    mocks.loadNotes.mockResolvedValue([local]);
+    mocks.loadPendingDeletes.mockResolvedValue(['gone']);
+    mocks.fetchNotes.mockResolvedValue({ status: 'missing-table' });
+
+    await expect(reconcileNotes('Jeff', LATE, 'seed')).resolves.toEqual([local]);
+
+    expect(mocks.deleteNoteRemote).not.toHaveBeenCalled();
+    expect(mocks.clearPendingDelete).not.toHaveBeenCalled();
+    expect(mocks.upsertNote).not.toHaveBeenCalled();
+  });
 });

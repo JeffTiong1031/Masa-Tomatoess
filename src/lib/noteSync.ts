@@ -28,10 +28,12 @@ export async function reconcileNotes(
     merged = seedPad(owner, nowIso, newId);
   }
 
-  for (const id of pending) {
-    const deleted = await deleteNoteRemote(id, owner);
-    if (deleted) {
-      await clearPendingDelete(id);
+  if (remoteFetch.status === 'ok') {
+    for (const id of pending) {
+      const deleted = await deleteNoteRemote(id, owner);
+      if (deleted) {
+        await clearPendingDelete(id);
+      }
     }
   }
 
