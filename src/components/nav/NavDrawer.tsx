@@ -3,9 +3,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, LogOut, Menu, X } from 'lucide-react';
+import { Home, LogOut, Menu, StickyNote, X } from 'lucide-react';
 import { ALL_LINKS, isActiveHref, isHubRoute } from './navLinks';
 import { accentVar } from '@/components/ui/PageShell';
+import { useNotesUiStore } from '@/store/useNotesUiStore';
 
 const CHIP_CLASS =
   'fixed z-[60] inline-flex h-11 w-11 items-center justify-center rounded-full border border-[var(--mt-border)] bg-[var(--mt-surface)] text-[var(--mt-text)] shadow-[0_6px_18px_rgba(0,0,0,0.10)]';
@@ -200,6 +201,19 @@ export default function NavDrawer() {
                   </Link>
                 );
               })}
+              <button
+                type="button"
+                onClick={() => {
+                  useNotesUiStore.getState().setOpen(true);
+                  close();
+                }}
+                className="mb-0.5 flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-sm text-[var(--mt-text-muted)]"
+              >
+                <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[color-mix(in_srgb,var(--mt-text)_6%,transparent)]">
+                  <StickyNote size={17} strokeWidth={1.9} aria-hidden />
+                </span>
+                Notes
+              </button>
             </nav>
 
             <div className="border-t border-[var(--mt-border)] px-3 pt-3">

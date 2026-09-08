@@ -64,6 +64,11 @@ describe('menu', () => {
     const hrefs = ALL_LINKS.map((l) => l.href);
     expect(new Set(hrefs).size).toBe(hrefs.length);
   });
+
+  it('does not add Notes as a destination', () => {
+    expect(ALL_LINKS.map((l) => l.href)).not.toContain('/notes');
+    expect(ALL_LINKS.map((l) => l.label)).not.toContain('Notes');
+  });
 });
 
 describe('study panel', () => {
