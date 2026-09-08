@@ -24,7 +24,11 @@ interface NotesWindowProps {
 }
 
 const CONTROL_CLASS =
-  'inline-flex min-h-11 min-w-11 items-center justify-center text-[var(--mt-text-muted)] hover:text-[var(--mt-text)]';
+  'inline-flex min-h-11 min-w-11 items-center justify-center text-[var(--mt-text-muted)]';
+
+const MINIMISE_CLASS = `${CONTROL_CLASS} hover:bg-[color-mix(in_srgb,var(--mt-text)_10%,transparent)] hover:text-[var(--mt-text)]`;
+
+const CLOSE_CLASS = `${CONTROL_CLASS} rounded-tr-2xl hover:bg-[var(--mt-danger)] hover:text-[var(--mt-danger-contrast)]`;
 
 const EDGE_HANDLES: {
   edge: NoteWindowEdge;
@@ -204,7 +208,7 @@ export function NotesWindow(props: NotesWindowProps) {
         <button
           type="button"
           aria-label="Minimise"
-          className={CONTROL_CLASS}
+          className={MINIMISE_CLASS}
           onPointerDown={(event) => event.stopPropagation()}
           onClick={() => setMinimised(true)}
         >
@@ -213,7 +217,7 @@ export function NotesWindow(props: NotesWindowProps) {
         <button
           type="button"
           aria-label="Close"
-          className={CONTROL_CLASS}
+          className={CLOSE_CLASS}
           onPointerDown={(event) => event.stopPropagation()}
           onClick={() => setOpen(false)}
         >
