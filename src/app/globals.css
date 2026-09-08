@@ -267,6 +267,10 @@ body {
   outline-offset: 2px;
 }
 
+.mt-quiet-focus:focus-visible {
+  outline: none;
+}
+
 .mt-glass {
   background: var(--mt-glass);
   backdrop-filter: blur(24px);

@@ -160,7 +160,7 @@ export function NotesPad({
       </div>
       <textarea
         aria-label="Note"
-        className="min-h-11 flex-1 resize-none bg-[var(--mt-surface)] p-3 text-[var(--mt-text)] outline-none"
+        className="mt-quiet-focus min-h-11 flex-1 resize-none border-0 bg-[var(--mt-surface)] p-3 text-[var(--mt-text)]"
         value={active.body}
         onChange={(event) => updateBody(event.target.value)}
       />

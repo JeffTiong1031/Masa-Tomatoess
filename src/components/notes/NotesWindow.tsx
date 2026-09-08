@@ -1,18 +1,17 @@
 'use client';
 
-import {
-  Maximize2,
-  Minus,
-  MoveDiagonal2,
-  StickyNote,
-  X,
-} from 'lucide-react';
+import { Minus, StickyNote, X } from 'lucide-react';
 import { useEffect, type PointerEvent as ReactPointerEvent } from 'react';
 import { useHasMounted } from '@/hooks/useHasMounted';
 import { useIsMdUp } from '@/hooks/useMediaQuery';
 import type { UserName } from '@/lib/identity';
 import type { Note } from '@/lib/note';
-import { clampNoteWindow, defaultNoteWindow } from '@/lib/noteWindow';
+import {
+  clampNoteWindow,
+  defaultNoteWindow,
+  resizeNoteWindow,
+  type NoteWindowEdge,
+} from '@/lib/noteWindow';
 import { useNotesUiStore } from '@/store/useNotesUiStore';
 import { NotesPad } from './NotesPad';
 
@@ -25,7 +24,67 @@ interface NotesWindowProps {
 }
 
 const CONTROL_CLASS =
-  'inline-flex min-h-11 min-w-11 items-center justify-center text-[var(--mt-text-muted)] hover:text-[var(--mt-text)]';
+  'inline-flex min-h-11 min-w-11 items-center justify-center text-[var(--mt-text-muted)]';
+
+const MINIMISE_CLASS = `${CONTROL_CLASS} hover:bg-[color-mix(in_srgb,var(--mt-text)_10%,transparent)] hover:text-[var(--mt-text)]`;
+
+const CLOSE_CLASS = `${CONTROL_CLASS} rounded-tr-2xl hover:bg-[var(--mt-danger)] hover:text-[var(--mt-danger-contrast)]`;
+
+const EDGE_HANDLES: {
+  edge: NoteWindowEdge;
+  className: string;
+  cursor: string;
+  label: string;
+}[] = [
+  {
+    edge: 'n',
+    className: 'left-4 right-4 top-0 h-3',
+    cursor: 'n-resize',
+    label: 'Resize up',
+  },
+  {
+    edge: 's',
+    className: 'left-4 right-4 bottom-0 h-3',
+    cursor: 's-resize',
+    label: 'Resize down',
+  },
+  {
+    edge: 'e',
+    className: 'top-4 bottom-4 right-0 w-3',
+    cursor: 'e-resize',
+    label: 'Resize right',
+  },
+  {
+    edge: 'w',
+    className: 'top-4 bottom-4 left-0 w-3',
+    cursor: 'w-resize',
+    label: 'Resize left',
+  },
+  {
+    edge: 'ne',
+    className: 'right-0 top-0 h-4 w-4',
+    cursor: 'ne-resize',
+    label: 'Resize up and right',
+  },
+  {
+    edge: 'nw',
+    className: 'left-0 top-0 h-4 w-4',
+    cursor: 'nw-resize',
+    label: 'Resize up and left',
+  },
+  {
+    edge: 'se',
+    className: 'right-0 bottom-0 h-4 w-4',
+    cursor: 'se-resize',
+    label: 'Resize down and right',
+  },
+  {
+    edge: 'sw',
+    className: 'left-0 bottom-0 h-4 w-4',
+    cursor: 'sw-resize',
+    label: 'Resize down and left',
+  },
+];
 
 export function NotesWindow(props: NotesWindowProps) {
   const mounted = useHasMounted();
@@ -92,7 +151,10 @@ export function NotesWindow(props: NotesWindowProps) {
     window.addEventListener('pointerup', stop);
   };
 
-  const startResize = (event: ReactPointerEvent<HTMLButtonElement>) => {
+  const startResize = (
+    edge: NoteWindowEdge,
+    event: ReactPointerEvent<HTMLButtonElement>,
+  ) => {
     event.preventDefault();
     event.stopPropagation();
     const startX = event.clientX;
@@ -100,12 +162,11 @@ export function NotesWindow(props: NotesWindowProps) {
     const start = box;
     const move = (moveEvent: PointerEvent) => {
       setBox(
-        clampNoteWindow(
-          {
-            ...start,
-            width: start.width + moveEvent.clientX - startX,
-            height: start.height + moveEvent.clientY - startY,
-          },
+        resizeNoteWindow(
+          start,
+          edge,
+          moveEvent.clientX - startX,
+          moveEvent.clientY - startY,
           window.innerWidth,
           window.innerHeight,
         ),
@@ -147,7 +208,7 @@ export function NotesWindow(props: NotesWindowProps) {
         <button
           type="button"
           aria-label="Minimise"
-          className={CONTROL_CLASS}
+          className={MINIMISE_CLASS}
           onPointerDown={(event) => event.stopPropagation()}
           onClick={() => setMinimised(true)}
         >
@@ -155,29 +216,8 @@ export function NotesWindow(props: NotesWindowProps) {
         </button>
         <button
           type="button"
-          aria-label="Enlarge"
-          className={CONTROL_CLASS}
-          onPointerDown={(event) => event.stopPropagation()}
-          onClick={() =>
-            setBox(
-              clampNoteWindow(
-                {
-                  ...box,
-                  width: Math.min(window.innerWidth - 48, 640),
-                  height: Math.min(window.innerHeight - 48, 720),
-                },
-                window.innerWidth,
-                window.innerHeight,
-              ),
-            )
-          }
-        >
-          <Maximize2 size={17} aria-hidden />
-        </button>
-        <button
-          type="button"
           aria-label="Close"
-          className={CONTROL_CLASS}
+          className={CLOSE_CLASS}
           onPointerDown={(event) => event.stopPropagation()}
           onClick={() => setOpen(false)}
         >
@@ -187,14 +227,16 @@ export function NotesWindow(props: NotesWindowProps) {
       <div className="min-h-0 flex-1">
         <NotesPad {...props} />
       </div>
-      <button
-        type="button"
-        aria-label="Resize"
-        className="absolute bottom-0 right-0 inline-flex min-h-11 min-w-11 touch-none items-end justify-end p-2 text-[var(--mt-text-muted)]"
-        onPointerDown={startResize}
-      >
-        <MoveDiagonal2 size={16} aria-hidden />
-      </button>
+      {EDGE_HANDLES.map((handle) => (
+        <button
+          key={handle.edge}
+          type="button"
+          aria-label={handle.label}
+          className={`absolute z-10 touch-none border-0 bg-transparent p-0 ${handle.className}`}
+          style={{ cursor: handle.cursor }}
+          onPointerDown={(event) => startResize(handle.edge, event)}
+        />
+      ))}
     </div>
   );
 }
