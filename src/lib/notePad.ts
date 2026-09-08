@@ -46,6 +46,14 @@ export function addNote(
   ];
 }
 
+export function isActiveNoteOwnedBy(
+  notes: Note[],
+  activeId: string,
+  owner: UserName,
+): boolean {
+  return notes.some((note) => note.id === activeId && note.owner === owner);
+}
+
 export function renameNote(
   notes: Note[],
   id: string,

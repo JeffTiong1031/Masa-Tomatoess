@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useHasMounted } from '@/hooks/useHasMounted';
 import { isUserName } from '@/lib/identity';
 import type { Note } from '@/lib/note';
+import { isActiveNoteOwnedBy } from '@/lib/notePad';
 import { isTypingTag, notesShortcut } from '@/lib/noteShortcut';
 import { reconcileNotes } from '@/lib/noteSync';
 import { useNotesUiStore } from '@/store/useNotesUiStore';
@@ -19,6 +20,8 @@ export function NotesHost() {
   const [notes, setNotes] = useState<Note[]>([]);
   const [activeId, setActiveId] = useState('');
   const previousOpen = useRef(open);
+  const activeNoteOwned =
+    owner !== null && isActiveNoteOwnedBy(notes, activeId, owner);
 
   useEffect(() => {
     if (owner === null) return;
@@ -66,10 +69,10 @@ export function NotesHost() {
   }, [open, owner]);
 
   useEffect(() => {
-    if (owner !== null && activeId !== '') {
+    if (owner !== null && activeNoteOwned) {
       localStorage.setItem(`mt-notes-active-${owner}`, activeId);
     }
-  }, [activeId, owner]);
+  }, [activeId, activeNoteOwned, owner]);
 
   useEffect(() => {
     if (owner === null) return;
@@ -92,7 +95,7 @@ export function NotesHost() {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [open, owner, setOpen]);
 
-  if (owner === null || notes.length === 0) return null;
+  if (owner === null || !activeNoteOwned) return null;
 
   const props = {
     owner,

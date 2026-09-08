@@ -5,6 +5,7 @@ import {
   nextSortOrder,
   seedPad,
   addNote,
+  isActiveNoteOwnedBy,
   renameNote,
   removeNote,
 } from './notePad';
@@ -64,6 +65,15 @@ describe('addNote', () => {
       body: '',
       sortOrder: 300,
     });
+  });
+});
+
+describe('isActiveNoteOwnedBy', () => {
+  it('rejects the previous person’s active tab during an owner switch', () => {
+    const jeffNotes = [sample({ id: 'jeff-active', owner: 'Jeff' })];
+
+    expect(isActiveNoteOwnedBy(jeffNotes, 'jeff-active', 'Rachel')).toBe(false);
+    expect(isActiveNoteOwnedBy(jeffNotes, 'jeff-active', 'Jeff')).toBe(true);
   });
 });
 
