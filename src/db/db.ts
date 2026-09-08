@@ -26,9 +26,26 @@ export interface PendingMeal {
   createdAt: number;
 }
 
+export interface NoteRecord {
+  id: string;
+  owner: UserName;
+  title: string;
+  body: string;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PendingNoteDelete {
+  id: string;
+  owner: UserName;
+}
+
 const db = new Dexie('PomodoroDB') as Dexie & {
   sessions: EntityTable<SessionRecord, 'id'>;
   pendingMeals: EntityTable<PendingMeal, 'id'>;
+  notes: EntityTable<NoteRecord, 'id'>;
+  pendingNoteDeletes: EntityTable<PendingNoteDelete, 'id'>;
 };
 
 // Schema definition
@@ -51,6 +68,13 @@ db.version(4).stores({
 db.version(5).stores({
   sessions: '++id, date, mode, taskName, synced, userName',
   pendingMeals: '++id, date',
+});
+
+db.version(6).stores({
+  sessions: '++id, date, mode, taskName, synced, userName',
+  pendingMeals: '++id, date',
+  notes: 'id, owner, updatedAt',
+  pendingNoteDeletes: 'id, owner',
 });
 
 export { db };
