@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { UserName } from '@/lib/identity';
 import { NOTE_SAVE_PAUSE_MS, titleOrDefault, type Note } from '@/lib/note';
 import { deleteNoteLocally, saveNote } from '@/lib/noteLocal';
@@ -24,21 +24,27 @@ export function NotesPad({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState('');
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingSave = useRef<Note | null>(null);
   const active = notes.find((note) => note.id === activeId) ?? notes[0];
 
-  useEffect(
-    () => () => {
-      if (saveTimer.current) clearTimeout(saveTimer.current);
-    },
-    [],
-  );
+  const flushPendingSave = useCallback(() => {
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    const pending = pendingSave.current;
+    saveTimer.current = null;
+    pendingSave.current = null;
+    if (pending) void saveNote(pending);
+  }, []);
+
+  useEffect(() => () => flushPendingSave(), [flushPendingSave]);
 
   const startRename = (note: Note) => {
+    flushPendingSave();
     setEditingId(note.id);
     setName(note.title);
   };
 
   const commitRename = (note: Note) => {
+    flushPendingSave();
     const renamed = renameNote(
       notes,
       note.id,
@@ -51,6 +57,7 @@ export function NotesPad({
   };
 
   const createNote = () => {
+    flushPendingSave();
     const id = crypto.randomUUID();
     const next = addNote(notes, owner, new Date().toISOString(), id);
     const created = next[next.length - 1];
@@ -61,6 +68,7 @@ export function NotesPad({
 
   const deleteNote = (note: Note) => {
     if (!confirm('Delete this note?')) return;
+    flushPendingSave();
     const next = removeNote(
       notes,
       note.id,
@@ -74,6 +82,11 @@ export function NotesPad({
     if (notes.length === 1) void saveNote(next[0]);
   };
 
+  const selectNote = (id: string) => {
+    flushPendingSave();
+    onActiveId(id);
+  };
+
   const updateBody = (body: string) => {
     const updatedAt = new Date().toISOString();
     const updated = { ...active, body, updatedAt };
@@ -81,8 +94,9 @@ export function NotesPad({
       notes.map((note) => (note.id === active.id ? updated : note)),
     );
     if (saveTimer.current) clearTimeout(saveTimer.current);
+    pendingSave.current = updated;
     saveTimer.current = setTimeout(() => {
-      void saveNote(updated);
+      flushPendingSave();
     }, NOTE_SAVE_PAUSE_MS);
   };
 
@@ -115,7 +129,7 @@ export function NotesPad({
                   type="button"
                   className="min-h-11 min-w-11 px-3 text-[var(--mt-text)]"
                   onClick={() =>
-                    isActive ? startRename(note) : onActiveId(note.id)
+                    isActive ? startRename(note) : selectNote(note.id)
                   }
                   onDoubleClick={() => startRename(note)}
                 >
