@@ -28,7 +28,9 @@ export function NotesSheet(props: NotesSheetProps) {
       maxWidthClass="max-w-lg"
       onClose={() => setOpen(false)}
     >
-      <NotesPad {...props} />
+      <div className="h-[60dvh]">
+        <NotesPad {...props} />
+      </div>
     </Modal>
   );
 }

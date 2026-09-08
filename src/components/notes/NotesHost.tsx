@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from 'react';
 import { useHasMounted } from '@/hooks/useHasMounted';
 import { isUserName } from '@/lib/identity';
 import type { Note } from '@/lib/note';
+import { loadNotes } from '@/lib/noteLocal';
+import { mergeNotes } from '@/lib/noteMerge';
 import { isActiveNoteOwnedBy } from '@/lib/notePad';
 import { isTypingTag, notesShortcut } from '@/lib/noteShortcut';
 import { reconcileNotes } from '@/lib/noteSync';
@@ -26,20 +28,35 @@ export function NotesHost() {
   useEffect(() => {
     if (owner === null) return;
     let active = true;
-    void reconcileNotes(
-      owner,
-      new Date().toISOString(),
-      crypto.randomUUID(),
-    ).then((reconciled) => {
-      if (!active) return;
-      const storedId = localStorage.getItem(`mt-notes-active-${owner}`);
-      setNotes(reconciled);
-      setActiveId(
-        reconciled.some((note) => note.id === storedId)
-          ? storedId!
-          : reconciled[0].id,
-      );
-    });
+    void loadNotes(owner)
+      .then((local) => {
+        if (!active) return;
+        const storedId = localStorage.getItem(`mt-notes-active-${owner}`);
+        setNotes(local);
+        if (local.length > 0) {
+          setActiveId(
+            local.some((note) => note.id === storedId)
+              ? storedId!
+              : local[0].id,
+          );
+        }
+        reconcileNotes(
+          owner,
+          new Date().toISOString(),
+          crypto.randomUUID(),
+        )
+          .then((reconciled) => {
+            if (!active) return;
+            setNotes((current) => mergeNotes(current, reconciled, []));
+            setActiveId((current) =>
+              reconciled.some((note) => note.id === current)
+                ? current
+                : reconciled[0].id,
+            );
+          })
+          .catch(console.error);
+      })
+      .catch(console.error);
     return () => {
       active = false;
     };
@@ -56,13 +73,13 @@ export function NotesHost() {
       crypto.randomUUID(),
     ).then((reconciled) => {
       if (!active) return;
-      setNotes(reconciled);
+      setNotes((current) => mergeNotes(current, reconciled, []));
       setActiveId((current) =>
         reconciled.some((note) => note.id === current)
           ? current
           : reconciled[0].id,
       );
-    });
+    }).catch(console.error);
     return () => {
       active = false;
     };

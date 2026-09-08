@@ -2,10 +2,7 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import {
-  defaultNoteWindow,
-  type NoteWindowBox,
-} from '@/lib/noteWindow';
+import type { NoteWindowBox } from '@/lib/noteWindow';
 
 interface NotesUiState {
   open: boolean;
@@ -27,6 +24,12 @@ export const useNotesUiStore = create<NotesUiState>()(
       setMinimised: (minimised) => set({ minimised }),
       setBox: (box) => set({ box }),
     }),
-    { name: 'mt-notes-ui' },
+    {
+      name: 'mt-notes-ui',
+      partialize: (state) => ({
+        box: state.box,
+        minimised: state.minimised,
+      }),
+    },
   ),
 );

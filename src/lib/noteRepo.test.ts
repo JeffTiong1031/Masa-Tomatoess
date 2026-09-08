@@ -58,6 +58,19 @@ describe('note cloud repository', () => {
     expect(noteFromRow(row)).toEqual(note);
   });
 
+  it('normalises cloud timestamps to ISO UTC', () => {
+    expect(
+      noteFromRow({
+        ...row,
+        created_at: '2026-09-09T04:00:00+00:00',
+        updated_at: '2026-09-09T05:00:00+00:00',
+      }),
+    ).toMatchObject({
+      createdAt: '2026-09-09T04:00:00.000Z',
+      updatedAt: '2026-09-09T05:00:00.000Z',
+    });
+  });
+
   it('maps a Note onto a cloud row', () => {
     expect(rowFromNote(note)).toEqual(row);
   });

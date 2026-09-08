@@ -46,6 +46,9 @@ function note(partial: Partial<Note> & Pick<Note, 'id'>): Note {
 describe('reconcileNotes', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.loadNotes.mockReset();
+    mocks.loadPendingDeletes.mockReset();
+    mocks.fetchNotes.mockReset();
     mocks.saveNote.mockResolvedValue(true);
     mocks.clearPendingDelete.mockResolvedValue(undefined);
     mocks.upsertNote.mockResolvedValue(true);
@@ -63,6 +66,29 @@ describe('reconcileNotes', () => {
 
     expect(mocks.saveNote).toHaveBeenCalledWith(local);
     expect(mocks.upsertNote).toHaveBeenCalledWith(local);
+  });
+
+  it('does not replace a local row saved while the cloud fetch is running', async () => {
+    const beforeFetch = note({ id: 'shared', body: 'before', updatedAt: EARLY });
+    const savedDuringFetch = note({
+      id: 'shared',
+      body: 'typed during fetch',
+      updatedAt: LATE,
+    });
+    const remote = note({ id: 'shared', body: 'cloud', updatedAt: EARLY });
+    mocks.loadNotes.mockResolvedValue([beforeFetch]);
+    mocks.loadPendingDeletes.mockResolvedValue([]);
+    mocks.fetchNotes.mockImplementation(async () => {
+      mocks.loadNotes.mockResolvedValue([savedDuringFetch]);
+      return { status: 'ok', rows: [remote] };
+    });
+
+    await expect(reconcileNotes('Jeff', LATE, 'seed')).resolves.toEqual([
+      savedDuringFetch,
+    ]);
+
+    expect(mocks.saveNote).toHaveBeenCalledWith(savedDuringFetch);
+    expect(mocks.upsertNote).toHaveBeenCalledWith(savedDuringFetch);
   });
 
   it('leaves a pending delete out of the reconciled notes', async () => {

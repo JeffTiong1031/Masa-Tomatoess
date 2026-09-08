@@ -30,8 +30,8 @@ export function noteFromRow(row: NoteRow): Note {
     title: row.title,
     body: row.body,
     sortOrder: row.sort_order,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
+    createdAt: new Date(row.created_at).toISOString(),
+    updatedAt: new Date(row.updated_at).toISOString(),
   };
 }
 

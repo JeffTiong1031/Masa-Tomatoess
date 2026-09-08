@@ -30,6 +30,12 @@ describe('mergeNotes', () => {
     expect(mergeNotes(local, remote, [])[0].body).toBe('phone');
   });
 
+  it('keeps one phone copy when both sides have the same updatedAt', () => {
+    const local = [note({ id: 'a', body: 'phone', updatedAt: LATE })];
+    const remote = [note({ id: 'a', body: 'phone', updatedAt: LATE })];
+    expect(mergeNotes(local, remote, [])).toEqual(local);
+  });
+
   it('keeps a local-only tab and adds a remote-only tab', () => {
     const merged = mergeNotes(
       [note({ id: 'local', sortOrder: 100 })],

@@ -15,11 +15,11 @@ export async function reconcileNotes(
   nowIso: string,
   newId: string,
 ): Promise<Note[]> {
-  const local = await loadNotes(owner);
   const pending = await loadPendingDeletes(owner);
   const remoteFetch = await fetchNotes(owner);
+  const currentLocal = await loadNotes(owner);
   let merged = mergeNotes(
-    local,
+    currentLocal,
     remoteFetch.status === 'ok' ? remoteFetch.rows : [],
     pending,
   );
