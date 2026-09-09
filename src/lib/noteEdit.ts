@@ -1,4 +1,5 @@
-import type { Block } from './noteDoc';
+import { joinIntoLine, stripIncoming } from './noteCopy';
+import { decodeBody, encodeBody, type Block } from './noteDoc';
 
 export interface DocCaret {
   index: number;
@@ -8,6 +9,165 @@ export interface DocCaret {
 export interface EditResult {
   blocks: Block[];
   caret: DocCaret;
+}
+
+export function ordered(a: DocCaret, b: DocCaret): [DocCaret, DocCaret] {
+  if (a.index < b.index || (a.index === b.index && a.offset <= b.offset)) {
+    return [a, b];
+  }
+  return [b, a];
+}
+
+export function deleteSelection(
+  blocks: Block[],
+  start: DocCaret,
+  end: DocCaret,
+): EditResult {
+  const [from, to] = ordered(start, end);
+  const first = blocks[from.index];
+  const last = blocks[to.index];
+  const next = [...blocks];
+
+  if (from.index === to.index) {
+    const text = first.text.slice(0, from.offset) + first.text.slice(to.offset);
+    switch (first.kind) {
+      case 'paragraph':
+        next[from.index] = { kind: 'paragraph', text };
+        break;
+      case 'item':
+        next[from.index] = { ...first, text };
+    }
+    return { blocks: next, caret: from };
+  }
+
+  const text = first.text.slice(0, from.offset) + last.text.slice(to.offset);
+  switch (first.kind) {
+    case 'paragraph':
+      next.splice(
+        from.index,
+        to.index - from.index + 1,
+        { kind: 'paragraph', text },
+      );
+      break;
+    case 'item':
+      next.splice(
+        from.index,
+        to.index - from.index + 1,
+        { ...first, text },
+      );
+  }
+  return { blocks: next, caret: from };
+}
+
+export function insertText(
+  blocks: Block[],
+  caret: DocCaret,
+  text: string,
+): EditResult {
+  const block = blocks[caret.index];
+  const next = [...blocks];
+  const inserted = block.text.slice(0, caret.offset) + text + block.text.slice(caret.offset);
+
+  switch (block.kind) {
+    case 'paragraph':
+      next[caret.index] = { kind: 'paragraph', text: inserted };
+      break;
+    case 'item':
+      next[caret.index] = { ...block, text: inserted };
+  }
+
+  return {
+    blocks: next,
+    caret: { index: caret.index, offset: caret.offset + text.length },
+  };
+}
+
+export function pasteExternal(
+  blocks: Block[],
+  start: DocCaret,
+  end: DocCaret,
+  raw: string,
+): EditResult {
+  const [from, to] = ordered(start, end);
+  const deleted = from.index === to.index && from.offset === to.offset
+    ? { blocks, caret: from }
+    : deleteSelection(blocks, from, to);
+  const block = deleted.blocks[deleted.caret.index];
+
+  switch (block.kind) {
+    case 'item':
+      return insertText(deleted.blocks, deleted.caret, joinIntoLine(raw));
+    case 'paragraph': {
+      const incoming = decodeBody(stripIncoming(raw).replaceAll('\r\n', '\n'));
+      if (incoming.length === 1) {
+        return insertText(deleted.blocks, deleted.caret, incoming[0].text);
+      }
+
+      const prefix = block.text.slice(0, deleted.caret.offset);
+      const suffix = block.text.slice(deleted.caret.offset);
+      const paragraphs = incoming.map((line, index): Block => {
+        const leading = index === 0 ? prefix : '';
+        const trailing = index === incoming.length - 1 ? suffix : '';
+        return { kind: 'paragraph', text: leading + line.text + trailing };
+      });
+      const next = [...deleted.blocks];
+      next.splice(deleted.caret.index, 1, ...paragraphs);
+      return {
+        blocks: next,
+        caret: {
+          index: deleted.caret.index + paragraphs.length - 1,
+          offset: incoming[incoming.length - 1].text.length,
+        },
+      };
+    }
+  }
+}
+
+export function pasteInternal(
+  blocks: Block[],
+  start: DocCaret,
+  end: DocCaret,
+  fragment: Block[],
+): EditResult {
+  const [from, to] = ordered(start, end);
+  const deleted = from.index === to.index && from.offset === to.offset
+    ? { blocks, caret: from }
+    : deleteSelection(blocks, from, to);
+  const block = deleted.blocks[deleted.caret.index];
+  const inserted = decodeBody(encodeBody(fragment));
+  const prefixText = block.text.slice(0, deleted.caret.offset);
+  const suffixText = block.text.slice(deleted.caret.offset);
+  const prefix: Block[] = [];
+  const suffix: Block[] = [];
+
+  switch (block.kind) {
+    case 'paragraph':
+      if (prefixText !== '') {
+        prefix.push({ kind: 'paragraph', text: prefixText });
+      }
+      if (suffixText !== '') {
+        suffix.push({ kind: 'paragraph', text: suffixText });
+      }
+      break;
+    case 'item':
+      if (prefixText !== '') {
+        prefix.push({ ...block, text: prefixText });
+      }
+      if (suffixText !== '') {
+        suffix.push({ ...block, text: suffixText, checked: false });
+      }
+  }
+
+  const next = [...deleted.blocks];
+  next.splice(deleted.caret.index, 1, ...prefix, ...inserted, ...suffix);
+  const caretIndex = deleted.caret.index + prefix.length + inserted.length - 1;
+  return {
+    blocks: next,
+    caret: {
+      index: caretIndex,
+      offset: inserted[inserted.length - 1].text.length,
+    },
+  };
 }
 
 export function familyEnd(blocks: Block[], index: number): number {

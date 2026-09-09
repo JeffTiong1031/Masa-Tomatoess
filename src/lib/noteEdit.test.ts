@@ -3,10 +3,15 @@ import {
   backspaceAtStart,
   canIndent,
   canOutdent,
+  deleteSelection,
   enterAt,
   familyEnd,
   indentSelection,
+  insertText,
+  ordered,
   outdentSelection,
+  pasteExternal,
+  pasteInternal,
   selectedRoots,
   toggleChecked,
   toggleChecklist,
@@ -207,5 +212,85 @@ describe('backspaceAtStart', () => {
     const next = backspaceAtStart(blocks, { index: 0, offset: 0 });
     expect(next?.blocks[0]).toEqual({ kind: 'paragraph', text: 'A' });
     expect(next?.blocks[1]).toMatchObject({ kind: 'item', indent: 0 });
+  });
+});
+
+describe('deleteSelection', () => {
+  it('keeps the first line type when a mix is deleted', () => {
+    const blocks: Block[] = [
+      { kind: 'paragraph', text: 'Ab' },
+      { kind: 'item', text: 'Cd', checked: true, indent: 0 },
+    ];
+    const next = deleteSelection(
+      blocks,
+      { index: 0, offset: 1 },
+      { index: 1, offset: 1 },
+    );
+    expect(next.blocks).toEqual([{ kind: 'paragraph', text: 'Ad' }]);
+  });
+});
+
+describe('ordered', () => {
+  it('orders carets by line and then offset', () => {
+    const earlier = { index: 0, offset: 4 };
+    const later = { index: 1, offset: 1 };
+
+    expect(ordered(later, earlier)).toEqual([earlier, later]);
+  });
+});
+
+describe('insertText', () => {
+  it('inserts into an item without changing its tick or nesting', () => {
+    const blocks: Block[] = [
+      { kind: 'item', text: 'AB', checked: true, indent: 2 },
+    ];
+
+    expect(insertText(blocks, { index: 0, offset: 1 }, 'x')).toEqual({
+      blocks: [{ kind: 'item', text: 'AxB', checked: true, indent: 2 }],
+      caret: { index: 0, offset: 2 },
+    });
+  });
+});
+
+describe('pasteExternal', () => {
+  it('joins into an item and does not create new items', () => {
+    const blocks: Block[] = [
+      { kind: 'item', text: 'AB', checked: true, indent: 1 },
+    ];
+    const next = pasteExternal(
+      blocks,
+      { index: 0, offset: 1 },
+      { index: 0, offset: 1 },
+      'x\ny',
+    );
+    expect(next.blocks).toEqual([
+      { kind: 'item', text: 'Ax yB', checked: true, indent: 1 },
+    ]);
+  });
+});
+
+describe('pasteInternal', () => {
+  it('keeps ticks and nesting when pasting a family inside the note', () => {
+    const blocks: Block[] = [{ kind: 'paragraph', text: '' }];
+    const fragment: Block[] = [
+      { kind: 'item', text: 'P', checked: true, indent: 0 },
+      { kind: 'item', text: 'C', checked: false, indent: 1 },
+    ];
+    const next = pasteInternal(
+      blocks,
+      { index: 0, offset: 0 },
+      { index: 0, offset: 0 },
+      fragment,
+    );
+    expect(next.blocks[0]).toMatchObject({
+      kind: 'item',
+      text: 'P',
+      checked: true,
+    });
+    expect(next.blocks[1]).toMatchObject({
+      kind: 'item',
+      text: 'C',
+      indent: 1,
+    });
   });
 });
