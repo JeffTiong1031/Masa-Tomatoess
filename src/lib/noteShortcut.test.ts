@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   isChecklistHotkey,
+  isEditorCommandBlocked,
   isTypingElement,
   isTypingTag,
   notesShortcut,
@@ -43,5 +44,17 @@ describe('isChecklistHotkey', () => {
     expect(isChecklistHotkey('9', true, true, false)).toBe(true);
     expect(isChecklistHotkey('9', true, true, true)).toBe(false);
     expect(isChecklistHotkey('9', false, true, false)).toBe(false);
+  });
+});
+
+describe('isEditorCommandBlocked', () => {
+  it('blocks commands throughout an active composition', () => {
+    expect(isEditorCommandBlocked(true, false, 'Enter')).toBe(true);
+    expect(isEditorCommandBlocked(false, true, 'Enter')).toBe(true);
+  });
+
+  it('blocks Process keys outside the reported composition window', () => {
+    expect(isEditorCommandBlocked(false, false, 'Process')).toBe(true);
+    expect(isEditorCommandBlocked(false, false, 'Enter')).toBe(false);
   });
 });

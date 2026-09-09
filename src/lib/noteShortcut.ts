@@ -20,6 +20,14 @@ export function isChecklistHotkey(
   return key === '9' && shift && ctrlOrMeta && !alt;
 }
 
+export function isEditorCommandBlocked(
+  composing: boolean,
+  eventComposing: boolean,
+  key: string,
+): boolean {
+  return composing || eventComposing || key === 'Process';
+}
+
 export function notesShortcut(
   key: string,
   typing: boolean,

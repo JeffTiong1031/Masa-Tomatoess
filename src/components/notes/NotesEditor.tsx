@@ -34,7 +34,10 @@ import {
   undoTo,
   type NoteSnapshot,
 } from '@/lib/noteHistory';
-import { isChecklistHotkey } from '@/lib/noteShortcut';
+import {
+  isChecklistHotkey,
+  isEditorCommandBlocked,
+} from '@/lib/noteShortcut';
 
 const ITEM_INDENT_PX = 24;
 
@@ -83,6 +86,7 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
     const historyRef = useRef(EMPTY_HISTORY);
     const typingRunRef = useRef(false);
     const restoreCaretRef = useRef(false);
+    const composingRef = useRef(false);
 
     const reportCaret = (
       nextBlocks: Block[],
@@ -236,6 +240,7 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
 
     useImperativeHandle(ref, () => ({
       toggle() {
+        if (composingRef.current) return;
         const current = blocksRef.current;
         const range = editorSelection();
         rememberCurrent();
@@ -248,6 +253,7 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
         commit(result.blocks, result.caret);
       },
       indent() {
+        if (composingRef.current) return;
         const current = blocksRef.current;
         const range = editorSelection();
         rememberCurrent();
@@ -260,6 +266,7 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
         commit(result.blocks, result.caret);
       },
       outdent() {
+        if (composingRef.current) return;
         const current = blocksRef.current;
         const range = editorSelection();
         rememberCurrent();
@@ -302,6 +309,7 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
                 className="min-h-11 min-w-11 text-[var(--mt-text)] disabled:text-[var(--mt-text-muted)]"
                 disabled={disabled}
                 onClick={() => {
+                  if (composingRef.current) return;
                   rememberCurrent();
                   const next = toggleChecked(blocksRef.current, index);
                   commit(next, caretRef.current);
@@ -331,6 +339,12 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
                 focusedRef.current = true;
                 updateCaret(index);
               }}
+              onCompositionStart={() => {
+                composingRef.current = true;
+              }}
+              onCompositionEnd={() => {
+                composingRef.current = false;
+              }}
               onInput={(event) => {
                 const input = event.nativeEvent as InputEvent;
                 if (!input.isComposing && !typingRunRef.current) {
@@ -345,15 +359,28 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
                 );
               }}
               onKeyDown={(event) => {
-                if (event.nativeEvent.isComposing || event.key === 'Process') {
+                const ctrlOrMeta = event.ctrlKey || event.metaKey;
+                const key = event.key.toLowerCase();
+                if (
+                  isEditorCommandBlocked(
+                    composingRef.current,
+                    event.nativeEvent.isComposing,
+                    event.key,
+                  )
+                ) {
+                  if (
+                    ctrlOrMeta &&
+                    !event.altKey &&
+                    (key === 'z' || key === 'y')
+                  ) {
+                    event.preventDefault();
+                  }
                   return;
                 }
                 const range = editorSelection();
                 const collapsed =
                   range.start.index === range.end.index &&
                   range.start.offset === range.end.offset;
-                const ctrlOrMeta = event.ctrlKey || event.metaKey;
-                const key = event.key.toLowerCase();
 
                 if (ctrlOrMeta && !event.altKey && key === 'z') {
                   event.preventDefault();
@@ -463,6 +490,7 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
               }}
               onCut={(event) => {
                 event.preventDefault();
+                if (composingRef.current) return;
                 const range = editorSelection();
                 writeClipboard(event, range);
                 if (disabled) return;
@@ -476,7 +504,7 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
               }}
               onPaste={(event) => {
                 event.preventDefault();
-                if (disabled) return;
+                if (disabled || composingRef.current) return;
                 const range = editorSelection();
                 const internal = event.clipboardData.getData(
                   NOTE_CLIPBOARD_TYPE,
