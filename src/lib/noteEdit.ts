@@ -173,16 +173,6 @@ export function toggleChecklist(
   return { blocks: next, caret };
 }
 
-function canIndentSelectionRoot(
-  blocks: Block[],
-  root: number,
-  from: number,
-  to: number,
-): boolean {
-  return canIndent(blocks, root)
-    || (root === 0 && from === 0 && familyEnd(blocks, root) <= to);
-}
-
 function moveSelection(
   blocks: Block[],
   from: number,
@@ -195,7 +185,7 @@ function moveSelection(
     root,
     end: familyEnd(blocks, root),
     movable: delta === 1
-      ? canIndentSelectionRoot(blocks, root, from, to)
+      ? canIndent(blocks, root)
       : canOutdent(blocks, root),
   }));
   const next = [...blocks];

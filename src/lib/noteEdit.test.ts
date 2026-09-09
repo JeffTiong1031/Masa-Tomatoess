@@ -92,12 +92,25 @@ describe('indentSelection', () => {
 
   it('does not indent a child twice when the parent is also selected', () => {
     const nested: Block[] = [
+      { kind: 'item', text: 'P', checked: false, indent: 0 },
       { kind: 'item', text: 'A', checked: false, indent: 0 },
       { kind: 'item', text: 'A1', checked: false, indent: 1 },
     ];
+    const next = indentSelection(nested, 1, 2, caret).blocks;
+    expect(next[1]).toMatchObject({ indent: 1 });
+    expect(next[2]).toMatchObject({ indent: 2 });
+  });
+
+  it('does not indent a fully selected first family', () => {
+    const nested: Block[] = [
+      { kind: 'item', text: 'A', checked: false, indent: 0 },
+      { kind: 'item', text: 'A1', checked: false, indent: 1 },
+    ];
+
     const next = indentSelection(nested, 0, 1, caret).blocks;
-    expect(next[0]).toMatchObject({ indent: 1 });
-    expect(next[1]).toMatchObject({ indent: 2 });
+
+    expect(next[0]).toMatchObject({ indent: 0 });
+    expect(next[1]).toMatchObject({ indent: 1 });
   });
 });
 
