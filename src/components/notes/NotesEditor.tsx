@@ -32,6 +32,12 @@ import {
 import { copyOut, NOTE_CLIPBOARD_TYPE } from '@/lib/noteCopy';
 import { decodeBody, encodeBody, type Block } from '@/lib/noteDoc';
 import {
+  beforeInputAction,
+  clipboardAction,
+  shouldCommitFromInput,
+  shouldReplaceEditorBody,
+} from '@/lib/noteEditorPolicy';
+import {
   EMPTY_HISTORY,
   redoTo,
   remember,
@@ -320,6 +326,18 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
       commit(inserted.blocks, caret, false);
     };
 
+    const applyEnter = (range: EditorSelection) => {
+      const collapsed = collapsedRange(range.start, range.end);
+      rememberCurrent();
+      const base = collapsed
+        ? { blocks: blocksRef.current, caret: range.focus }
+        : deleteSelection(blocksRef.current, range.start, range.end);
+      spanningRef.current = false;
+      setPaint(null);
+      const result = enterAt(base.blocks, base.caret);
+      commit(result.blocks, result.caret);
+    };
+
     const updateCaret = (index: number) => {
       const selection = editorSelection();
       const caret =
@@ -331,7 +349,21 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
     };
 
     useEffect(() => {
-      const encoded = encodeBody(decodeBody(body));
+      if (!shouldReplaceEditorBody(body, encodeBody(blocksRef.current))) {
+        return;
+      }
+      const next = decodeBody(body);
+      const caret = { index: 0, offset: 0 };
+      blocksRef.current = next;
+      caretRef.current = caret;
+      rangeRef.current = { start: caret, end: caret, focus: caret };
+      anchorRef.current = caret;
+      spanningRef.current = false;
+      historyRef.current = EMPTY_HISTORY;
+      typingRunRef.current = false;
+      setPaint(null);
+      setBlocks(next);
+      const encoded = encodeBody(next);
       if (encoded !== body) onChange(encoded);
     }, [body, onChange]);
 
@@ -499,45 +531,76 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
               onCompositionStart={() => {
                 composingRef.current = true;
               }}
-              onCompositionEnd={() => {
+              onCompositionEnd={(event) => {
                 composingRef.current = false;
+                if (disabled) return;
+                if (!typingRunRef.current) {
+                  historyRef.current = remember(historyRef.current, snapshot());
+                  typingRunRef.current = true;
+                }
+                applyText(
+                  index,
+                  event.currentTarget.textContent ?? '',
+                  editorSelection().focus,
+                );
               }}
               onBeforeInput={(event) => {
                 if (composingRef.current || disabled) return;
-                const range = rangeRef.current;
-                if (collapsedRange(range.start, range.end)) return;
+                const range = editorSelection();
+                const collapsed = collapsedRange(range.start, range.end);
                 const native = event.nativeEvent;
-                if (native.inputType === 'insertText' && native.data) {
-                  event.preventDefault();
-                  rememberCurrent();
-                  const result = typeOverRange(
-                    blocksRef.current,
-                    range.start,
-                    range.end,
-                    native.data,
-                  );
-                  spanningRef.current = false;
-                  setPaint(null);
-                  commit(result.blocks, result.caret);
-                  return;
-                }
-                if (native.inputType.startsWith('delete')) {
-                  event.preventDefault();
-                  rememberCurrent();
-                  const result = deleteSelection(
-                    blocksRef.current,
-                    range.start,
-                    range.end,
-                  );
-                  spanningRef.current = false;
-                  setPaint(null);
-                  commit(result.blocks, result.caret);
+                switch (
+                  beforeInputAction(
+                    native.inputType,
+                    collapsed,
+                    Boolean(native.data),
+                  )
+                ) {
+                  case 'ignore':
+                    return;
+                  case 'enter':
+                    event.preventDefault();
+                    applyEnter(range);
+                    return;
+                  case 'type-over': {
+                    event.preventDefault();
+                    rememberCurrent();
+                    const result = typeOverRange(
+                      blocksRef.current,
+                      range.start,
+                      range.end,
+                      native.data ?? '',
+                    );
+                    spanningRef.current = false;
+                    setPaint(null);
+                    commit(result.blocks, result.caret);
+                    return;
+                  }
+                  case 'delete': {
+                    event.preventDefault();
+                    rememberCurrent();
+                    const result = deleteSelection(
+                      blocksRef.current,
+                      range.start,
+                      range.end,
+                    );
+                    spanningRef.current = false;
+                    setPaint(null);
+                    commit(result.blocks, result.caret);
+                  }
                 }
               }}
               onInput={(event) => {
                 if (dragAnchorRef.current || spanningRef.current) return;
                 const input = event.nativeEvent as InputEvent;
-                if (!input.isComposing && !typingRunRef.current) {
+                if (
+                  !shouldCommitFromInput(
+                    composingRef.current || input.isComposing,
+                  )
+                ) {
+                  return;
+                }
+                if (!typingRunRef.current) {
                   historyRef.current = remember(historyRef.current, snapshot());
                   typingRunRef.current = true;
                 }
@@ -740,16 +803,7 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
 
                 if (event.key === 'Enter') {
                   event.preventDefault();
-                  rememberCurrent();
-                  const base = collapsed
-                    ? { blocks: blocksRef.current, caret: range.focus }
-                    : deleteSelection(
-                        blocksRef.current,
-                        range.start,
-                        range.end,
-                      );
-                  const result = enterAt(base.blocks, base.caret);
-                  commit(result.blocks, result.caret);
+                  applyEnter(range);
                   return;
                 }
 
@@ -770,13 +824,27 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
                 }
               }}
               onCopy={(event) => {
+                const range = editorSelection();
+                if (
+                  clipboardAction(
+                    collapsedRange(range.start, range.end),
+                    'copy',
+                  ) === 'let-native'
+                ) {
+                  return;
+                }
                 event.preventDefault();
-                writeClipboard(event, editorSelection());
+                writeClipboard(event, range);
               }}
               onCut={(event) => {
+                const range = editorSelection();
+                const action = clipboardAction(
+                  collapsedRange(range.start, range.end),
+                  'cut',
+                );
+                if (action === 'let-native') return;
                 event.preventDefault();
                 if (composingRef.current) return;
-                const range = editorSelection();
                 writeClipboard(event, range);
                 if (disabled) return;
                 rememberCurrent();
@@ -785,6 +853,8 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
                   range.start,
                   range.end,
                 );
+                spanningRef.current = false;
+                setPaint(null);
                 commit(result.blocks, result.caret);
               }}
               onPaste={(event) => {
