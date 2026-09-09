@@ -329,6 +329,14 @@ describe('the editor keeps a DocCaret range across blocks', () => {
   it('captures mouse drags and leaves touch moves free to scroll', () => {
     expect(EDITOR).toContain("event.pointerType !== 'mouse'");
   });
+
+  it('collapses a painted range to the focus caret on an unshifted arrow', () => {
+    expect(EDITOR).toContain('!event.shiftKey && CARET_MOVES.has(event.key)');
+    expect(EDITOR).toContain('applyRange(range.focus, range.focus)');
+    expect(EDITOR).not.toContain(
+      'if (!ctrlOrMeta && CARET_MOVES.has(event.key))',
+    );
+  });
 });
 
 describe('ordered', () => {

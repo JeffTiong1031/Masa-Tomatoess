@@ -595,6 +595,12 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
                   return;
                 }
 
+                if (!collapsed && !event.shiftKey && CARET_MOVES.has(event.key) && !ctrlOrMeta) {
+                  applyRange(range.focus, range.focus);
+                  placeNativeCaret(range.focus);
+                  return;
+                }
+
                 if (
                   collapsed &&
                   !ctrlOrMeta &&
