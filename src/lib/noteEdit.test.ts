@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
+  backspaceAtStart,
   canIndent,
   canOutdent,
+  enterAt,
   familyEnd,
   indentSelection,
   outdentSelection,
@@ -127,5 +129,83 @@ describe('outdentSelection', () => {
     expect(result.blocks[1]).toMatchObject({ indent: 0 });
     expect(result.blocks[2]).toMatchObject({ indent: 1, checked: true });
     expect(result.caret).toBe(caret);
+  });
+});
+
+describe('enterAt', () => {
+  it('creates an unchecked item below at the same indent', () => {
+    const blocks: Block[] = [
+      { kind: 'item', text: 'Hello', checked: true, indent: 1 },
+    ];
+    const next = enterAt(blocks, { index: 0, offset: 5 });
+    expect(next.blocks[0]).toMatchObject({ text: 'Hello', checked: true });
+    expect(next.blocks[1]).toEqual({
+      kind: 'item',
+      text: '',
+      checked: false,
+      indent: 1,
+    });
+    expect(next.caret).toEqual({ index: 1, offset: 0 });
+  });
+
+  it('splits in the middle and does not copy the tick', () => {
+    const blocks: Block[] = [
+      { kind: 'item', text: 'Hello', checked: true, indent: 0 },
+    ];
+    const next = enterAt(blocks, { index: 0, offset: 2 });
+    expect(next.blocks[0]).toEqual({
+      kind: 'item',
+      text: 'He',
+      checked: true,
+      indent: 0,
+    });
+    expect(next.blocks[1]).toEqual({
+      kind: 'item',
+      text: 'llo',
+      checked: false,
+      indent: 0,
+    });
+  });
+
+  it('outdents an empty nested item and exits an empty top-level item', () => {
+    const nested: Block[] = [
+      { kind: 'item', text: 'A', checked: false, indent: 0 },
+      { kind: 'item', text: '', checked: false, indent: 1 },
+    ];
+    expect(enterAt(nested, { index: 1, offset: 0 }).blocks[1]).toMatchObject({
+      kind: 'item',
+      indent: 0,
+    });
+    const top: Block[] = [{ kind: 'item', text: '', checked: false, indent: 0 }];
+    expect(enterAt(top, { index: 0, offset: 0 }).blocks[0]).toEqual({
+      kind: 'paragraph',
+      text: '',
+    });
+  });
+});
+
+describe('backspaceAtStart', () => {
+  it('outdents a nested item instead of turning it into a paragraph', () => {
+    const blocks: Block[] = [
+      { kind: 'item', text: 'A', checked: false, indent: 0 },
+      { kind: 'item', text: 'B', checked: true, indent: 1 },
+    ];
+    const next = backspaceAtStart(blocks, { index: 1, offset: 0 });
+    expect(next?.blocks[1]).toEqual({
+      kind: 'item',
+      text: 'B',
+      checked: true,
+      indent: 0,
+    });
+  });
+
+  it('turns a top-level item into a paragraph and shifts children out', () => {
+    const blocks: Block[] = [
+      { kind: 'item', text: 'A', checked: true, indent: 0 },
+      { kind: 'item', text: 'B', checked: false, indent: 1 },
+    ];
+    const next = backspaceAtStart(blocks, { index: 0, offset: 0 });
+    expect(next?.blocks[0]).toEqual({ kind: 'paragraph', text: 'A' });
+    expect(next?.blocks[1]).toMatchObject({ kind: 'item', indent: 0 });
   });
 });

@@ -225,3 +225,93 @@ export function outdentSelection(
 ): EditResult {
   return moveSelection(blocks, from, to, caret, -1);
 }
+
+export function enterAt(blocks: Block[], caret: DocCaret): EditResult {
+  const block = blocks[caret.index];
+  switch (block.kind) {
+    case 'paragraph': {
+      const next = [...blocks];
+      next.splice(
+        caret.index,
+        1,
+        { kind: 'paragraph', text: block.text.slice(0, caret.offset) },
+        { kind: 'paragraph', text: block.text.slice(caret.offset) },
+      );
+      return {
+        blocks: next,
+        caret: { index: caret.index + 1, offset: 0 },
+      };
+    }
+    case 'item': {
+      if (block.text === '') {
+        if (block.indent > 0) {
+          return outdentSelection(blocks, caret.index, caret.index, caret);
+        }
+        return toggleChecklist(blocks, caret.index, caret.index, caret);
+      }
+
+      const next = [...blocks];
+      next.splice(
+        caret.index,
+        1,
+        { ...block, text: block.text.slice(0, caret.offset) },
+        {
+          kind: 'item',
+          text: block.text.slice(caret.offset),
+          checked: false,
+          indent: block.indent,
+        },
+      );
+      return {
+        blocks: next,
+        caret: { index: caret.index + 1, offset: 0 },
+      };
+    }
+  }
+}
+
+export function backspaceAtStart(
+  blocks: Block[],
+  caret: DocCaret,
+): EditResult | null {
+  if (caret.offset !== 0) {
+    return null;
+  }
+
+  const block = blocks[caret.index];
+  switch (block.kind) {
+    case 'item':
+      if (block.indent > 0) {
+        return outdentSelection(blocks, caret.index, caret.index, caret);
+      }
+      return toggleChecklist(blocks, caret.index, caret.index, caret);
+    case 'paragraph': {
+      if (caret.index === 0) {
+        return { blocks, caret };
+      }
+
+      const previousIndex = caret.index - 1;
+      const previous = blocks[previousIndex];
+      const joinOffset = previous.text.length;
+      const next = [...blocks];
+      switch (previous.kind) {
+        case 'paragraph':
+          next[previousIndex] = {
+            kind: 'paragraph',
+            text: previous.text + block.text,
+          };
+          break;
+        case 'item':
+          next[previousIndex] = {
+            ...previous,
+            text: previous.text + block.text,
+          };
+      }
+      next.splice(caret.index, 1);
+      return {
+        blocks: next,
+        caret: { index: previousIndex, offset: joinOffset },
+      };
+    }
+  }
+}
