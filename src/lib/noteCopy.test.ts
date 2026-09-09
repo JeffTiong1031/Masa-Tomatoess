@@ -12,6 +12,20 @@ describe('copyOut', () => {
       ]),
     ).toBe('[x] Parent\n  [ ] Child\nAfter');
   });
+
+  it('never emits private marks from block text', () => {
+    expect(
+      copyOut([
+        { kind: 'paragraph', text: `${NOTE_MARK_START}note${NOTE_MARK_SEP}tail` },
+        {
+          kind: 'item',
+          text: `${NOTE_MARK_START}item${NOTE_MARK_SEP}body`,
+          checked: false,
+          indent: 0,
+        },
+      ]),
+    ).toBe('notetail\n[ ] itembody');
+  });
 });
 
 describe('stripIncoming', () => {
