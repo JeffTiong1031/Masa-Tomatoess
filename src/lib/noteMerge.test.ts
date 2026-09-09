@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { NOTE_MARK_START, NOTE_MARK_SEP } from './noteDoc';
 import { mergeNotes } from './noteMerge';
 import { DEFAULT_NOTE_TITLE, type Note } from './note';
 
@@ -22,6 +23,13 @@ describe('mergeNotes', () => {
     const local = [note({ id: 'a', body: 'phone', updatedAt: EARLY })];
     const remote = [note({ id: 'a', body: 'laptop', updatedAt: LATE })];
     expect(mergeNotes(local, remote, [])[0].body).toBe('laptop');
+  });
+
+  it('does not tidy checklist marks when the later row wins', () => {
+    const body = `${NOTE_MARK_START}0/0${NOTE_MARK_SEP}Milk`;
+    const local = [note({ id: 'a', body: 'plain', updatedAt: EARLY })];
+    const remote = [note({ id: 'a', body, updatedAt: LATE })];
+    expect(mergeNotes(local, remote, [])[0].body).toBe(body);
   });
 
   it('does not replace the device copy with an equally old or older cloud row', () => {
