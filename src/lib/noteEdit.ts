@@ -56,7 +56,11 @@ export function deleteSelection(
     case 'item':
       tail = { ...last, text: last.text.slice(to.offset) };
   }
-  next.splice(from.index, to.index - from.index + 1, head, tail);
+  next.splice(
+    from.index,
+    to.index - from.index + 1,
+    ...(tail.text === '' ? [head] : [head, tail]),
+  );
   return { blocks: next, caret: from };
 }
 

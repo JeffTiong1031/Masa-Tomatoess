@@ -187,6 +187,19 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
       reportCaret(blocksRef.current, focus, true);
     };
 
+    const placeNativeCaret = (caret: DocCaret) => {
+      const element = blockNodesRef.current[caret.index];
+      if (!element) return;
+      const node = element.firstChild ?? element;
+      const offset = node === element ? 0 : caret.offset;
+      const nativeRange = document.createRange();
+      nativeRange.setStart(node, offset);
+      nativeRange.collapse(true);
+      const selection = window.getSelection();
+      selection?.removeAllRanges();
+      selection?.addRange(nativeRange);
+    };
+
     const caretFromPoint = (x: number, y: number): DocCaret | null => {
       const position = document.caretPositionFromPoint?.(x, y);
       if (position) {
@@ -304,7 +317,7 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
         { index, offset: block.text.length },
       );
       const inserted = insertText(deleted.blocks, deleted.caret, text);
-      commit(inserted.blocks, caret);
+      commit(inserted.blocks, caret, false);
     };
 
     const updateCaret = (index: number) => {
@@ -391,15 +404,20 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
           if (!caret) return;
           if (event.shiftKey) {
             applyRange(anchorRef.current, caret);
-            dragAnchorRef.current = anchorRef.current;
+            if (event.pointerType === 'mouse') {
+              dragAnchorRef.current = anchorRef.current;
+            }
           } else {
             applyRange(caret, caret);
-            dragAnchorRef.current = caret;
+            if (event.pointerType === 'mouse') {
+              dragAnchorRef.current = caret;
+            }
           }
         }}
         onPointerMove={(event) => {
           const origin = dragAnchorRef.current;
           if (!origin || event.buttons === 0) return;
+          if (event.pointerType !== 'mouse') return;
           const caret = caretFromPoint(event.clientX, event.clientY);
           if (!caret) return;
           if (caret.index === origin.index && caret.offset === origin.offset) {
@@ -565,30 +583,44 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
                   return;
                 }
 
-                if (!ctrlOrMeta && CARET_MOVES.has(event.key)) {
+                if (event.shiftKey && CARET_MOVES.has(event.key) && !ctrlOrMeta) {
                   event.preventDefault();
                   const focus = extendCaret(
                     blocksRef.current,
-                    event.shiftKey ? range.focus : range.focus,
+                    range.focus,
                     event.key as CaretMove,
                   );
-                  applyRange(
-                    event.shiftKey ? anchorRef.current : focus,
-                    focus,
-                  );
-                  restoreCaretRef.current = true;
-                  const element = blockNodesRef.current[focus.index];
-                  if (element) {
-                    const node = element.firstChild ?? element;
-                    const offset = node === element ? 0 : focus.offset;
-                    const nativeRange = document.createRange();
-                    nativeRange.setStart(node, offset);
-                    nativeRange.collapse(true);
-                    const selection = window.getSelection();
-                    selection?.removeAllRanges();
-                    selection?.addRange(nativeRange);
-                  }
+                  applyRange(anchorRef.current, focus);
+                  placeNativeCaret(focus);
                   return;
+                }
+
+                if (
+                  collapsed &&
+                  !ctrlOrMeta &&
+                  (event.key === 'ArrowLeft' || event.key === 'ArrowRight')
+                ) {
+                  const atEdge =
+                    event.key === 'ArrowLeft'
+                      ? range.focus.offset === 0
+                      : range.focus.offset ===
+                        blocksRef.current[range.focus.index].text.length;
+                  if (atEdge) {
+                    const focus = extendCaret(
+                      blocksRef.current,
+                      range.focus,
+                      event.key,
+                    );
+                    if (
+                      focus.index !== range.focus.index ||
+                      focus.offset !== range.focus.offset
+                    ) {
+                      event.preventDefault();
+                      applyRange(focus, focus);
+                      placeNativeCaret(focus);
+                      return;
+                    }
+                  }
                 }
 
                 if (

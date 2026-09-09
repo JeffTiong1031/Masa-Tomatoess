@@ -241,6 +241,20 @@ describe('deleteSelection', () => {
     ]);
     expect(next.caret).toEqual({ index: 0, offset: 1 });
   });
+
+  it('drops an empty tail so Ctrl+A then type does not leave a husk', () => {
+    const blocks: Block[] = [
+      { kind: 'paragraph', text: 'Ab' },
+      { kind: 'item', text: 'Cd', checked: true, indent: 0 },
+    ];
+    const next = deleteSelection(
+      blocks,
+      { index: 0, offset: 0 },
+      { index: 1, offset: 2 },
+    );
+    expect(next.blocks).toEqual([{ kind: 'paragraph', text: '' }]);
+    expect(next.caret).toEqual({ index: 0, offset: 0 });
+  });
 });
 
 describe('typeOverRange', () => {
@@ -262,6 +276,24 @@ describe('typeOverRange', () => {
         { kind: 'item', text: 'd', checked: true, indent: 0 },
       ],
       caret: { index: 0, offset: 2 },
+    });
+  });
+
+  it('replaces the whole note on the head line only', () => {
+    const blocks: Block[] = [
+      { kind: 'paragraph', text: 'Ab' },
+      { kind: 'item', text: 'Cd', checked: true, indent: 0 },
+    ];
+    expect(
+      typeOverRange(
+        blocks,
+        { index: 0, offset: 0 },
+        { index: 1, offset: 2 },
+        'x',
+      ),
+    ).toEqual({
+      blocks: [{ kind: 'paragraph', text: 'x' }],
+      caret: { index: 0, offset: 1 },
     });
   });
 });
@@ -286,6 +318,17 @@ describe('the editor keeps a DocCaret range across blocks', () => {
     expect(EDITOR).toContain('typeOverRange(');
     expect(EDITOR).toContain('extendCaret(');
   });
+
+  it('uses extendCaret only while Shift is held, not for collapsed ArrowUp/Down', () => {
+    expect(EDITOR).toContain('event.shiftKey && CARET_MOVES.has(event.key)');
+    expect(EDITOR).not.toContain(
+      'if (!ctrlOrMeta && CARET_MOVES.has(event.key))',
+    );
+  });
+
+  it('captures mouse drags and leaves touch moves free to scroll', () => {
+    expect(EDITOR).toContain("event.pointerType !== 'mouse'");
+  });
 });
 
 describe('ordered', () => {
@@ -309,8 +352,8 @@ describe('insertText', () => {
     });
   });
 
-  it('restores the DOM caret after a controlled text update', () => {
-    expect(EDITOR).toContain('commit(inserted.blocks, caret);');
+  it('does not restore the DOM caret on ordinary typing input', () => {
+    expect(EDITOR).toContain('commit(inserted.blocks, caret, false)');
   });
 });
 
