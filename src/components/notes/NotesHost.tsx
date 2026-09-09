@@ -7,7 +7,7 @@ import type { Note } from '@/lib/note';
 import { loadNotes } from '@/lib/noteLocal';
 import { mergeNotes } from '@/lib/noteMerge';
 import { isActiveNoteOwnedBy } from '@/lib/notePad';
-import { isTypingTag, notesShortcut } from '@/lib/noteShortcut';
+import { isTypingElement, notesShortcut } from '@/lib/noteShortcut';
 import { reconcileNotes } from '@/lib/noteSync';
 import { useNotesUiStore } from '@/store/useNotesUiStore';
 import { NotesSheet } from './NotesSheet';
@@ -94,8 +94,13 @@ export function NotesHost() {
   useEffect(() => {
     if (owner === null) return;
     const onKeyDown = (event: KeyboardEvent) => {
-      const typing = isTypingTag(
-        (event.target as { tagName?: string }).tagName ?? '',
+      const target = event.target as {
+        tagName?: string;
+        isContentEditable?: boolean;
+      };
+      const typing = isTypingElement(
+        target.tagName ?? '',
+        target.isContentEditable === true,
       );
       const action = notesShortcut(
         event.key,

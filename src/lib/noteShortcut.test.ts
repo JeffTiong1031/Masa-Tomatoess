@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { isTypingTag, notesShortcut } from './noteShortcut';
+import {
+  isChecklistHotkey,
+  isTypingElement,
+  isTypingTag,
+  notesShortcut,
+} from './noteShortcut';
 
 describe('isTypingTag', () => {
   it('treats form fields as typing', () => {
@@ -23,5 +28,20 @@ describe('notesShortcut', () => {
 
   it('closes on Escape even while typing', () => {
     expect(notesShortcut('Escape', true, false)).toBe('close');
+  });
+});
+
+describe('isTypingElement', () => {
+  it('treats a contenteditable div as typing', () => {
+    expect(isTypingElement('DIV', true)).toBe(true);
+    expect(isTypingElement('DIV', false)).toBe(false);
+  });
+});
+
+describe('isChecklistHotkey', () => {
+  it('matches Ctrl+Shift+9 and Cmd+Shift+9, not Alt', () => {
+    expect(isChecklistHotkey('9', true, true, false)).toBe(true);
+    expect(isChecklistHotkey('9', true, true, true)).toBe(false);
+    expect(isChecklistHotkey('9', false, true, false)).toBe(false);
   });
 });
