@@ -1,6 +1,13 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  async redirects() {
+    return [
+      { source: '/study/calendar', destination: '/calendar', permanent: true },
+      { source: '/study/timetable', destination: '/timetable', permanent: true },
+      { source: '/todo', destination: '/timetable/todo', permanent: true },
+    ];
+  },
   async headers() {
     return [
       {

@@ -2,12 +2,12 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { STUDY_PANEL, isActiveHref } from './navLinks';
+import { TIMETABLE_PANEL, isActiveHref } from './navLinks';
 import { accentVar } from '@/components/ui/PageShell';
 
-/** Study's own lower panel: Focus, Calendar, Timeline.
+/** Timetable's own lower panel: Timetable, To-do.
  *
- *  Three floating pills, not a bar. The full-width slab this replaced
+ *  Two floating pills, not a bar. The full-width slab this replaced
  *  cut a hard white band across the bottom of the wallpaper, which read
  *  as chrome bolted over the page rather than part of it. Dropping the
  *  bar background and its top border lets the photo run to the bottom
@@ -18,25 +18,29 @@ import { accentVar } from '@/components/ui/PageShell';
  *  straight onto the background, and that rule is what lets the veil
  *  stay gone.
  *
- *  Renders at every width, because the drawer does not list Calendar or
- *  Timeline and hiding this would strand them. It is the app's only
- *  bottom bar; everywhere else navigation is the drawer alone. */
-export default function StudyPanel() {
+ *  Renders at every width, because the drawer lists Timetable once and
+ *  does not list To-do; hiding this would strand the task list. It is
+ *  the app's only bottom bar; everywhere else navigation is the
+ *  drawer alone. */
+export default function TimetablePanel() {
   const pathname = usePathname();
 
   return (
     <nav
-      aria-label="Study sections"
+      aria-label="Timetable sections"
       className="pointer-events-none fixed inset-x-0 bottom-0 z-50 flex justify-center px-2"
       style={{ paddingBottom: 'calc(var(--mt-safe-bottom) + 0.875rem)' }}
     >
-      {/* The three labelled pills measure ~340px, which fits 375 with
-          room to spare but would overrun a 320px phone. The tighter
-          padding below that width buys the ~40px needed rather than
-          letting the row spill off screen. */}
+      {/* The two labelled pills measure well under 340px, which fits 375
+          with room to spare but would overrun a 320px phone if the row
+          grew. The tighter padding below that width buys the ~40px
+          needed rather than letting the row spill off screen. */}
       <div className="pointer-events-auto flex items-center gap-1.5 sm:gap-2">
-        {STUDY_PANEL.map(({ href, label, icon: Icon, accent }) => {
-          const active = isActiveHref(pathname, href);
+        {TIMETABLE_PANEL.map(({ href, label, icon: Icon, accent }) => {
+          const active =
+            href === '/timetable'
+              ? pathname === '/timetable'
+              : isActiveHref(pathname, href);
           return (
             <Link
               key={href}

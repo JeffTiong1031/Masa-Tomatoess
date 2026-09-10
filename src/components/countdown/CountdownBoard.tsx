@@ -94,7 +94,7 @@ export default function CountdownBoard() {
       )}
 
       <Link
-        href="/study/calendar"
+        href="/calendar"
         className="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-[var(--mt-accent)] text-sm font-semibold text-[var(--mt-accent-contrast)]"
       >
         Add a date in the calendar

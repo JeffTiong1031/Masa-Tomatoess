@@ -16,7 +16,7 @@ export type BackgroundField = 'themed' | 'plain';
  *  now that the veil is gone and the cards are fully opaque -- the photo
  *  reads as the surround rather than as something the cards are fighting.
  *
- *  Calendar and Timeline stay on the plain field: they are not part of a
+ *  Calendar and Timetable stay on the plain field: they are not part of a
  *  focus session, and the wallpaper is the session's furniture. */
 const THEMED_ROUTES = ['/study/timer', '/study/flexible', '/study/dashboard'];
 
