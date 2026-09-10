@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, it, expect } from 'vitest';
-import { contrastRatio, deltaE76, hueDistance } from './color';
+import { contrastRatio, deltaE76, hexToRgb, hueDistance } from './color';
 
 const CSS = readFileSync(
   path.resolve(process.cwd(), 'src/app/globals.css'),
@@ -128,6 +128,17 @@ describe('home calendar card', () => {
     return match![1];
   }
 
+  function mixOverCard(hex: string, percent: number): string {
+    const fg = hexToRgb(hex);
+    const bg = hexToRgb(readToken('mac-white'));
+    const p = percent / 100;
+    const channel = (a: number, b: number) => Math.round(a * p + b * (1 - p));
+    const r = channel(fg.r, bg.r);
+    const g = channel(fg.g, bg.g);
+    const b = channel(fg.b, bg.b);
+    return `#${[r, g, b].map((v) => v.toString(16).padStart(2, '0')).join('')}`;
+  }
+
   it('keeps cocoa readable on the today pill', () => {
     const ratio = contrastRatio(
       readToken('mac-cocoa'),
@@ -137,10 +148,19 @@ describe('home calendar card', () => {
     expect(ratio).toBeGreaterThanOrEqual(4.5);
   });
 
-  it('keeps the late chip text readable on white', () => {
+  it('keeps cocoa readable on the late to-do chip', () => {
     const ratio = contrastRatio(
-      readToken('mac-danger-deep'),
-      readToken('mac-white'),
+      readToken('mac-cocoa'),
+      mixOverCard(readToken('mac-danger-deep'), 16),
+    );
+
+    expect(ratio).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it('keeps cocoa readable on the ordinary agenda chip', () => {
+    const ratio = contrastRatio(
+      readToken('mac-cocoa'),
+      mixOverCard(readAccents()['calendar'], 40),
     );
 
     expect(ratio).toBeGreaterThanOrEqual(4.5);
