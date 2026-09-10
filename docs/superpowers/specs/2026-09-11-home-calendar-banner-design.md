@@ -51,9 +51,12 @@ Left column:
 
 Right column:
 
-- Month grid for the month containing today. Seven columns, Monday first,
-  single-letter muted weekday headers, leading blanks for the offset.
-- Every cell is a link to `/calendar` for that date, minimum 44px hit area.
+- Month grid for the month containing today, built from the existing
+  `monthGridDates(month)` in `dates.ts`: 42 cells, seven columns, Monday
+  first, single-letter muted weekday headers. Days from the neighbouring
+  months fill the corners and render at 0.35 opacity, exactly as
+  `calendar/MonthGrid.tsx` already does.
+- Every cell links to `/calendar?date=<the date>`, minimum 44px hit area.
 - Today renders as a filled `--mt-accent` rounded-full pill with cocoa text.
 - A day that has at least one of your events or to-dos gets a 3px accent dot
   under its number.
@@ -115,10 +118,20 @@ alter table count_up_entries add column pinned boolean not null default false;
 The same statements are saved to
 `docs/superpowers/specs/2026-09-11-home-banner-setup.sql`.
 
-`calendarRepo.ts` adds `pinned` to `COLUMNS`, `EventRow`, `EventInput` and
-`toColumns`, and `CalendarEvent` gains the field. `countUpRepo.ts` does the
-same for `count_up_entries` and `CountUpEntry`. Both gain a small update
-function that flips only that column.
+The `pinned` flag stays out of `CalendarEvent`, `EventInput` and
+`CountUpEntry`. Adding a field to `CalendarEvent` would force every literal
+that builds one — event form, assistant, countdown writer, their tests — to
+grow a field none of them care about, and adding it to `toColumns` would make
+every ordinary edit write the star back.
+
+Instead each repo gains two narrow functions that touch only that column:
+
+- `calendarRepo.ts`: `fetchPinnedEventIds(owner)` returning `Set<string>`, and
+  `setEventPinned(id, pinned)`
+- `countUpRepo.ts`: `fetchPinnedCountUpIds(owner)` returning `Set<string>`, and
+  `setCountUpPinned(id, owner, pinned)`
+
+Components hold the pinned ids as a set beside the rows they already have.
 
 If the column is missing, the select fails the way a missing table does today:
 the banner falls back to period plus streak, the failure is logged, and the
@@ -143,6 +156,18 @@ Sort order inside `buildAgenda`:
 
 1. events, timed ones by start time ascending, all-day ones after them
 2. to-dos, overdue first, then today's by due time, then to-dos with no time
+
+## The calendar page has to learn a date
+
+`CalendarBoard` keeps the selected date in its own state and never reads the
+URL, so `/calendar?date=2026-09-14` currently lands on today. It gains a first
+-load read of `useSearchParams().get('date')`, used as the initial selected
+date and initial month when the value is a real `YYYY-MM-DD`, and ignored
+otherwise. Later navigation inside the board is unaffected.
+
+`useSearchParams` client-side renders everything up to the nearest Suspense
+boundary during prerender, so `src/app/(life)/calendar/page.tsx` wraps
+`<CalendarBoard />` in `<Suspense>` with a small fallback card.
 
 ## New components
 
