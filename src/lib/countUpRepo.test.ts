@@ -251,6 +251,75 @@ describe('count-up cloud repository', () => {
     );
   });
 
+  it('uploads leftover extras onto a cloud list that already has rows', async () => {
+    let calls = 0;
+    mocks.query.then.mockImplementation((resolve) => {
+      calls += 1;
+      if (calls === 1) {
+        return resolve({ data: [row], error: null });
+      }
+      if (calls === 2) {
+        return resolve({
+          data: {
+            id: 'bbbbbbbb-bbbb-cccc-dddd-eeeeeeeeeeee',
+            owner: 'Jeff',
+            label: 'Moved in',
+            date: '2024-06-01',
+          },
+          error: null,
+        });
+      }
+      return resolve({
+        data: [
+          row,
+          {
+            id: 'bbbbbbbb-bbbb-cccc-dddd-eeeeeeeeeeee',
+            owner: 'Jeff',
+            label: 'Moved in',
+            date: '2024-06-01',
+          },
+        ],
+        error: null,
+      });
+    });
+
+    await expect(
+      loadCountUpList('Jeff', [
+        { id: 'together-seed', label: 'Together', date: '2025-08-09' },
+        { id: 'id-1', label: 'Moved in', date: '2024-06-01' },
+      ]),
+    ).resolves.toEqual([
+      { id: row.id, label: 'Together', date: '2025-08-09' },
+      {
+        id: 'bbbbbbbb-bbbb-cccc-dddd-eeeeeeeeeeee',
+        label: 'Moved in',
+        date: '2024-06-01',
+      },
+    ]);
+
+    expect(mocks.query.insert).toHaveBeenCalledWith({
+      owner: 'Jeff',
+      label: 'Moved in',
+      date: '2024-06-01',
+    });
+    expect(mocks.query.insert).not.toHaveBeenCalledWith({
+      owner: 'Jeff',
+      label: 'Together',
+      date: '2025-08-09',
+    });
+  });
+
+  it('fails the load when existing rows cannot be marked initialized', async () => {
+    mocks.query.then.mockImplementation((resolve) =>
+      resolve({ data: [row], error: null }),
+    );
+    mocks.state.then.mockImplementation((resolve) =>
+      resolve({ error: { code: 'PGRST205' } }),
+    );
+
+    await expect(loadCountUpList('Jeff', [])).resolves.toBeNull();
+  });
+
   it('only seeds once when two loads overlap', async () => {
     let releaseFirst!: (value: unknown) => void;
     const firstFetch = new Promise((resolve) => {

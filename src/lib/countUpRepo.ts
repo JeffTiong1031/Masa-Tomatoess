@@ -146,6 +146,29 @@ export async function loadCountUpList(
   return promise;
 }
 
+function leftoverMissingFrom(
+  fallback: CountUpEntry[],
+  existing: CountUpEntry[],
+): CountUpEntry[] {
+  return fallback.filter(
+    (item) =>
+      !existing.some(
+        (row) => row.label === item.label && row.date === item.date,
+      ),
+  );
+}
+
+async function insertAll(
+  owner: UserName,
+  entries: CountUpEntry[],
+): Promise<boolean> {
+  for (const entry of entries) {
+    const saved = await insertCountUpEntry(owner, entry.label, entry.date);
+    if (saved === null) return false;
+  }
+  return true;
+}
+
 async function loadCountUpListOnce(
   owner: UserName,
   fallback: CountUpEntry[],
@@ -153,8 +176,11 @@ async function loadCountUpListOnce(
   const existing = await fetchCountUpEntries(owner);
   if (existing === null) return null;
   if (existing.length > 0) {
-    await markCountUpInitialized(owner);
-    return existing;
+    if (!(await markCountUpInitialized(owner))) return null;
+    const extra = leftoverMissingFrom(fallback, existing);
+    if (!(await insertAll(owner, extra))) return null;
+    if (extra.length === 0) return existing;
+    return fetchCountUpEntries(owner);
   }
 
   const initialized = await fetchCountUpInitialized(owner);
@@ -167,11 +193,7 @@ async function loadCountUpListOnce(
       ? fallback
       : [{ id: '', label: seed.label, date: seed.date }];
 
-  for (const entry of toAdd) {
-    const saved = await insertCountUpEntry(owner, entry.label, entry.date);
-    if (saved === null) return null;
-  }
-
+  if (!(await insertAll(owner, toAdd))) return null;
   if (!(await markCountUpInitialized(owner))) return null;
   return fetchCountUpEntries(owner);
 }

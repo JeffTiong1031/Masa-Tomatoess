@@ -13,6 +13,11 @@ function timingFromTime(time: string): EventTiming {
   return { kind: 'moment', startTime: time };
 }
 
+function timingFromEdit(event: CalendarEvent, time: string): EventTiming {
+  if (time === timeFromEvent(event)) return event.timing;
+  return timingFromTime(time);
+}
+
 export function eventToInput(event: CalendarEvent): EventInput {
   return {
     owner: event.owner,
@@ -48,7 +53,7 @@ export function countdownEditInput(
     ...eventToInput(event),
     title: form.title.trim(),
     date: form.date,
-    timing: timingFromTime(form.time),
+    timing: timingFromEdit(event, form.time),
     countdown: true,
   };
 }

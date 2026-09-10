@@ -111,4 +111,32 @@ describe('countdownEditInput', () => {
     });
     expect(updated.timing).toEqual({ kind: 'allDay', endDate: null });
   });
+
+  it('keeps a time span when the start time is left as it was', () => {
+    const source = event({
+      timing: { kind: 'span', startTime: '09:00', endTime: '11:00' },
+    });
+    const updated = countdownEditInput(source, {
+      title: 'Dentist',
+      date: '2026-09-13',
+      time: '09:00',
+    });
+    expect(updated.timing).toEqual({
+      kind: 'span',
+      startTime: '09:00',
+      endTime: '11:00',
+    });
+  });
+
+  it('keeps a multi-day all-day range when the time stays blank', () => {
+    const source = event({
+      timing: { kind: 'allDay', endDate: '2026-09-15' },
+    });
+    const updated = countdownEditInput(source, {
+      title: 'Holiday',
+      date: '2026-09-13',
+      time: '',
+    });
+    expect(updated.timing).toEqual({ kind: 'allDay', endDate: '2026-09-15' });
+  });
 });

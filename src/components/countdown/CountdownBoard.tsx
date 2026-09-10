@@ -300,6 +300,10 @@ export default function CountdownBoard() {
         </Card>
       )}
 
+      {saveError !== null && dialog === null && (
+        <p className="text-sm text-[var(--mt-danger)]">{saveError}</p>
+      )}
+
       {!failed && !loaded && (
         <Card>
           <p className="text-sm text-[var(--mt-text-muted)]">Loading…</p>
@@ -385,7 +389,8 @@ export default function CountdownBoard() {
       <button
         type="button"
         onClick={openAdd}
-        className="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-[var(--mt-accent)] text-sm font-semibold text-[var(--mt-accent-contrast)]"
+        disabled={!loaded || failed}
+        className="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-[var(--mt-accent)] text-sm font-semibold text-[var(--mt-accent-contrast)] disabled:opacity-50"
       >
         Add a date
       </button>
