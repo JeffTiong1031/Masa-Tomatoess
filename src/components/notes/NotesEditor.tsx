@@ -15,14 +15,18 @@ import {
   canOutdent as canOutdentBlock,
   deleteSelection,
   enterAt,
+  extendCaret,
   indentSelection,
   insertText,
   ordered,
   outdentSelection,
   pasteExternal,
   pasteInternal,
+  selectedRoots,
   toggleChecked,
   toggleChecklist,
+  typeOverRange,
+  type CaretMove,
   type DocCaret,
 } from '@/lib/noteEdit';
 import { copyOut, NOTE_CLIPBOARD_TYPE } from '@/lib/noteCopy';
@@ -67,6 +71,31 @@ interface EditorSelection {
   focus: DocCaret;
 }
 
+const CARET_MOVES = new Set<string>([
+  'ArrowUp',
+  'ArrowDown',
+  'ArrowLeft',
+  'ArrowRight',
+  'Home',
+  'End',
+]);
+
+function collapsedRange(start: DocCaret, end: DocCaret): boolean {
+  return start.index === end.index && start.offset === end.offset;
+}
+
+function rangeHasItem(blocks: Block[], from: number, to: number): boolean {
+  for (let index = from; index <= to; index += 1) {
+    switch (blocks[index].kind) {
+      case 'item':
+        return true;
+      case 'paragraph':
+        break;
+    }
+  }
+  return false;
+}
+
 function slicedBlock(block: Block, start: number, end: number): Block {
   switch (block.kind) {
     case 'paragraph':
@@ -87,19 +116,36 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
     const typingRunRef = useRef(false);
     const restoreCaretRef = useRef(false);
     const composingRef = useRef(false);
+    const rangeRef = useRef<EditorSelection>({
+      start: { index: 0, offset: 0 },
+      end: { index: 0, offset: 0 },
+      focus: { index: 0, offset: 0 },
+    });
+    const anchorRef = useRef<DocCaret>({ index: 0, offset: 0 });
+    const dragAnchorRef = useRef<DocCaret | null>(null);
+    const spanningRef = useRef(false);
+    const [paint, setPaint] = useState<{ start: DocCaret; end: DocCaret } | null>(
+      null,
+    );
 
     const reportCaret = (
       nextBlocks: Block[],
       caret: DocCaret,
       inWords = focusedRef.current,
     ) => {
-      const block = nextBlocks[caret.index];
-      const inChecklist = inWords && block.kind === 'item';
+      const from = rangeRef.current.start;
+      const to = rangeRef.current.end;
+      const inChecklist = inWords && rangeHasItem(nextBlocks, from.index, to.index);
+      const roots = selectedRoots(nextBlocks, from.index, to.index);
       onCaret({
         inWords,
         inChecklist,
-        canIndent: inChecklist && canIndentBlock(nextBlocks, caret.index),
-        canOutdent: inChecklist && canOutdentBlock(nextBlocks, caret.index),
+        canIndent:
+          inChecklist &&
+          roots.some((index) => canIndentBlock(nextBlocks, index)),
+        canOutdent:
+          inChecklist &&
+          roots.some((index) => canOutdentBlock(nextBlocks, index)),
       });
     };
 
@@ -111,6 +157,11 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
       blocksRef.current = nextBlocks;
       caretRef.current = caret;
       restoreCaretRef.current = restoreCaret;
+      if (!spanningRef.current) {
+        rangeRef.current = { start: caret, end: caret, focus: caret };
+        anchorRef.current = caret;
+        setPaint(null);
+      }
       setBlocks(nextBlocks);
       onChange(encodeBody(nextBlocks));
       reportCaret(nextBlocks, caret);
@@ -124,6 +175,49 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
     const rememberCurrent = () => {
       typingRunRef.current = false;
       historyRef.current = remember(historyRef.current, snapshot());
+    };
+
+    const applyRange = (anchor: DocCaret, focus: DocCaret) => {
+      const [start, end] = ordered(anchor, focus);
+      anchorRef.current = anchor;
+      rangeRef.current = { start, end, focus };
+      caretRef.current = focus;
+      spanningRef.current = !collapsedRange(start, end);
+      setPaint(spanningRef.current ? { start, end } : null);
+      reportCaret(blocksRef.current, focus, true);
+    };
+
+    const caretFromPoint = (x: number, y: number): DocCaret | null => {
+      const position = document.caretPositionFromPoint?.(x, y);
+      if (position) {
+        const mapped = pointForNode(position.offsetNode, position.offset);
+        if (mapped) return mapped;
+      }
+      const nativeRange = document.caretRangeFromPoint?.(x, y);
+      if (nativeRange) {
+        const mapped = pointForNode(
+          nativeRange.startContainer,
+          nativeRange.startOffset,
+        );
+        if (mapped) return mapped;
+      }
+      let nearest: DocCaret | null = null;
+      let nearestDist = Number.POSITIVE_INFINITY;
+      for (let index = 0; index < blocksRef.current.length; index += 1) {
+        const element = blockNodesRef.current[index];
+        if (!element) continue;
+        const rect = element.getBoundingClientRect();
+        const dy =
+          y < rect.top ? rect.top - y : y > rect.bottom ? y - rect.bottom : 0;
+        if (dy < nearestDist) {
+          nearestDist = dy;
+          nearest = {
+            index,
+            offset: x < rect.left + rect.width / 2 ? 0 : blocksRef.current[index].text.length,
+          };
+        }
+      }
+      return nearest;
     };
 
     const pointForNode = (
@@ -149,6 +243,9 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
     };
 
     const editorSelection = (): EditorSelection => {
+      if (spanningRef.current) {
+        return rangeRef.current;
+      }
       const selection = window.getSelection();
       const anchor = pointForNode(
         selection?.anchorNode ?? null,
@@ -159,11 +256,14 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
         selection?.focusOffset ?? 0,
       );
       if (!anchor || !focus) {
-        const caret = caretRef.current;
-        return { start: caret, end: caret, focus: caret };
+        return rangeRef.current;
       }
       const [start, end] = ordered(anchor, focus);
-      return { start, end, focus };
+      const next = { start, end, focus };
+      rangeRef.current = next;
+      anchorRef.current = anchor;
+      caretRef.current = focus;
+      return next;
     };
 
     const selectedFragment = ({ start, end }: EditorSelection): Block[] => {
@@ -204,7 +304,7 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
         { index, offset: block.text.length },
       );
       const inserted = insertText(deleted.blocks, deleted.caret, text);
-      commit(inserted.blocks, caret, false);
+      commit(inserted.blocks, caret);
     };
 
     const updateCaret = (index: number) => {
@@ -283,6 +383,37 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
     return (
       <div
         className="mt-quiet-focus min-h-11 flex-1 overflow-auto bg-[var(--mt-surface)] p-3 text-[var(--mt-text)]"
+        onPointerDown={(event) => {
+          if ((event.target as HTMLElement).closest('[role="checkbox"]')) {
+            return;
+          }
+          const caret = caretFromPoint(event.clientX, event.clientY);
+          if (!caret) return;
+          if (event.shiftKey) {
+            applyRange(anchorRef.current, caret);
+            dragAnchorRef.current = anchorRef.current;
+          } else {
+            applyRange(caret, caret);
+            dragAnchorRef.current = caret;
+          }
+        }}
+        onPointerMove={(event) => {
+          const origin = dragAnchorRef.current;
+          if (!origin || event.buttons === 0) return;
+          const caret = caretFromPoint(event.clientX, event.clientY);
+          if (!caret) return;
+          if (caret.index === origin.index && caret.offset === origin.offset) {
+            return;
+          }
+          event.preventDefault();
+          if (!event.currentTarget.hasPointerCapture(event.pointerId)) {
+            event.currentTarget.setPointerCapture(event.pointerId);
+          }
+          applyRange(origin, caret);
+        }}
+        onPointerUp={() => {
+          dragAnchorRef.current = null;
+        }}
         onBlur={(event) => {
           if (event.currentTarget.contains(event.relatedTarget as Node | null)) {
             return;
@@ -294,7 +425,13 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
         {blocks.map((block, index) => (
           <div
             key={index}
-            className="flex min-h-11 items-start"
+            className={`flex min-h-11 items-start ${
+              paint &&
+              index >= paint.start.index &&
+              index <= paint.end.index
+                ? 'bg-[color-mix(in_srgb,var(--mt-accent)_28%,transparent)]'
+                : ''
+            }`}
             style={{
               paddingLeft:
                 block.kind === 'item' ? block.indent * ITEM_INDENT_PX : 0,
@@ -329,6 +466,8 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
               }}
               aria-label={index === 0 ? 'Note' : undefined}
               className={`min-h-11 min-w-0 flex-1 py-2 outline-none ${
+                spanningRef.current ? 'select-none' : ''
+              } ${
                 block.kind === 'item' && block.checked
                   ? 'text-[var(--mt-text-muted)] line-through'
                   : 'text-[var(--mt-text)]'
@@ -345,7 +484,40 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
               onCompositionEnd={() => {
                 composingRef.current = false;
               }}
+              onBeforeInput={(event) => {
+                if (composingRef.current || disabled) return;
+                const range = rangeRef.current;
+                if (collapsedRange(range.start, range.end)) return;
+                const native = event.nativeEvent;
+                if (native.inputType === 'insertText' && native.data) {
+                  event.preventDefault();
+                  rememberCurrent();
+                  const result = typeOverRange(
+                    blocksRef.current,
+                    range.start,
+                    range.end,
+                    native.data,
+                  );
+                  spanningRef.current = false;
+                  setPaint(null);
+                  commit(result.blocks, result.caret);
+                  return;
+                }
+                if (native.inputType.startsWith('delete')) {
+                  event.preventDefault();
+                  rememberCurrent();
+                  const result = deleteSelection(
+                    blocksRef.current,
+                    range.start,
+                    range.end,
+                  );
+                  spanningRef.current = false;
+                  setPaint(null);
+                  commit(result.blocks, result.caret);
+                }
+              }}
               onInput={(event) => {
+                if (dragAnchorRef.current || spanningRef.current) return;
                 const input = event.nativeEvent as InputEvent;
                 if (!input.isComposing && !typingRunRef.current) {
                   historyRef.current = remember(historyRef.current, snapshot());
@@ -378,9 +550,80 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
                   return;
                 }
                 const range = editorSelection();
-                const collapsed =
-                  range.start.index === range.end.index &&
-                  range.start.offset === range.end.offset;
+                const collapsed = collapsedRange(range.start, range.end);
+
+                if (ctrlOrMeta && !event.altKey && key === 'a') {
+                  event.preventDefault();
+                  const last = blocksRef.current.length - 1;
+                  applyRange(
+                    { index: 0, offset: 0 },
+                    {
+                      index: last,
+                      offset: blocksRef.current[last].text.length,
+                    },
+                  );
+                  return;
+                }
+
+                if (!ctrlOrMeta && CARET_MOVES.has(event.key)) {
+                  event.preventDefault();
+                  const focus = extendCaret(
+                    blocksRef.current,
+                    event.shiftKey ? range.focus : range.focus,
+                    event.key as CaretMove,
+                  );
+                  applyRange(
+                    event.shiftKey ? anchorRef.current : focus,
+                    focus,
+                  );
+                  restoreCaretRef.current = true;
+                  const element = blockNodesRef.current[focus.index];
+                  if (element) {
+                    const node = element.firstChild ?? element;
+                    const offset = node === element ? 0 : focus.offset;
+                    const nativeRange = document.createRange();
+                    nativeRange.setStart(node, offset);
+                    nativeRange.collapse(true);
+                    const selection = window.getSelection();
+                    selection?.removeAllRanges();
+                    selection?.addRange(nativeRange);
+                  }
+                  return;
+                }
+
+                if (
+                  !collapsed &&
+                  event.key.length === 1 &&
+                  !ctrlOrMeta &&
+                  !event.altKey
+                ) {
+                  event.preventDefault();
+                  rememberCurrent();
+                  const result = typeOverRange(
+                    blocksRef.current,
+                    range.start,
+                    range.end,
+                    event.key,
+                  );
+                  spanningRef.current = false;
+                  setPaint(null);
+                  commit(result.blocks, result.caret);
+                  return;
+                }
+
+                if (!collapsed && event.key === 'Backspace') {
+                  event.preventDefault();
+                  rememberCurrent();
+                  const result = deleteSelection(
+                    blocksRef.current,
+                    range.start,
+                    range.end,
+                  );
+                  spanningRef.current = false;
+                  setPaint(null);
+                  commit(result.blocks, result.caret);
+                  return;
+                }
 
                 if (ctrlOrMeta && !event.altKey && key === 'z') {
                   event.preventDefault();
@@ -432,7 +675,11 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
 
                 if (
                   event.key === 'Tab' &&
-                  blocksRef.current[range.focus.index].kind === 'item'
+                  rangeHasItem(
+                    blocksRef.current,
+                    range.start.index,
+                    range.end.index,
+                  )
                 ) {
                   event.preventDefault();
                   rememberCurrent();

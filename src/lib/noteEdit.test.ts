@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   backspaceAtStart,
@@ -5,11 +7,13 @@ import {
   canOutdent,
   deleteSelection,
   enterAt,
+  extendCaret,
   familyEnd,
   indentSelection,
   insertText,
   ordered,
   outdentSelection,
+  typeOverRange,
   pasteExternal,
   pasteInternal,
   selectedRoots,
@@ -17,6 +21,11 @@ import {
   toggleChecklist,
 } from './noteEdit';
 import type { Block } from './noteDoc';
+
+const EDITOR = readFileSync(
+  path.resolve(process.cwd(), 'src/components/notes/NotesEditor.tsx'),
+  'utf8',
+);
 
 const caret = { index: 0, offset: 0 };
 
@@ -216,7 +225,7 @@ describe('backspaceAtStart', () => {
 });
 
 describe('deleteSelection', () => {
-  it('keeps the first line type when a mix is deleted', () => {
+  it('keeps each remaining line type when a mixed selection is deleted', () => {
     const blocks: Block[] = [
       { kind: 'paragraph', text: 'Ab' },
       { kind: 'item', text: 'Cd', checked: true, indent: 0 },
@@ -226,7 +235,56 @@ describe('deleteSelection', () => {
       { index: 0, offset: 1 },
       { index: 1, offset: 1 },
     );
-    expect(next.blocks).toEqual([{ kind: 'paragraph', text: 'Ad' }]);
+    expect(next.blocks).toEqual([
+      { kind: 'paragraph', text: 'A' },
+      { kind: 'item', text: 'd', checked: true, indent: 0 },
+    ]);
+    expect(next.caret).toEqual({ index: 0, offset: 1 });
+  });
+});
+
+describe('typeOverRange', () => {
+  it('inserts into the first remaining line and does not smash a mixed range', () => {
+    const blocks: Block[] = [
+      { kind: 'paragraph', text: 'Ab' },
+      { kind: 'item', text: 'Cd', checked: true, indent: 0 },
+    ];
+    expect(
+      typeOverRange(
+        blocks,
+        { index: 0, offset: 1 },
+        { index: 1, offset: 1 },
+        'x',
+      ),
+    ).toEqual({
+      blocks: [
+        { kind: 'paragraph', text: 'Ax' },
+        { kind: 'item', text: 'd', checked: true, indent: 0 },
+      ],
+      caret: { index: 0, offset: 2 },
+    });
+  });
+});
+
+describe('extendCaret', () => {
+  it('moves into the next line so a shift-arrow range can cover several blocks', () => {
+    expect(extendCaret(sample, { index: 0, offset: 5 }, 'ArrowRight')).toEqual({
+      index: 1,
+      offset: 0,
+    });
+    expect(extendCaret(sample, { index: 0, offset: 5 }, 'ArrowDown')).toEqual({
+      index: 1,
+      offset: 5,
+    });
+  });
+});
+
+describe('the editor keeps a DocCaret range across blocks', () => {
+  it('maps pointer drag to start/end and types over the range with typeOverRange', () => {
+    expect(EDITOR).toContain('onPointerDown');
+    expect(EDITOR).toContain('onPointerMove');
+    expect(EDITOR).toContain('typeOverRange(');
+    expect(EDITOR).toContain('extendCaret(');
   });
 });
 
@@ -249,6 +307,10 @@ describe('insertText', () => {
       blocks: [{ kind: 'item', text: 'AxB', checked: true, indent: 2 }],
       caret: { index: 0, offset: 2 },
     });
+  });
+
+  it('restores the DOM caret after a controlled text update', () => {
+    expect(EDITOR).toContain('commit(inserted.blocks, caret);');
   });
 });
 

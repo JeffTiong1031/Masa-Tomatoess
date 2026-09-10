@@ -40,22 +40,23 @@ export function deleteSelection(
     return { blocks: next, caret: from };
   }
 
-  const text = first.text.slice(0, from.offset) + last.text.slice(to.offset);
+  let head: Block;
   switch (first.kind) {
     case 'paragraph':
-      next.splice(
-        from.index,
-        to.index - from.index + 1,
-        { kind: 'paragraph', text },
-      );
+      head = { kind: 'paragraph', text: first.text.slice(0, from.offset) };
       break;
     case 'item':
-      next.splice(
-        from.index,
-        to.index - from.index + 1,
-        { ...first, text },
-      );
+      head = { ...first, text: first.text.slice(0, from.offset) };
   }
+  let tail: Block;
+  switch (last.kind) {
+    case 'paragraph':
+      tail = { kind: 'paragraph', text: last.text.slice(to.offset) };
+      break;
+    case 'item':
+      tail = { ...last, text: last.text.slice(to.offset) };
+  }
+  next.splice(from.index, to.index - from.index + 1, head, tail);
   return { blocks: next, caret: from };
 }
 
@@ -80,6 +81,73 @@ export function insertText(
     blocks: next,
     caret: { index: caret.index, offset: caret.offset + text.length },
   };
+}
+
+export function typeOverRange(
+  blocks: Block[],
+  start: DocCaret,
+  end: DocCaret,
+  text: string,
+): EditResult {
+  const deleted = deleteSelection(blocks, start, end);
+  return insertText(deleted.blocks, deleted.caret, text);
+}
+
+export type CaretMove =
+  | 'ArrowUp'
+  | 'ArrowDown'
+  | 'ArrowLeft'
+  | 'ArrowRight'
+  | 'Home'
+  | 'End';
+
+export function extendCaret(
+  blocks: Block[],
+  caret: DocCaret,
+  key: CaretMove,
+): DocCaret {
+  const block = blocks[caret.index];
+  switch (key) {
+    case 'ArrowLeft':
+      if (caret.offset > 0) {
+        return { index: caret.index, offset: caret.offset - 1 };
+      }
+      if (caret.index === 0) {
+        return caret;
+      }
+      return {
+        index: caret.index - 1,
+        offset: blocks[caret.index - 1].text.length,
+      };
+    case 'ArrowRight':
+      if (caret.offset < block.text.length) {
+        return { index: caret.index, offset: caret.offset + 1 };
+      }
+      if (caret.index === blocks.length - 1) {
+        return caret;
+      }
+      return { index: caret.index + 1, offset: 0 };
+    case 'ArrowUp':
+      if (caret.index === 0) {
+        return { index: 0, offset: 0 };
+      }
+      return {
+        index: caret.index - 1,
+        offset: Math.min(caret.offset, blocks[caret.index - 1].text.length),
+      };
+    case 'ArrowDown':
+      if (caret.index === blocks.length - 1) {
+        return { index: caret.index, offset: block.text.length };
+      }
+      return {
+        index: caret.index + 1,
+        offset: Math.min(caret.offset, blocks[caret.index + 1].text.length),
+      };
+    case 'Home':
+      return { index: caret.index, offset: 0 };
+    case 'End':
+      return { index: caret.index, offset: block.text.length };
+  }
 }
 
 export function pasteExternal(
