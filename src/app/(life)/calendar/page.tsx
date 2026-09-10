@@ -12,7 +12,7 @@ export default function CalendarPage() {
     >
       <Suspense
         fallback={
-          <Card>
+          <Card className="mb-4">
             <p className="text-sm text-[var(--mt-text-muted)]">Loading…</p>
           </Card>
         }
