@@ -360,8 +360,8 @@ describe('insertText', () => {
     });
   });
 
-  it('does not restore the DOM caret on ordinary typing input', () => {
-    expect(EDITOR).toContain('commit(inserted.blocks, caret, false)');
+  it('restores the DOM caret after ordinary typing input', () => {
+    expect(EDITOR).toContain('shouldRestoreCaretAfterTextCommit(');
   });
 });
 

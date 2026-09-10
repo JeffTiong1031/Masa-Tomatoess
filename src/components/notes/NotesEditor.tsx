@@ -8,7 +8,7 @@ import {
   useRef,
   useState,
 } from 'react';
-import { CheckSquare, Square } from 'lucide-react';
+import { CheckSquare2, Square } from 'lucide-react';
 import {
   backspaceAtStart,
   canIndent as canIndentBlock,
@@ -36,6 +36,7 @@ import {
   clipboardAction,
   shouldCommitFromInput,
   shouldReplaceEditorBody,
+  shouldRestoreCaretAfterTextCommit,
 } from '@/lib/noteEditorPolicy';
 import {
   EMPTY_HISTORY,
@@ -323,7 +324,11 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
         { index, offset: block.text.length },
       );
       const inserted = insertText(deleted.blocks, deleted.caret, text);
-      commit(inserted.blocks, caret, false);
+      commit(
+        inserted.blocks,
+        caret,
+        shouldRestoreCaretAfterTextCommit(composingRef.current),
+      );
     };
 
     const applyEnter = (range: EditorSelection) => {
@@ -493,7 +498,7 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
                 role="checkbox"
                 aria-checked={block.checked}
                 aria-label={block.checked ? 'Mark unchecked' : 'Mark checked'}
-                className="min-h-11 min-w-11 text-[var(--mt-text)] disabled:text-[var(--mt-text-muted)]"
+                className="flex min-h-11 min-w-11 shrink-0 items-center justify-center text-[var(--mt-text)] disabled:text-[var(--mt-text-muted)]"
                 disabled={disabled}
                 onClick={() => {
                   if (composingRef.current) return;
@@ -504,7 +509,7 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
                 onPointerDown={(event) => event.preventDefault()}
               >
                 {block.checked ? (
-                  <CheckSquare aria-hidden="true" />
+                  <CheckSquare2 aria-hidden="true" />
                 ) : (
                   <Square aria-hidden="true" />
                 )}
@@ -515,7 +520,7 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
                 blockNodesRef.current[index] = element;
               }}
               aria-label={index === 0 ? 'Note' : undefined}
-              className={`min-h-11 min-w-0 flex-1 py-2 outline-none ${
+              className={`mt-quiet-focus min-h-11 min-w-0 flex-1 py-2 outline-none ${
                 spanningRef.current ? 'select-none' : ''
               } ${
                 block.kind === 'item' && block.checked

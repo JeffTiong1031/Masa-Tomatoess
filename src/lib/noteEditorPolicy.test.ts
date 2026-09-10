@@ -6,6 +6,7 @@ import {
   clipboardAction,
   shouldCommitFromInput,
   shouldReplaceEditorBody,
+  shouldRestoreCaretAfterTextCommit,
 } from './noteEditorPolicy';
 
 const EDITOR = readFileSync(
@@ -29,6 +30,16 @@ describe('shouldCommitFromInput', () => {
   it('does not commit while composing', () => {
     expect(shouldCommitFromInput(true)).toBe(false);
     expect(shouldCommitFromInput(false)).toBe(true);
+  });
+});
+
+describe('shouldRestoreCaretAfterTextCommit', () => {
+  it('puts the caret back after ordinary typing', () => {
+    expect(shouldRestoreCaretAfterTextCommit(false)).toBe(true);
+  });
+
+  it('leaves the native caret alone while composing', () => {
+    expect(shouldRestoreCaretAfterTextCommit(true)).toBe(false);
   });
 });
 
@@ -71,6 +82,11 @@ describe('NotesEditor wiring', () => {
     expect(EDITOR).toContain('shouldCommitFromInput(');
     expect(EDITOR).toContain('onCompositionEnd');
     expect(EDITOR).toContain('textContent');
+  });
+
+  it('asks shouldRestoreCaretAfterTextCommit instead of skipping restore', () => {
+    expect(EDITOR).toContain('shouldRestoreCaretAfterTextCommit(');
+    expect(EDITOR).not.toMatch(/commit\(inserted\.blocks,\s*caret,\s*false\)/);
   });
 
   it('routes insertLineBreak and insertParagraph through enterAt', () => {

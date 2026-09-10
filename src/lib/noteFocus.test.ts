@@ -26,4 +26,22 @@ describe('the note typing area', () => {
   it('uses quiet-focus on the note body', () => {
     expect(EDITOR).toContain('mt-quiet-focus');
   });
+
+  it('quiets the cocoa ring on the line you type in', () => {
+    const match = EDITOR.match(
+      /className=\{`([^`]+)`\}[\s\S]{0,250}contentEditable=\{!disabled\}/,
+    );
+    expect(match?.[1]).toContain('mt-quiet-focus');
+  });
+
+  it('keeps the tick button inside the checklist row', () => {
+    expect(EDITOR).toMatch(
+      /block\.kind === 'item'[\s\S]{0,400}shrink-0[\s\S]{0,80}items-center justify-center/,
+    );
+  });
+
+  it('uses the lucide tick that sits inside the square', () => {
+    expect(EDITOR).toContain('<CheckSquare2');
+    expect(EDITOR).not.toContain('<CheckSquare ');
+  });
 });

@@ -12,6 +12,10 @@ export function shouldCommitFromInput(composing: boolean): boolean {
   return !composing;
 }
 
+export function shouldRestoreCaretAfterTextCommit(composing: boolean): boolean {
+  return !composing;
+}
+
 export function beforeInputAction(
   inputType: string,
   collapsed: boolean,
