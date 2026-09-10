@@ -43,7 +43,10 @@ Left column:
   - to-do: chip reads `to-do`
   - overdue to-do: chip reads `Late`, tinted with the danger wash, and the
     row carries a danger dot
-- If more than four items exist, a muted `+N more` row links to `/calendar`.
+- If more than four items exist, a muted `+N more` row. Where it goes depends
+  on what is hidden: if every hidden item is a to-do it opens `/timetable/todo`,
+  otherwise it opens `/calendar`. The decision is made in `buildAgenda` and
+  returned with the list, not worked out again in the component.
 - If nothing exists for today: a single muted line, `Nothing today.`
 
 Right column:
@@ -128,7 +131,7 @@ lives in `lib/`.
 
 | File | Exports | Job |
 |---|---|---|
-| `src/lib/todayAgenda.ts` | `AgendaItem`, `buildAgenda(events, todos, today, limit)` | merge, classify, sort, truncate, report the hidden count |
+| `src/lib/todayAgenda.ts` | `AgendaItem`, `Agenda`, `buildAgenda(events, todos, today, limit)` | merge, classify, sort, truncate; returns the shown rows, the hidden count, and the href that `+N more` should open |
 | `src/lib/monthGrid.ts` | `MonthCell`, `buildMonthGrid(today, busyDates)` | leading blanks, day numbers, `isToday`, `hasItems` |
 | `src/lib/bannerCards.ts` | `BannerCard`, `buildBannerCards(cycle, streak, pinnedEvents, pinnedCountUps, today)` | ordered cards with label, value, accent and href |
 | `src/lib/carousel.ts` | `nextIndex(i, len)`, `prevIndex(i, len)` | wrap-around maths, testable without a browser |
@@ -184,7 +187,9 @@ New `*.test.ts` beside each new lib file:
 - `todayAgenda.test.ts` — a timed event sorts before an all-day one; an
   overdue to-do sorts above a to-do due today; a done to-do due today is
   excluded; five items yield four rows and a hidden count of one; no items
-  yields an empty list and a hidden count of zero
+  yields an empty list and a hidden count of zero; hidden items that are all
+  to-dos give `/timetable/todo` as the more-href, and a hidden mix or a hidden
+  event gives `/calendar`
 - `monthGrid.test.ts` — a month starting on Sunday produces six leading
   blanks; the today cell is flagged exactly once; a date in `busyDates` sets
   `hasItems` and one absent from it does not
