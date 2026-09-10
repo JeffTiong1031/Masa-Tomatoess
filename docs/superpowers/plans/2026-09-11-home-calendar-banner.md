@@ -235,8 +235,8 @@ describe('buildAgenda', () => {
     expect(agenda.items.map((item) => item.chip)).toEqual([
       '09:00',
       'all day',
-      'to-do',
       'Late',
+      'to-do',
     ]);
   });
 });
