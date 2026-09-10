@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { Agenda } from '@/lib/todayAgenda';
 import type { MonthCell } from '@/lib/monthGrid';
+import { accentVar } from '@/components/ui/PageShell';
 import {
   WEEKDAYS,
   WEEKDAYS_SHORT,
@@ -25,7 +26,7 @@ export default function TodayCalendarCard({
   return (
     <section
       className="mt-soft mb-6 grid gap-6 p-5 sm:grid-cols-2"
-      style={{ ['--mt-accent' as string]: 'var(--mac-accent-calendar)' }}
+      style={{ ['--mt-accent' as string]: accentVar('calendar') }}
     >
       <div>
         <h2 className="text-2xl font-semibold tracking-tight text-[var(--mt-text)]">
