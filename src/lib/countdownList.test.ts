@@ -31,24 +31,28 @@ describe('countdownRows', () => {
     expect(countdownRows(events, today).map((row) => row.id)).toEqual(['1']);
   });
 
-  it('drops events already past', () => {
+  it('keeps a past ticked event as Passed', () => {
     const events = [event('1', 'Last month', '2026-07-01', true)];
-    expect(countdownRows(events, today)).toEqual([]);
+    expect(countdownRows(events, today)).toEqual([
+      {
+        id: '1',
+        title: 'Last month',
+        date: '2026-07-01',
+        display: 'Passed',
+      },
+    ]);
   });
 
-  it('keeps today at zero days', () => {
+  it('shows Today when the date is today', () => {
     const events = [event('1', 'Today', today, true)];
-    expect(countdownRows(events, today)[0].daysUntil).toBe(0);
+    expect(countdownRows(events, today)[0].display).toBe('Today');
   });
 
-  it('never returns a negative number', () => {
-    const events = [
-      event('1', 'Past', '2026-01-01', true),
-      event('2', 'Future', '2026-12-01', true),
-    ];
-    for (const row of countdownRows(events, today)) {
-      expect(row.daysUntil).toBeGreaterThanOrEqual(0);
-    }
+  it('uses the singular 1 day', () => {
+    expect(
+      countdownRows([event('1', 'Tomorrow', '2026-08-20', true)], today)[0]
+        .display,
+    ).toBe('1 day');
   });
 
   it('orders soonest first', () => {
@@ -61,7 +65,7 @@ describe('countdownRows', () => {
 
   it('counts the days between', () => {
     const events = [event('1', 'Anniversary', '2026-08-29', true)];
-    expect(countdownRows(events, today)[0].daysUntil).toBe(10);
+    expect(countdownRows(events, today)[0].display).toBe('10 days');
   });
 
   it('returns nothing when nothing is ticked', () => {

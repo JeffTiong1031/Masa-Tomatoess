@@ -1,11 +1,11 @@
-import { diffDays } from './dates';
 import type { CalendarEvent } from './calendarEvent';
+import { formatTrackerDays } from './dayCount';
 
 export interface CountdownRow {
   id: string;
   title: string;
   date: string;
-  daysUntil: number;
+  display: string;
 }
 
 export function countdownRows(
@@ -13,12 +13,12 @@ export function countdownRows(
   today: string,
 ): CountdownRow[] {
   return events
-    .filter((event) => event.countdown && event.date >= today)
+    .filter((event) => event.countdown)
     .sort((a, b) => a.date.localeCompare(b.date))
     .map((event) => ({
       id: event.id,
       title: event.title,
       date: event.date,
-      daysUntil: diffDays(event.date, today),
+      display: formatTrackerDays('countdown', event.date, today),
     }));
 }
