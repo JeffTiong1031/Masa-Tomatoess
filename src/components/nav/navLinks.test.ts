@@ -3,7 +3,7 @@ import {
   ALL_LINKS,
   FOCUS_HREFS,
   FOCUS_SEGMENTS,
-  STUDY_PANEL,
+  TIMETABLE_PANEL,
   isActiveHref,
   isFocusRoute,
   isHubRoute,
@@ -37,7 +37,8 @@ describe('menu', () => {
     expect(ALL_LINKS.map((l) => l.href)).toEqual([
       '/',
       '/study',
-      '/todo',
+      '/timetable',
+      '/calendar',
       '/cycle',
       '/countdown',
       '/meals',
@@ -46,12 +47,14 @@ describe('menu', () => {
     ]);
   });
 
-  /* Both moved inside Study and are reached from STUDY_PANEL. Leaving
-     them here too would give one page two entry points at different
-     depths, which is what "don't split the sections" was about. */
-  it('no longer lists Calendar or Timetable as top-level destinations', () => {
-    expect(ALL_LINKS.some((l) => l.href === '/calendar')).toBe(false);
-    expect(ALL_LINKS.some((l) => l.href === '/timetable')).toBe(false);
+  /* Calendar and Timetable are peers of Period and Finance. To-do lives
+     inside Timetable and is reached from TIMETABLE_PANEL. Listing it
+     here too would give one page two entry points at different depths. */
+  it('lists Calendar and Timetable as top-level destinations', () => {
+    expect(ALL_LINKS.some((l) => l.href === '/calendar')).toBe(true);
+    expect(ALL_LINKS.some((l) => l.href === '/timetable')).toBe(true);
+    expect(ALL_LINKS.some((l) => l.href === '/todo')).toBe(false);
+    expect(ALL_LINKS.some((l) => l.href === '/timetable/todo')).toBe(false);
   });
 
   it('does not list the Focus widgets separately either', () => {
@@ -71,31 +74,25 @@ describe('menu', () => {
   });
 });
 
-describe('study panel', () => {
-  it('is the three things you can be doing in a study session', () => {
-    expect(STUDY_PANEL.map((s) => s.href)).toEqual([
-      '/study/timer',
-      '/study/calendar',
-      '/study/timetable',
+describe('timetable panel', () => {
+  it('is the two views inside Timetable', () => {
+    expect(TIMETABLE_PANEL.map((s) => s.href)).toEqual([
+      '/timetable',
+      '/timetable/todo',
     ]);
+    expect(TIMETABLE_PANEL.map((s) => s.label)).toEqual(['Timetable', 'To-do']);
   });
 
-  it('points only at routes inside Study', () => {
-    for (const { href } of STUDY_PANEL) {
-      expect(isStudyRoute(href), `${href} is not under /study`).toBe(true);
+  it('points only at routes inside Timetable', () => {
+    for (const { href } of TIMETABLE_PANEL) {
+      expect(
+        isActiveHref(href, '/timetable'),
+        `${href} is not under /timetable`,
+      ).toBe(true);
+      expect(isStudyRoute(href), `${href} should not be under /study`).toBe(
+        false,
+      );
     }
-  });
-
-  /* The panel's Focus tab and the pill's Timer segment are the same
-     route under two labels, deliberately. Pinning both stops a later
-     tidy-up unifying them. */
-  it('calls /study/timer "Focus", where the pill calls it "Timer"', () => {
-    expect(STUDY_PANEL.find((s) => s.href === '/study/timer')?.label).toBe(
-      'Focus',
-    );
-    expect(FOCUS_SEGMENTS.find((s) => s.href === '/study/timer')?.label).toBe(
-      'Timer',
-    );
   });
 });
 
@@ -109,6 +106,9 @@ describe('isHubRoute', () => {
     '/study/timer',
     '/study/flexible',
     '/study/dashboard',
+    '/calendar',
+    '/timetable',
+    '/timetable/todo',
     '/cycle',
     '/countdown',
     '/meals',
@@ -120,23 +120,24 @@ describe('isHubRoute', () => {
 });
 
 describe('isStudyRoute', () => {
-  it.each([
-    '/study',
-    '/study/timer',
-    '/study/flexible',
-    '/study/dashboard',
-    '/study/calendar',
-    '/study/timetable',
-  ])('is true on %s', (path) => {
-    expect(isStudyRoute(path)).toBe(true);
-  });
-
-  it.each(['/', '/cycle', '/finance', '/studying'])(
-    'is false on %s',
+  it.each(['/study', '/study/timer', '/study/flexible', '/study/dashboard'])(
+    'is true on %s',
     (path) => {
-      expect(isStudyRoute(path)).toBe(false);
+      expect(isStudyRoute(path)).toBe(true);
     },
   );
+
+  it.each([
+    '/',
+    '/cycle',
+    '/finance',
+    '/studying',
+    '/calendar',
+    '/timetable',
+    '/timetable/todo',
+  ])('is false on %s', (path) => {
+    expect(isStudyRoute(path)).toBe(false);
+  });
 });
 
 describe('isFocusRoute', () => {
@@ -149,17 +150,22 @@ describe('isFocusRoute', () => {
   });
 
   /* FocusPill renders on exactly these routes and returns null
-     elsewhere. Calendar and Timetable are inside Study but outside
-     Focus, and they use .mt-page-pad -- which carries its own hamburger
-     clearance. A page that wore .mt-page-pad-focus without the pill
-     above it would slide under the fixed hamburger. */
-  it.each(['/study', '/study/calendar', '/study/timetable'])(
-    'is false on %s, which is inside Study but wears no pill',
+     elsewhere. /study itself only redirects. Calendar and Timetable
+     are their own sections, and they use .mt-page-pad -- which carries
+     its own hamburger clearance. A page that wore .mt-page-pad-focus
+     without the pill above it would slide under the fixed hamburger. */
+  it.each(['/study', '/calendar', '/timetable', '/timetable/todo'])(
+    'is false on %s, which wears no pill',
     (href) => {
-      expect(isStudyRoute(href)).toBe(true);
       expect(isFocusRoute(href)).toBe(false);
     },
   );
+
+  it('calls /study/timer "Timer"', () => {
+    expect(FOCUS_SEGMENTS.find((s) => s.href === '/study/timer')?.label).toBe(
+      'Timer',
+    );
+  });
 });
 
 describe('isActiveHref', () => {
@@ -174,11 +180,23 @@ describe('isActiveHref', () => {
     '/study/timer',
     '/study/flexible',
     '/study/dashboard',
-    '/study/calendar',
-    '/study/timetable',
   ])('lights the Study menu entry on %s', (pathname) => {
     expect(isActiveHref(pathname, '/study')).toBe(true);
   });
+
+  it.each(['/calendar', '/timetable', '/timetable/todo'])(
+    'does not light Study on %s',
+    (pathname) => {
+      expect(isActiveHref(pathname, '/study')).toBe(false);
+    },
+  );
+
+  it.each(['/timetable', '/timetable/todo'])(
+    'lights the Timetable menu entry on %s',
+    (pathname) => {
+      expect(isActiveHref(pathname, '/timetable')).toBe(true);
+    },
+  );
 
   it('keeps Home exact, so it does not light everywhere', () => {
     expect(isActiveHref('/', '/')).toBe(true);

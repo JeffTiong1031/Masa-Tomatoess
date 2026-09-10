@@ -8,12 +8,11 @@ import { FOCUS_SEGMENTS, isFocusRoute } from './navLinks';
 export default function FocusPill() {
   const pathname = usePathname();
 
-  /* Study's other two routes -- Calendar and Timeline -- sit inside the
-     section but outside Focus, and get no pill. They are PageShell
-     pages, which carry their own hamburger clearance via .mt-page-pad;
-     .mt-page-pad-focus deliberately does not, because it assumes this
-     pill is rendering above it. Returning null here is therefore only
-     safe for routes NOT using .mt-page-pad-focus. */
+  /* /study itself only ever redirects into /study/timer, and gets no
+     pill. PageShell pages carry their own hamburger clearance via
+     .mt-page-pad; .mt-page-pad-focus deliberately does not, because it
+     assumes this pill is rendering above it. Returning null here is
+     therefore only safe for routes NOT using .mt-page-pad-focus. */
   if (!isFocusRoute(pathname)) return null;
 
   return (

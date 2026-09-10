@@ -27,23 +27,27 @@ Not everything is wired up yet. The timer, stopwatch, dashboard, and hub are ful
 | Route | What it is | Status |
 |---|---|---|
 | `/` | **Home hub.** Live focus stats pulled from real session data, plus quick links into every section. | Real |
-| `/timer` | The Pomodoro timer (drift-free, Web Worker–driven). This is where `/` used to live. | Real |
-| `/flexible` | An open-ended stopwatch for unstructured focus sessions. | Real |
-| `/dashboard` | Charts, a GitHub-style contribution heatmap, and the 2-player cloud leaderboard. | Real |
+| `/study/timer` | The Pomodoro timer (drift-free, Web Worker–driven). `/study` redirects here. | Real |
+| `/study/flexible` | An open-ended stopwatch for unstructured focus sessions. | Real |
+| `/study/dashboard` | Charts, a GitHub-style contribution heatmap, and the 2-player cloud leaderboard. | Real |
+| `/calendar` | Shared calendar. | Real |
+| `/timetable` | Weekly class grid and itinerary. | Real |
+| `/timetable/todo` | Shared to-do list, inside Timetable. | Real |
 | `/cycle` | Period tracker. | Sample shell |
 | `/countdown` | Countdown to shared events/dates. | Sample shell |
 | `/meals` | Meal planning. | Sample shell |
 | `/fitness` | Fitness tracker. | Sample shell |
 | `/finance` | Shared finance tracker. | Sample shell |
 
-**If your home-screen icon still opens the timer:** it was pointing at `/`, and `/` used to *be* the timer. `/` is now the hub — re-add the icon (or just navigate to `/timer` and re-save it) to get the timer back as a direct shortcut, or keep the hub shortcut and reach the timer from there.
+Saved home-screen shortcuts to the old paths still work: `/study/calendar` goes to `/calendar`, `/study/timetable` goes to `/timetable`, and `/todo` goes to `/timetable/todo`.
 
 ---
 
 ## 🧭 Navigation
 
-- **Drawer menu**, reachable from every route via the hamburger button (top-left). It lists all nine routes, grouped as Home / Focus (Timer, Flexible, Dashboard) / Life (Period, Countdown, Meals, Fitness, Finance). Closes on backdrop tap, the X, `Escape`, clicking a link, or swiping left; traps `Tab` while open; returns focus to the hamburger on close; locks body scroll.
-- **Bottom bar** on mobile viewports (below 768px): four slots — Home, Timer, Flexible, Dashboard. The five Life sections are drawer-only by design; the bottom bar disappears above the 768px breakpoint.
+- **Drawer menu**, reachable from every route via the hamburger button (top-left). It is one flat list: Home, Study, Timetable, Calendar, Period, Countdown, Meals, Fitness, Finance. Closes on backdrop tap, the X, `Escape`, clicking a link, or swiping left; traps `Tab` while open; returns focus to the hamburger on close; locks body scroll.
+- **Focus pill** on the three Study routes (Timer / Flexible / Dashboard). Study has no bottom bar.
+- **Timetable pill bar** at every viewport width: Timetable and To-do. This is the app's only bottom bar; every other section navigates through the drawer alone.
 - A timer left running in the background keeps ticking if you navigate elsewhere in the app and come back.
 
 ---
@@ -248,21 +252,20 @@ Masa Tomato includes custom scripts to run completely silently in the background
 ```
 src/
 ├── app/
-│   ├── (focus)/           # Dark-plum route group
-│   │   ├── timer/         # Pomodoro timer (moved from /)
-│   │   └── flexible/      # Stopwatch
 │   ├── (life)/            # Cream route group
 │   │   ├── page.tsx       # Home hub (live focus stats)
-│   │   ├── dashboard/     # Charts, heatmap, leaderboard
+│   │   ├── calendar/      # Shared calendar
+│   │   ├── timetable/     # Week grid + itinerary; todo/ nested under it
 │   │   ├── cycle/         # Sample shell
 │   │   ├── countdown/     # Sample shell
 │   │   ├── meals/         # Sample shell
 │   │   ├── fitness/       # Sample shell
 │   │   └── finance/       # Sample shell
+│   ├── study/             # Focus widgets (timer, flexible, dashboard)
 │   ├── actions/           # Server Actions (auth, clearSessions)
 │   └── manifest.ts        # Web app manifest (home-screen install)
 ├── components/
-│   ├── nav/                # Drawer + bottom bar + link config
+│   ├── nav/                # Drawer + Timetable pill bar + link config
 │   ├── Gatekeeper.tsx       # Auth gate (password + identity)
 │   ├── HubGrid.tsx          # Hub tiles + live stats
 │   ├── InstallPrompt.tsx    # Home-screen install prompt

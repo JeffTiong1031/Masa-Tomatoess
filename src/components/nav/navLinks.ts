@@ -1,7 +1,6 @@
 import {
   Home,
   GraduationCap,
-  Timer,
   ListChecks,
   HeartPulse,
   CalendarClock,
@@ -22,17 +21,18 @@ export interface NavLink {
 }
 
 /** The menu, as one flat list. There are deliberately no group headings:
- *  Study sits alongside Period, Countdown, Meals, Fitness and Finance as
- *  a peer, and splitting them under a "Life" heading made Study read as
- *  a different KIND of thing than the rest of the app.
+ *  Study sits alongside Timetable, Calendar, Period, Countdown, Meals,
+ *  Fitness and Finance as a peer, and splitting them under a "Life"
+ *  heading made Study read as a different KIND of thing than the rest
+ *  of the app.
  *
- *  Calendar and Timetable are absent on purpose -- they moved inside
- *  Study and are reached from its own panel (STUDY_PANEL below), not
- *  from here. */
+ *  To-do is absent on purpose -- it lives inside Timetable and is
+ *  reached from its own panel (TIMETABLE_PANEL below), not from here. */
 export const ALL_LINKS: NavLink[] = [
   { href: '/', label: 'Home', icon: Home, accent: 'dashboard' },
   { href: '/study', label: 'Study', icon: GraduationCap, accent: 'timer' },
-  { href: '/todo', label: 'To-do', icon: ListChecks, accent: 'todo' },
+  { href: '/timetable', label: 'Timetable', icon: LayoutList, accent: 'timetable' },
+  { href: '/calendar', label: 'Calendar', icon: CalendarDays, accent: 'calendar' },
   { href: '/cycle', label: 'Period', icon: HeartPulse, accent: 'cycle' },
   { href: '/countdown', label: 'Countdown', icon: CalendarClock, accent: 'countdown' },
   { href: '/meals', label: 'Meals', icon: UtensilsCrossed, accent: 'meals' },
@@ -40,21 +40,16 @@ export const ALL_LINKS: NavLink[] = [
   { href: '/finance', label: 'Finance', icon: Wallet, accent: 'finance' },
 ];
 
-/** Study's lower panel: the three things you can be doing in a study
- *  session. Focus is the entry point to the timer widgets, which have a
- *  second level of their own (FOCUS_SEGMENTS). */
-export const STUDY_PANEL: NavLink[] = [
-  { href: '/study/timer', label: 'Focus', icon: Timer, accent: 'timer' },
-  { href: '/study/calendar', label: 'Calendar', icon: CalendarDays, accent: 'calendar' },
-  { href: '/study/timetable', label: 'Timetable', icon: LayoutList, accent: 'timetable' },
+/** Timetable's lower panel: the two views inside the section. The
+ *  drawer lists the section once, as Timetable; this is how you switch
+ *  between the week grid and the task list. */
+export const TIMETABLE_PANEL: NavLink[] = [
+  { href: '/timetable', label: 'Timetable', icon: LayoutList, accent: 'timetable' },
+  { href: '/timetable/todo', label: 'To-do', icon: ListChecks, accent: 'todo' },
 ];
 
-/** The three widgets behind Study's Focus tab, in pill order.
- *
- *  The labels are deliberately NOT the panel's: STUDY_PANEL calls
- *  /study/timer "Focus", because that is what the section tab means.
- *  The pill needs to call the same route "Timer". Both lists live in
- *  this one file so they cannot drift. */
+/** The three widgets behind Study, in pill order. FocusPill is Study's
+ *  only navigation -- there is no lower panel. */
 export const FOCUS_SEGMENTS: {
   href: string;
   label: string;
@@ -65,8 +60,8 @@ export const FOCUS_SEGMENTS: {
   { href: '/study/dashboard', label: 'Dashboard', accent: 'dashboard' },
 ];
 
-/** Just the hrefs, for active-state checks. Derived, so the pill and the
- *  panel can never disagree about what counts as Focus. */
+/** Just the hrefs, for active-state checks. Derived, so consumers
+ *  cannot disagree about what counts as Focus. */
 export const FOCUS_HREFS = FOCUS_SEGMENTS.map((segment) => segment.href);
 
 export function isActiveHref(pathname: string, href: string): boolean {
@@ -85,8 +80,8 @@ export function isStudyRoute(pathname: string): boolean {
 }
 
 /** True on the three timer widgets, which are the only Study routes that
- *  wear the Focus pill. /study/calendar and /study/timetable are inside
- *  Study but outside Focus, and must not show it. */
+ *  wear the Focus pill. /study itself only ever redirects into
+ *  /study/timer, and must not show it. */
 export function isFocusRoute(pathname: string): boolean {
   return FOCUS_HREFS.some((href) => isActiveHref(pathname, href));
 }

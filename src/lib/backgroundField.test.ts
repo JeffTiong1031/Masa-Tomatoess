@@ -3,7 +3,7 @@ import {
   backgroundFieldFor,
   themedRoutesAreFocusRoutes,
 } from '@/lib/backgroundField';
-import { ALL_LINKS, FOCUS_HREFS, STUDY_PANEL } from '@/components/nav/navLinks';
+import { ALL_LINKS, FOCUS_HREFS, TIMETABLE_PANEL } from '@/components/nav/navLinks';
 
 describe('backgroundFieldFor', () => {
   it('gives all three Focus widgets the themed backdrop', () => {
@@ -16,15 +16,17 @@ describe('backgroundFieldFor', () => {
     expect(backgroundFieldFor('/study/timer/settings')).toBe('themed');
   });
 
-  /* Calendar and Timeline are inside Study but are not part of a focus
-     session, and the wallpaper is the session's furniture. /study
-     itself only ever redirects. */
-  it.each(['/study', '/study/calendar', '/study/timetable'])(
-    'keeps %s on the plain field',
-    (path) => {
-      expect(backgroundFieldFor(path)).toBe('plain');
-    },
-  );
+  /* Calendar and Timetable are not part of a focus session, and the
+     wallpaper is the session's furniture. /study itself only ever
+     redirects. */
+  it.each([
+    '/study',
+    '/calendar',
+    '/timetable',
+    '/timetable/todo',
+  ])('keeps %s on the plain field', (path) => {
+    expect(backgroundFieldFor(path)).toBe('plain');
+  });
 
   /* Every themed route is a Focus route and vice versa, which is what
      makes "the wallpaper marks a focus session" a rule rather than a
@@ -59,12 +61,10 @@ describe('backgroundFieldFor', () => {
     expect(themedRoutesAreFocusRoutes()).toBe(true);
   });
 
-  /* Study's own panel must never land the user somewhere the backdrop
-     changes out from under them mid-section. Focus is the one panel tab
-     that may carry a photo. */
-  it('keeps both non-Focus panel tabs on the plain field', () => {
-    for (const { href, label } of STUDY_PANEL) {
-      if (label === 'Focus') continue;
+  /* Timetable's own panel must never land the user somewhere the
+     backdrop changes out from under them mid-section. */
+  it('keeps both Timetable panel tabs on the plain field', () => {
+    for (const { href, label } of TIMETABLE_PANEL) {
       expect(backgroundFieldFor(href), `${label} should be plain`).toBe('plain');
     }
   });

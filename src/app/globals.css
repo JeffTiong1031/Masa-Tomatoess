@@ -352,17 +352,17 @@ body {
   padding-top: 1rem;
 }
 
-/* Study only. StudyPanel is fixed to the bottom edge at every width --
-   it has to be, since the drawer does not list Calendar or Timeline.
-   No other section keeps a bar down there, so no other section pays for
-   one. Without this, a Study page runs its last card underneath the
-   panel. */
-[data-section='study'] .mt-page-pad,
-[data-section='study'] .mt-page-pad-focus {
+/* Timetable only. TimetablePanel is fixed to the bottom edge at every
+   width -- it has to be, since the drawer lists the section once and
+   does not list To-do. No other section keeps a bar down there, so no
+   other section pays for one. Without this, a Timetable page runs its
+   last card underneath the panel. */
+[data-section='timetable'] .mt-page-pad,
+[data-section='timetable'] .mt-page-pad-focus {
   padding-bottom: calc(var(--mt-safe-bottom) + var(--mt-nav-height) + 1.5rem);
 }
 
-[data-section='study'] .mt-assistant-fab {
+[data-section='timetable'] .mt-assistant-fab {
   bottom: calc(var(--mt-safe-bottom) + var(--mt-nav-height) + 1.5rem);
 }
 

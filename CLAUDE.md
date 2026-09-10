@@ -122,12 +122,15 @@ src/
     manifest.ts             PWA manifest
     (life)/                 data-mood light; the everyday sections
       page.tsx              the hub at /
+      calendar              peer of cycle and finance
+      timetable/            data-section timetable; TimetablePanel
+        page.tsx            week grid + itinerary
+        todo/               the to-do view
       cycle countdown meals fitness finance
-    study/                  data-mood light, data-section study
-      layout.tsx            FocusPill + StudyPanel
+    study/                  data-mood light
+      layout.tsx            FocusPill
       page.tsx              redirects to /study/timer
       timer flexible dashboard    the Focus pill
-      calendar timetable          the section panel
     actions/                server actions (auth, clearSessions)
   components/
     AppShell BackgroundManager TimerEngine ClientProviders
@@ -135,7 +138,7 @@ src/
     Leaderboard HubGrid Gatekeeper ThemeModal SettingsModal
     nav/
       navLinks.ts           the nav spine; every list and predicate
-      NavDrawer StudyPanel FocusPill
+      NavDrawer TimetablePanel FocusPill
     ui/                     PageShell Card Modal StatTile ComingSoon
   lib/
     color.ts                contrast, L*, Lab, deltaE for palette tests
@@ -156,7 +159,7 @@ Tests sit beside their source as `*.test.ts`.
 ## Routing and navigation
 
 `navLinks.ts` is the single source of truth. `ALL_LINKS` is the flat menu,
-`STUDY_PANEL` the three Study tabs, `FOCUS_SEGMENTS` the pill.
+`TIMETABLE_PANEL` the two Timetable views, `FOCUS_SEGMENTS` the pill.
 
 Study is a real URL segment, and that matters: prefix matching via
 `isActiveHref(pathname, '/study')` lights the menu entry on every child. An
@@ -165,14 +168,17 @@ consumer forgot to call it. Do not flatten these routes back out.
 
 - `FocusPill` renders only on the three Focus routes and returns `null`
   elsewhere. `.mt-page-pad-focus` assumes it is above; `.mt-page-pad` carries
-  its own hamburger clearance for pages without it.
-- `StudyPanel` renders at every width, because the drawer does not list
-  Calendar or Timeline. It is the only bottom bar in the app; every other
-  section navigates through the drawer alone. There was once a Home / Study /
-  Period bar on phones and it is gone on purpose -- it floated over page
-  content and duplicated the drawer. Do not bring it back.
-- `[data-section='study'] .mt-page-pad` is the only rule that reserves bottom
-  nav height, because Study is the only section with a fixed bottom bar.
+  its own hamburger clearance for pages without it. It is Study's only
+  navigation -- Calendar and Timetable are their own top-level sections.
+- `TimetablePanel` renders at every width, because the drawer lists
+  Timetable once and does not list To-do. It is the only bottom bar in the
+  app; every other section navigates through the drawer alone. There was
+  once a Home / Study / Period bar on phones and it is gone on purpose --
+  it floated over page content and duplicated the drawer. Do not bring it
+  back.
+- `[data-section='timetable'] .mt-page-pad` is the only rule that reserves
+  bottom nav height, because Timetable is the only section with a fixed
+  bottom bar. Study no longer pays for one.
 
 ## Backdrops and contrast
 
