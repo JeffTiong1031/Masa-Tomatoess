@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Plus } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import { useHasMounted } from '@/hooks/useHasMounted';
@@ -78,6 +79,13 @@ interface Notice {
 export default function CalendarBoard() {
   const mounted = useHasMounted();
 
+  const searchParams = useSearchParams();
+  const requestedDate = searchParams.get('date');
+  const startDate =
+    requestedDate !== null && /^\d{4}-\d{2}-\d{2}$/.test(requestedDate)
+      ? requestedDate
+      : todayISO();
+
   const [signedInAs, setSignedInAs] = useState<UserName>('Jeff');
   const [view, setView] = useState<CalendarView>('week');
   const [owner, setOwner] = useState<OwnerFilter>('Jeff');
@@ -111,10 +119,10 @@ export default function CalendarBoard() {
       setSignedInAs(name);
       setOwner(name);
       setToday(now);
-      setSelectedDate(now);
-      setMonth(monthOf(now));
+      setSelectedDate(startDate);
+      setMonth(monthOf(startDate));
     });
-  }, [mounted]);
+  }, [mounted, startDate]);
 
   const load = useCallback(async () => {
     if (today === '') return;
