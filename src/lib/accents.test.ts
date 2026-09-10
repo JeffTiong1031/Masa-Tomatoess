@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, it, expect } from 'vitest';
-import { deltaE76, hueDistance } from './color';
+import { contrastRatio, deltaE76, hueDistance } from './color';
 
 const CSS = readFileSync(
   path.resolve(process.cwd(), 'src/app/globals.css'),
@@ -119,5 +119,30 @@ describe('accent palette', () => {
       NEW_ACCENTS.some((n) => closest.pair.split('/').includes(n)),
       `${closest.pair} is the closest pair at delta E ${closest.difference.toFixed(1)}, and it involves a new accent`,
     ).toBe(false);
+  });
+});
+
+describe('home calendar card', () => {
+  function readToken(name: string): string {
+    const match = new RegExp(`--${name}:\\s*(#[0-9A-Fa-f]{6})`).exec(CSS);
+    return match![1];
+  }
+
+  it('keeps cocoa readable on the today pill', () => {
+    const ratio = contrastRatio(
+      readToken('mac-cocoa'),
+      readAccents()['calendar'],
+    );
+
+    expect(ratio).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it('keeps the late chip text readable on white', () => {
+    const ratio = contrastRatio(
+      readToken('mac-danger-deep'),
+      readToken('mac-white'),
+    );
+
+    expect(ratio).toBeGreaterThanOrEqual(4.5);
   });
 });

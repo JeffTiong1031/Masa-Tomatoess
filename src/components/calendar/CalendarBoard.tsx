@@ -21,7 +21,14 @@ import {
 import { withCategoryFills, type Category } from '@/lib/categories';
 import type { ColourSwatch } from '@/lib/colourPalette';
 import { fetchPalette } from '@/lib/colourRepo';
-import { addDays, addMonths, monthOf, timeISO, todayISO } from '@/lib/dates';
+import {
+  addDays,
+  addMonths,
+  isValidISODate,
+  monthOf,
+  timeISO,
+  todayISO,
+} from '@/lib/dates';
 import { toTiming, type EventDraft } from '@/lib/eventForm';
 import { isUserName, partnerOf, type UserName } from '@/lib/identity';
 import AssistantButton from '@/components/assistant/AssistantButton';
@@ -48,17 +55,6 @@ function blankDraft(date: string): EventDraft {
     countdown: false,
     categoryId: null,
   };
-}
-
-function isValidISODate(value: string): boolean {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
-  const [year, month, day] = value.split('-').map(Number);
-  const date = new Date(Date.UTC(year, month - 1, day));
-  return (
-    date.getUTCFullYear() === year &&
-    date.getUTCMonth() === month - 1 &&
-    date.getUTCDate() === day
-  );
 }
 
 function draftOf(event: CalendarEvent): EventDraft {
