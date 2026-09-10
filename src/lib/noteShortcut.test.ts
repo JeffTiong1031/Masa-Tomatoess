@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { isTypingTag, notesShortcut } from './noteShortcut';
+import {
+  isChecklistHotkey,
+  isEditorCommandBlocked,
+  isTypingElement,
+  isTypingTag,
+  notesShortcut,
+} from './noteShortcut';
 
 describe('isTypingTag', () => {
   it('treats form fields as typing', () => {
@@ -23,5 +29,32 @@ describe('notesShortcut', () => {
 
   it('closes on Escape even while typing', () => {
     expect(notesShortcut('Escape', true, false)).toBe('close');
+  });
+});
+
+describe('isTypingElement', () => {
+  it('treats a contenteditable div as typing', () => {
+    expect(isTypingElement('DIV', true)).toBe(true);
+    expect(isTypingElement('DIV', false)).toBe(false);
+  });
+});
+
+describe('isChecklistHotkey', () => {
+  it('matches Ctrl+Shift+9 and Cmd+Shift+9, not Alt', () => {
+    expect(isChecklistHotkey('9', true, true, false)).toBe(true);
+    expect(isChecklistHotkey('9', true, true, true)).toBe(false);
+    expect(isChecklistHotkey('9', false, true, false)).toBe(false);
+  });
+});
+
+describe('isEditorCommandBlocked', () => {
+  it('blocks commands throughout an active composition', () => {
+    expect(isEditorCommandBlocked(true, false, 'Enter')).toBe(true);
+    expect(isEditorCommandBlocked(false, true, 'Enter')).toBe(true);
+  });
+
+  it('blocks Process keys outside the reported composition window', () => {
+    expect(isEditorCommandBlocked(false, false, 'Process')).toBe(true);
+    expect(isEditorCommandBlocked(false, false, 'Enter')).toBe(false);
   });
 });

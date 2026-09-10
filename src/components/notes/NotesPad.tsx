@@ -5,6 +5,12 @@ import type { UserName } from '@/lib/identity';
 import { NOTE_SAVE_PAUSE_MS, titleOrDefault, type Note } from '@/lib/note';
 import { deleteNoteLocally, saveNote } from '@/lib/noteLocal';
 import { addNote, removeNote, renameNote } from '@/lib/notePad';
+import {
+  NotesEditor,
+  type NotesCaretInfo,
+  type NotesEditorHandle,
+} from './NotesEditor';
+import { NotesStrip } from './NotesStrip';
 
 interface NotesPadProps {
   owner: UserName;
@@ -23,6 +29,13 @@ export function NotesPad({
 }: NotesPadProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState('');
+  const [strip, setStrip] = useState<NotesCaretInfo>({
+    inWords: false,
+    inChecklist: false,
+    canIndent: false,
+    canOutdent: false,
+  });
+  const editorRef = useRef<NotesEditorHandle>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingSave = useRef<Note | null>(null);
   const active = notes.find((note) => note.id === activeId) ?? notes[0];
@@ -158,11 +171,21 @@ export function NotesPad({
           +
         </button>
       </div>
-      <textarea
-        aria-label="Note"
-        className="mt-quiet-focus min-h-11 flex-1 resize-none border-0 bg-[var(--mt-surface)] p-3 text-[var(--mt-text)]"
-        value={active.body}
-        onChange={(event) => updateBody(event.target.value)}
+      <NotesStrip
+        inWords={strip.inWords}
+        inChecklist={strip.inChecklist}
+        canIndent={strip.canIndent}
+        canOutdent={strip.canOutdent}
+        onToggle={() => editorRef.current?.toggle()}
+        onIndent={() => editorRef.current?.indent()}
+        onOutdent={() => editorRef.current?.outdent()}
+      />
+      <NotesEditor
+        key={active.id}
+        ref={editorRef}
+        body={active.body}
+        onChange={updateBody}
+        onCaret={setStrip}
       />
     </div>
   );
