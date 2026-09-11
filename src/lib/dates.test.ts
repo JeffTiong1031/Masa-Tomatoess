@@ -6,6 +6,7 @@ import {
   formatLongDate,
   formatMonthYear,
   formatShortDate,
+  isValidISODate,
   monthGridDates,
   monthOf,
   timeISO,
@@ -137,6 +138,32 @@ describe('todayWeekday', () => {
 
   it('reads local parts, so a late evening does not roll forward', () => {
     expect(todayWeekday(new Date(2026, 8, 7, 23, 30))).toBe(0);
+  });
+});
+
+describe('isValidISODate', () => {
+  it('accepts a real date', () => {
+    expect(isValidISODate('2026-08-16')).toBe(true);
+  });
+
+  it('rejects a month that rolls over into another year', () => {
+    expect(isValidISODate('2026-13-01')).toBe(false);
+  });
+
+  it('rejects a day that rolls over into another month', () => {
+    expect(isValidISODate('2026-02-30')).toBe(false);
+  });
+
+  it('rejects a 31st in a 30-day month', () => {
+    expect(isValidISODate('2026-09-31')).toBe(false);
+  });
+
+  it('rejects a wrongly-shaped string', () => {
+    expect(isValidISODate('2026-9-1')).toBe(false);
+  });
+
+  it('rejects an empty string', () => {
+    expect(isValidISODate('')).toBe(false);
   });
 });
 

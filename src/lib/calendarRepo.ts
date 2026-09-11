@@ -179,3 +179,36 @@ export async function deleteCategory(id: string): Promise<boolean> {
   }
   return true;
 }
+
+export async function fetchPinnedEventIds(
+  owner: UserName,
+): Promise<Set<string>> {
+  const { data, error } = await supabase
+    .from('calendar_events')
+    .select('id')
+    .eq('owner', owner)
+    .eq('pinned', true);
+
+  if (error) {
+    console.error('Failed to load starred dates:', error);
+    return new Set();
+  }
+
+  return new Set((data as { id: string }[]).map((row) => row.id));
+}
+
+export async function setEventPinned(
+  id: string,
+  pinned: boolean,
+): Promise<boolean> {
+  const { error } = await supabase
+    .from('calendar_events')
+    .update({ pinned, updated_at: new Date().toISOString() })
+    .eq('id', id);
+
+  if (error) {
+    console.error('Failed to star a date:', error);
+    return false;
+  }
+  return true;
+}

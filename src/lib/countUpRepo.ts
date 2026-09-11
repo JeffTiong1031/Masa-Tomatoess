@@ -197,3 +197,38 @@ async function loadCountUpListOnce(
   if (!(await markCountUpInitialized(owner))) return null;
   return fetchCountUpEntries(owner);
 }
+
+export async function fetchPinnedCountUpIds(
+  owner: UserName,
+): Promise<Set<string>> {
+  const { data, error } = await supabase
+    .from('count_up_entries')
+    .select('id')
+    .eq('owner', owner)
+    .eq('pinned', true);
+
+  if (error) {
+    console.error('Failed to load starred count-up dates:', error);
+    return new Set();
+  }
+
+  return new Set((data as { id: string }[]).map((row) => row.id));
+}
+
+export async function setCountUpPinned(
+  id: string,
+  owner: UserName,
+  pinned: boolean,
+): Promise<boolean> {
+  const { error } = await supabase
+    .from('count_up_entries')
+    .update({ pinned, updated_at: new Date().toISOString() })
+    .eq('id', id)
+    .eq('owner', owner);
+
+  if (error) {
+    console.error('Failed to star a count-up date:', error);
+    return false;
+  }
+  return true;
+}

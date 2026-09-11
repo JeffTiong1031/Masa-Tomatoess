@@ -1,14 +1,16 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Trash2 } from 'lucide-react';
+import { Star, Trash2 } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import { useHasMounted } from '@/hooks/useHasMounted';
 import type { CalendarEvent } from '@/lib/calendarEvent';
 import {
   deleteEvent,
   fetchEvents,
+  fetchPinnedEventIds,
   insertEvent,
+  setEventPinned,
   updateEvent,
 } from '@/lib/calendarRepo';
 import { localCountUpCache, withoutLocalCountUpEntries } from '@/lib/countUpCache';
@@ -25,8 +27,10 @@ import type { CountUpEntry } from '@/lib/countUpList';
 import { countUpRows } from '@/lib/countUpList';
 import {
   deleteCountUpEntry,
+  fetchPinnedCountUpIds,
   insertCountUpEntry,
   loadCountUpList,
+  setCountUpPinned,
   updateCountUpEntry,
 } from '@/lib/countUpRepo';
 import { formatShortDate, todayISO } from '@/lib/dates';
@@ -68,6 +72,7 @@ export default function CountdownBoard() {
   const [dialog, setDialog] = useState<Dialog | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [pinnedIds, setPinnedIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     const finish = () => setHydrated(true);
@@ -107,6 +112,14 @@ export default function CountdownBoard() {
     useCountdownTrackerStore.setState((state) => ({ mode: state.mode }));
   }, []);
 
+  const loadPinned = useCallback(async (who: UserName) => {
+    const [events, entries] = await Promise.all([
+      fetchPinnedEventIds(who),
+      fetchPinnedCountUpIds(who),
+    ]);
+    setPinnedIds(new Set([...events, ...entries]));
+  }, []);
+
   useEffect(() => {
     if (!mounted) return;
     queueMicrotask(() => {
@@ -115,8 +128,9 @@ export default function CountdownBoard() {
       setOwner(who);
       loadEvents();
       loadCountUp(who);
+      loadPinned(who);
     });
-  }, [mounted, loadEvents, loadCountUp]);
+  }, [mounted, loadEvents, loadCountUp, loadPinned]);
 
   useEffect(() => {
     if (!mounted) return;
@@ -228,6 +242,30 @@ export default function CountdownBoard() {
       return;
     }
     await loadCountUp(owner);
+  };
+
+  const flipStar = (id: string) =>
+    setPinnedIds((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
+  const toggleStar = async (id: string) => {
+    const starred = pinnedIds.has(id);
+    setSaveError(null);
+    flipStar(id);
+
+    const saved =
+      mode === 'countdown'
+        ? await setEventPinned(id, !starred)
+        : await setCountUpPinned(id, owner, !starred);
+
+    if (!saved) {
+      flipStar(id);
+      setSaveError('Could not star that date. Check your connection and try again.');
+    }
   };
 
   const formInitial = (): TrackerDateForm => {
@@ -365,6 +403,24 @@ export default function CountdownBoard() {
                     {row.display}
                   </div>
                 </div>
+                <button
+                  type="button"
+                  aria-label={
+                    pinnedIds.has(row.id)
+                      ? `Take ${row.title} off the home banner`
+                      : `Show ${row.title} on the home banner`
+                  }
+                  aria-pressed={pinnedIds.has(row.id)}
+                  onClick={() => toggleStar(row.id)}
+                  className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[var(--mt-text-muted)]"
+                >
+                  <Star
+                    size={18}
+                    aria-hidden
+                    fill={pinnedIds.has(row.id) ? 'var(--mt-accent)' : 'none'}
+                    style={pinnedIds.has(row.id) ? { color: 'var(--mt-text)' } : undefined}
+                  />
+                </button>
                 <button
                   type="button"
                   aria-label={`Delete ${row.title}`}

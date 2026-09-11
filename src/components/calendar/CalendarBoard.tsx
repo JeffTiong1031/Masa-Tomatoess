@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Plus } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import { useHasMounted } from '@/hooks/useHasMounted';
@@ -20,7 +21,14 @@ import {
 import { withCategoryFills, type Category } from '@/lib/categories';
 import type { ColourSwatch } from '@/lib/colourPalette';
 import { fetchPalette } from '@/lib/colourRepo';
-import { addDays, addMonths, monthOf, timeISO, todayISO } from '@/lib/dates';
+import {
+  addDays,
+  addMonths,
+  isValidISODate,
+  monthOf,
+  timeISO,
+  todayISO,
+} from '@/lib/dates';
 import { toTiming, type EventDraft } from '@/lib/eventForm';
 import { isUserName, partnerOf, type UserName } from '@/lib/identity';
 import AssistantButton from '@/components/assistant/AssistantButton';
@@ -78,6 +86,9 @@ interface Notice {
 export default function CalendarBoard() {
   const mounted = useHasMounted();
 
+  const searchParams = useSearchParams();
+  const requestedDate = searchParams.get('date');
+
   const [signedInAs, setSignedInAs] = useState<UserName>('Jeff');
   const [view, setView] = useState<CalendarView>('week');
   const [owner, setOwner] = useState<OwnerFilter>('Jeff');
@@ -107,14 +118,18 @@ export default function CalendarBoard() {
     const stored = localStorage.getItem('user_name');
     const name: UserName = isUserName(stored) ? stored : 'Jeff';
     const now = todayISO();
+    const startDate =
+      requestedDate !== null && isValidISODate(requestedDate)
+        ? requestedDate
+        : now;
     queueMicrotask(() => {
       setSignedInAs(name);
       setOwner(name);
       setToday(now);
-      setSelectedDate(now);
-      setMonth(monthOf(now));
+      setSelectedDate(startDate);
+      setMonth(monthOf(startDate));
     });
-  }, [mounted]);
+  }, [mounted, requestedDate]);
 
   const load = useCallback(async () => {
     if (today === '') return;
