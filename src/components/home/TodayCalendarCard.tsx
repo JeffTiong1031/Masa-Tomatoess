@@ -25,7 +25,7 @@ export default function TodayCalendarCard({
 }) {
   return (
     <section
-      className="mt-soft mb-6 grid gap-6 p-5 sm:grid-cols-2"
+      className="mt-soft mb-6 grid grid-cols-1 gap-6 p-5 sm:grid-cols-2"
       style={{ ['--mt-accent' as string]: accentVar('calendar') }}
     >
       <div>
