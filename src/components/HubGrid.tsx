@@ -117,8 +117,10 @@ export default function HubGrid() {
         </p>
       </div>
 
-      {mounted && (
+      {mounted ? (
         <TodayCalendarCard today={today} agenda={agenda} cells={cells} />
+      ) : (
+        <div className="mt-soft mb-6 min-h-[39rem] sm:min-h-[22rem]" aria-hidden />
       )}
 
       <div className="mb-6 grid gap-3 sm:grid-cols-[1fr_2fr]">

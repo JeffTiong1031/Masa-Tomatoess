@@ -58,6 +58,13 @@ export default function TodayCalendarCard({
                 <span className="truncate text-sm text-[var(--mt-text)]">
                   {item.title}
                 </span>
+                {item.kind === 'todo' && item.late && (
+                  <span
+                    className="h-1.5 w-1.5 shrink-0 rounded-full"
+                    style={{ background: 'var(--mt-danger)' }}
+                    aria-hidden
+                  />
+                )}
               </li>
             ))}
           </ul>

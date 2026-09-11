@@ -244,20 +244,28 @@ export default function CountdownBoard() {
     await loadCountUp(owner);
   };
 
+  const flipStar = (id: string) =>
+    setPinnedIds((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
   const toggleStar = async (id: string) => {
     const starred = pinnedIds.has(id);
-    const next = new Set(pinnedIds);
-
-    if (starred) next.delete(id);
-    else next.add(id);
-    setPinnedIds(next);
+    setSaveError(null);
+    flipStar(id);
 
     const saved =
       mode === 'countdown'
         ? await setEventPinned(id, !starred)
         : await setCountUpPinned(id, owner, !starred);
 
-    if (!saved) setPinnedIds(pinnedIds);
+    if (!saved) {
+      flipStar(id);
+      setSaveError('Could not star that date. Check your connection and try again.');
+    }
   };
 
   const formInitial = (): TrackerDateForm => {
