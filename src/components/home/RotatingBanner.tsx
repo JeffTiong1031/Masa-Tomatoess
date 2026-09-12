@@ -6,15 +6,23 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { accentVar } from '@/components/ui/PageShell';
 import type { BannerCard } from '@/lib/bannerCards';
 import { nextIndex, prevIndex } from '@/lib/carousel';
+import { filledStreakPips } from '@/lib/homeField';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 
 const TICK_MS = 5000;
 const PAUSE_MS = 10000;
 
-export default function RotatingBanner({ cards }: { cards: BannerCard[] }) {
+export default function RotatingBanner({
+  cards,
+  streakDays,
+}: {
+  cards: BannerCard[];
+  streakDays: number;
+}) {
   const [index, setIndex] = useState(0);
   const [pausedUntil, setPausedUntil] = useState(0);
   const stillMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
+  const pips = filledStreakPips(streakDays);
 
   useEffect(() => {
     if (stillMotion) return;
@@ -36,15 +44,23 @@ export default function RotatingBanner({ cards }: { cards: BannerCard[] }) {
 
   return (
     <div
-      className="mt-soft flex flex-col items-center gap-1 px-1 py-3"
-      style={{ ['--mt-accent' as string]: accentVar(card.accent) }}
+      className="mt-soft flex flex-col items-center gap-3 px-3 py-4"
+      style={{
+        ['--mt-accent' as string]: accentVar(card.accent),
+        background:
+          'color-mix(in srgb, var(--mt-accent) 18%, var(--mt-surface))',
+      }}
     >
       <div className="flex w-full items-center gap-1">
         <button
           type="button"
           aria-label="Previous"
           onClick={() => step(prevIndex)}
-          className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[var(--mt-text-muted)]"
+          className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-[var(--mt-text)]"
+          style={{
+            background:
+              'color-mix(in srgb, var(--mt-accent) 28%, var(--mt-surface))',
+          }}
         >
           <ChevronLeft size={18} aria-hidden />
         </button>
@@ -65,10 +81,29 @@ export default function RotatingBanner({ cards }: { cards: BannerCard[] }) {
           type="button"
           aria-label="Next"
           onClick={() => step(nextIndex)}
-          className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[var(--mt-text-muted)]"
+          className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-[var(--mt-text)]"
+          style={{
+            background:
+              'color-mix(in srgb, var(--mt-accent) 28%, var(--mt-surface))',
+          }}
         >
           <ChevronRight size={18} aria-hidden />
         </button>
+      </div>
+
+      <div className="flex items-center gap-1.5">
+        {pips.map((filled, pipIndex) => (
+          <span
+            key={pipIndex}
+            aria-hidden
+            className="h-1.5 w-1.5 rounded-full"
+            style={{
+              background: filled
+                ? 'var(--mt-accent)'
+                : 'color-mix(in srgb, var(--mt-accent) 28%, transparent)',
+            }}
+          />
+        ))}
       </div>
 
       <div className="flex items-center gap-1">
