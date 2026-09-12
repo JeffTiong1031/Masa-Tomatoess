@@ -4,6 +4,7 @@ import {
   FOCUS_HREFS,
   FOCUS_SEGMENTS,
   TIMETABLE_PANEL,
+  hubDoors,
   isActiveHref,
   isFocusRoute,
   isHubRoute,
@@ -71,6 +72,21 @@ describe('menu', () => {
   it('does not add Notes as a destination', () => {
     expect(ALL_LINKS.map((l) => l.href)).not.toContain('/notes');
     expect(ALL_LINKS.map((l) => l.label)).not.toContain('Notes');
+  });
+});
+
+describe('hubDoors', () => {
+  it('lists every section door and never Home', () => {
+    expect(hubDoors().map((link) => link.href)).toEqual([
+      '/study',
+      '/timetable',
+      '/calendar',
+      '/cycle',
+      '/countdown',
+      '/meals',
+      '/fitness',
+      '/finance',
+    ]);
   });
 });
 

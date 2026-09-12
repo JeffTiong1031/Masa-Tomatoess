@@ -74,6 +74,10 @@ export function isHubRoute(pathname: string): boolean {
   return pathname === '/';
 }
 
+export function hubDoors(): NavLink[] {
+  return ALL_LINKS.filter((link) => link.href !== '/');
+}
+
 /** Anywhere inside Study, including /study itself. */
 export function isStudyRoute(pathname: string): boolean {
   return isActiveHref(pathname, '/study');

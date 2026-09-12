@@ -5,12 +5,18 @@ import Link from 'next/link';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/db/db';
 import { computeHubStats } from '@/lib/hubStats';
-import { ALL_LINKS } from '@/components/nav/navLinks';
+import { hubDoors } from '@/components/nav/navLinks';
 import { accentVar } from '@/components/ui/PageShell';
-import StatTile from '@/components/ui/StatTile';
 import { useHasMounted } from '@/hooks/useHasMounted';
 import { hubCycleLabel, summarizeCycle, type PeriodLog } from '@/lib/cycle';
-import { monthGridDates, monthOf, todayISO } from '@/lib/dates';
+import {
+  WEEKDAYS,
+  formatMonthYear,
+  monthGridDates,
+  monthOf,
+  todayISO,
+  weekdayIndex,
+} from '@/lib/dates';
 import { fetchPeriods } from '@/lib/cycleRepo';
 import { fetchEvents, fetchPinnedEventIds } from '@/lib/calendarRepo';
 import { fetchTodos } from '@/lib/todoRepo';
@@ -24,6 +30,7 @@ import type { Todo } from '@/lib/todo';
 import type { CountUpEntry } from '@/lib/countUpList';
 import TodayCalendarCard from '@/components/home/TodayCalendarCard';
 import RotatingBanner from '@/components/home/RotatingBanner';
+import HomeFocusTile from '@/components/home/HomeFocusTile';
 
 function greetingForHour(h: number): string {
   if (h < 12) return 'Good morning';
@@ -31,13 +38,12 @@ function greetingForHour(h: number): string {
   return 'Good evening';
 }
 
+function longDate(date: string): string {
+  const [year, month, day] = date.split('-').map(Number);
+  return `${day} ${formatMonthYear(`${year}-${`${month}`.padStart(2, '0')}`)}`;
+}
+
 export default function HubGrid() {
-  // useHasMounted (useSyncExternalStore under the hood, same pattern as
-  // Gatekeeper.tsx) reports false on the server and on the first client
-  // render, then flips true afterwards. That keeps the SSR/hydration
-  // render pure — localStorage.getItem and the wall-clock greeting are
-  // only ever evaluated once we're safely client-only, so there is no
-  // server/client markup mismatch to warn about.
   const mounted = useHasMounted();
   const userName = mounted ? localStorage.getItem('user_name') : null;
   const greeting = mounted ? greetingForHour(new Date().getHours()) : 'Welcome';
@@ -101,66 +107,121 @@ export default function HubGrid() {
     today,
   );
 
-  const sections = ALL_LINKS.filter((l) => l.href !== '/');
+  const sections = hubDoors();
 
   return (
     <>
-      <div className="mb-6">
+      <div className="mb-10 flex flex-col gap-2 md:flex-row md:items-baseline">
         <h1 className="text-2xl font-semibold tracking-tight text-[var(--mt-text)]">
           {greeting}
           {userName ? `, ${userName}` : ''}
         </h1>
-        <p className="mt-1 text-sm text-[var(--mt-text-muted)]">
+        <p className="text-sm text-[var(--mt-text-muted)] md:ml-2">
           {stats.todayMinutes > 0
             ? `${stats.todayMinutes} focus minutes today.`
             : 'No focus time logged yet today.'}
         </p>
       </div>
 
-      {mounted ? (
-        <TodayCalendarCard today={today} agenda={agenda} cells={cells} />
-      ) : (
-        <div className="mt-soft mb-6 min-h-[39rem] sm:min-h-[22rem]" aria-hidden />
-      )}
+      <div className="grid grid-cols-1 items-start gap-12 md:grid-cols-12 md:gap-16">
+        <div className="md:col-span-7">
+          {mounted ? (
+            <>
+              <h2 className="text-6xl font-semibold leading-[0.9] tracking-tighter text-[var(--mt-text)] md:text-7xl lg:text-8xl">
+                {WEEKDAYS[weekdayIndex(today)]}
+              </h2>
+              <p className="mt-4 text-lg font-medium text-[var(--mt-text-muted)] md:text-xl">
+                {longDate(today)}
+              </p>
+              <div className="mt-10 mb-8 h-0.5 w-12 bg-[var(--mt-text)]" />
+              {agenda.items.length === 0 ? (
+                <p className="text-lg text-[var(--mt-text-muted)]">
+                  Nothing today.
+                </p>
+              ) : (
+                <ul className="flex max-w-sm flex-col gap-4">
+                  {agenda.items.map((item) => (
+                    <li key={item.id} className="flex items-center gap-4">
+                      <span
+                        className="inline-flex min-w-16 shrink-0 justify-center rounded-full border border-[var(--mt-border)] bg-[var(--mt-bg)] px-3 py-1 text-xs font-semibold text-[var(--mt-text)]"
+                        style={
+                          item.kind === 'todo' && item.late
+                            ? {
+                                background:
+                                  'color-mix(in srgb, var(--mt-danger) 16%, transparent)',
+                                borderColor: 'transparent',
+                              }
+                            : undefined
+                        }
+                      >
+                        {item.chip}
+                      </span>
+                      <span className="truncate text-lg font-medium text-[var(--mt-text)] md:text-xl">
+                        {item.title}
+                      </span>
+                      {item.kind === 'todo' && item.late ? (
+                        <span
+                          className="h-1.5 w-1.5 shrink-0 rounded-full"
+                          style={{ background: 'var(--mt-danger)' }}
+                          aria-hidden
+                        />
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {agenda.hiddenCount > 0 ? (
+                <Link
+                  href={agenda.moreHref}
+                  className="mt-3 inline-flex min-h-11 items-center text-sm text-[var(--mt-text-muted)]"
+                >
+                  +{agenda.hiddenCount} more
+                </Link>
+              ) : null}
+            </>
+          ) : (
+            <div className="min-h-[16rem]" aria-hidden />
+          )}
+        </div>
 
-      <div className="mb-6 grid gap-3 sm:grid-cols-[1fr_2fr]">
-        <StatTile
-          label="Today"
-          value={`${stats.todayMinutes} min`}
-          accent="timer"
-        />
-        <RotatingBanner cards={cards} />
+        <div className="flex flex-col gap-6 md:col-span-5">
+          {mounted ? (
+            <TodayCalendarCard
+              today={today}
+              cells={cells}
+              listedCount={agenda.items.length + agenda.hiddenCount}
+            />
+          ) : (
+            <div className="mt-soft min-h-[22rem]" aria-hidden />
+          )}
+          <HomeFocusTile minutes={stats.todayMinutes} />
+          <RotatingBanner cards={cards} streakDays={stats.streakDays} />
+        </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        {sections.map(({ href, label, icon: Icon, accent }) => (
-          <Link
-            key={href}
-            href={href}
-            className="mt-soft flex flex-col gap-2 p-4 transition-transform active:scale-[0.98]"
-            style={{ ['--mt-accent' as string]: accentVar(accent) }}
-          >
-            <span
-              className="inline-flex h-9 w-9 items-center justify-center rounded-xl"
-              style={{ background: 'var(--mt-accent)' }}
+      <div className="mt-20 border-t border-[var(--mt-border)] pt-8 md:mt-24">
+        <div className="grid grid-cols-2 justify-start gap-3 sm:grid-cols-4 md:flex md:flex-wrap">
+          {sections.map(({ href, label, icon: Icon, accent }) => (
+            <Link
+              key={href}
+              href={href}
+              className="mt-soft flex flex-col items-center gap-3 p-3 transition-transform active:scale-[0.98] md:flex-row md:pr-5"
+              style={{ ['--mt-accent' as string]: accentVar(accent) }}
             >
-              <Icon
-                size={18}
-                strokeWidth={1.9}
-                aria-hidden
-                className="text-[var(--mt-accent-contrast)]"
-              />
-            </span>
-            <span className="text-sm font-semibold text-[var(--mt-text)]">
-              {label}
-            </span>
-            {href === '/cycle' && cycleLabel ? (
-              <span className="text-xs text-[var(--mt-text-muted)]">
-                {cycleLabel}
+              <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[var(--mt-accent)]">
+                <Icon
+                  size={18}
+                  strokeWidth={1.9}
+                  aria-hidden
+                  className="text-[var(--mt-accent-contrast)]"
+                />
               </span>
-            ) : null}
-          </Link>
-        ))}
+              <span className="text-sm font-semibold text-[var(--mt-text)]">
+                {label}
+              </span>
+            </Link>
+          ))}
+        </div>
       </div>
     </>
   );
