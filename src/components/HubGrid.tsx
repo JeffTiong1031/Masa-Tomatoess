@@ -123,8 +123,8 @@ export default function HubGrid() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 items-start gap-12 md:grid-cols-12 md:gap-16">
-        <div className="md:col-span-7">
+      <div className="grid grid-cols-1 items-start gap-12 md:grid-cols-12 md:gap-x-16 md:gap-y-12">
+        <div className="md:col-span-7 md:row-start-1">
           {mounted ? (
             <>
               <h2 className="text-6xl font-semibold leading-[0.9] tracking-tighter text-[var(--mt-text)] md:text-7xl lg:text-8xl">
@@ -184,7 +184,7 @@ export default function HubGrid() {
           )}
         </div>
 
-        <div className="flex flex-col gap-6 md:col-span-5">
+        <div className="flex flex-col gap-6 md:col-span-5 md:row-span-2 md:row-start-1">
           {mounted ? (
             <TodayCalendarCard
               today={today}
@@ -197,30 +197,30 @@ export default function HubGrid() {
           <HomeFocusTile minutes={stats.todayMinutes} />
           <RotatingBanner cards={cards} streakDays={stats.streakDays} />
         </div>
-      </div>
 
-      <div className="mt-20 border-t border-[var(--mt-border)] pt-8 md:mt-24">
-        <div className="grid grid-cols-2 justify-start gap-3 sm:grid-cols-4 md:flex md:flex-wrap">
-          {sections.map(({ href, label, icon: Icon, accent }) => (
-            <Link
-              key={href}
-              href={href}
-              className="mt-soft flex flex-col items-center gap-3 p-3 transition-transform active:scale-[0.98] md:flex-row md:pr-5"
-              style={{ ['--mt-accent' as string]: accentVar(accent) }}
-            >
-              <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[var(--mt-accent)]">
-                <Icon
-                  size={18}
-                  strokeWidth={1.9}
-                  aria-hidden
-                  className="text-[var(--mt-accent-contrast)]"
-                />
-              </span>
-              <span className="text-sm font-semibold text-[var(--mt-text)]">
-                {label}
-              </span>
-            </Link>
-          ))}
+        <div className="mt-8 border-t border-[var(--mt-border)] pt-8 md:col-span-7 md:row-start-2 md:mt-0">
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+            {sections.map(({ href, label, icon: Icon, accent }) => (
+              <Link
+                key={href}
+                href={href}
+                className="mt-soft flex min-h-[5.75rem] flex-col items-center justify-center gap-2 p-3 text-center transition-transform active:scale-[0.98]"
+                style={{ ['--mt-accent' as string]: accentVar(accent) }}
+              >
+                <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[var(--mt-accent)]">
+                  <Icon
+                    size={18}
+                    strokeWidth={1.9}
+                    aria-hidden
+                    className="text-[var(--mt-accent-contrast)]"
+                  />
+                </span>
+                <span className="text-sm font-semibold text-[var(--mt-text)]">
+                  {label}
+                </span>
+              </Link>
+            ))}
+          </div>
         </div>
       </div>
     </>
