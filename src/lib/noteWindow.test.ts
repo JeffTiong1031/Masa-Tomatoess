@@ -2,11 +2,15 @@ import { describe, it, expect } from 'vitest';
 import {
   NOTE_WINDOW_DEFAULT_HEIGHT,
   NOTE_WINDOW_DEFAULT_WIDTH,
+  NOTE_WINDOW_GRAB,
   NOTE_WINDOW_MIN_HEIGHT,
   NOTE_WINDOW_MIN_WIDTH,
+  NOTE_WINDOW_SLIVER,
+  NOTE_WINDOW_TITLE,
   clampNoteWindow,
   defaultNoteWindow,
   resizeNoteWindow,
+  restoreNoteWindowAtPointer,
 } from './noteWindow';
 
 describe('defaultNoteWindow', () => {
@@ -20,7 +24,7 @@ describe('defaultNoteWindow', () => {
 });
 
 describe('clampNoteWindow', () => {
-  it('keeps a minimum size and stays on screen', () => {
+  it('keeps a minimum size and a grab of the title bar on screen', () => {
     const box = clampNoteWindow(
       { x: -40, y: -20, width: 80, height: 80 },
       800,
@@ -28,10 +32,21 @@ describe('clampNoteWindow', () => {
     );
     expect(box.width).toBe(NOTE_WINDOW_MIN_WIDTH);
     expect(box.height).toBe(NOTE_WINDOW_MIN_HEIGHT);
-    expect(box.x).toBeGreaterThanOrEqual(0);
-    expect(box.y).toBeGreaterThanOrEqual(0);
-    expect(box.x + box.width).toBeLessThanOrEqual(800);
-    expect(box.y + box.height).toBeLessThanOrEqual(600);
+    expect(box.x).toBeGreaterThanOrEqual(NOTE_WINDOW_GRAB - box.width);
+    expect(box.x).toBeLessThanOrEqual(800 - NOTE_WINDOW_GRAB);
+    expect(box.y).toBeGreaterThanOrEqual(NOTE_WINDOW_SLIVER - NOTE_WINDOW_TITLE);
+    expect(box.y).toBeLessThanOrEqual(600 - NOTE_WINDOW_SLIVER);
+  });
+
+  it('lets the pad hang past the page edge', () => {
+    const box = clampNoteWindow(
+      { x: -200, y: 40, width: 360, height: 420 },
+      800,
+      600,
+    );
+    expect(box.x).toBeLessThan(0);
+    expect(box.x + box.width).toBeGreaterThanOrEqual(NOTE_WINDOW_GRAB);
+    expect(box.y).toBe(40);
   });
 });
 
@@ -65,12 +80,25 @@ describe('resizeNoteWindow', () => {
     expect(n.y + n.height).toBe(start.y + start.height);
   });
 
-  it('does not leave the screen when an edge is dragged past it', () => {
-    const w = resizeNoteWindow(start, 'w', -500, 0, 1280, 800);
-    expect(w.x).toBe(0);
-    expect(w.x + w.width).toBe(start.x + start.width);
+  it('lets an edge grow past the page', () => {
     const e = resizeNoteWindow(start, 'e', 5000, 0, 1280, 800);
     expect(e.x).toBe(start.x);
-    expect(e.x + e.width).toBe(1280);
+    expect(e.x + e.width).toBeGreaterThan(1280);
+  });
+});
+
+describe('restoreNoteWindowAtPointer', () => {
+  it('puts the saved size under the pointer', () => {
+    const restored = restoreNoteWindowAtPointer(
+      { x: 40, y: 80, width: 360, height: 420 },
+      640,
+      200,
+      1280,
+      800,
+    );
+    expect(restored.width).toBe(360);
+    expect(restored.height).toBe(420);
+    expect(restored.x).toBe(640 - 180);
+    expect(restored.y).toBe(200 - NOTE_WINDOW_TITLE / 2);
   });
 });

@@ -319,11 +319,12 @@ describe('the editor keeps a DocCaret range across blocks', () => {
     expect(EDITOR).toContain('extendCaret(');
   });
 
-  it('uses extendCaret only while Shift is held, not for collapsed ArrowUp/Down', () => {
-    expect(EDITOR).toContain('event.shiftKey && CARET_MOVES.has(event.key)');
-    expect(EDITOR).not.toContain(
-      'if (!ctrlOrMeta && CARET_MOVES.has(event.key))',
-    );
+  it('moves a collapsed caret to the row above or below', () => {
+    expect(EDITOR).toContain("event.key === 'ArrowUp'");
+    expect(EDITOR).toContain("event.key === 'ArrowDown'");
+    expect(EDITOR).toContain('extendCaret(');
+    expect(EDITOR).toContain('caretOnFirstVisualLine');
+    expect(EDITOR).toContain('caretOnLastVisualLine');
   });
 
   it('captures mouse drags and leaves touch moves free to scroll', () => {

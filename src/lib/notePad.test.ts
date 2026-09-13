@@ -8,6 +8,7 @@ import {
   isActiveNoteOwnedBy,
   renameNote,
   removeNote,
+  removeNotes,
 } from './notePad';
 
 const NOW = '2026-09-09T04:00:00.000Z';
@@ -101,5 +102,25 @@ describe('removeNote', () => {
   it('plants a fresh empty Note when the last tab is deleted', () => {
     const next = removeNote([sample({ body: 'gone' })], 'a', 'Jeff', NOW, 'fresh');
     expect(next).toEqual(seedPad('Jeff', NOW, 'fresh'));
+  });
+});
+
+describe('removeNotes', () => {
+  it('drops every picked tab and keeps the rest', () => {
+    const notes = [
+      sample(),
+      sample({ id: 'b', title: 'Keep' }),
+      sample({ id: 'c', title: 'Also' }),
+    ];
+    expect(removeNotes(notes, ['a', 'c'], 'Jeff', NOW, 'unused')).toEqual([
+      sample({ id: 'b', title: 'Keep' }),
+    ]);
+  });
+
+  it('plants a fresh empty Note when every tab is deleted', () => {
+    const notes = [sample(), sample({ id: 'b', title: 'Gone' })];
+    expect(removeNotes(notes, ['a', 'b'], 'Jeff', NOW, 'fresh')).toEqual(
+      seedPad('Jeff', NOW, 'fresh'),
+    );
   });
 });

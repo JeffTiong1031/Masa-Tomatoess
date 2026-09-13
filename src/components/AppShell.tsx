@@ -9,18 +9,20 @@ import { NotesHost } from '@/components/notes/NotesHost';
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="relative min-h-dvh overflow-x-hidden">
-      <BackgroundManager />
-      <div className="relative z-10 flex min-h-dvh flex-col">
-        <NavDrawer />
-        {/* TimerEngine stays here, above the route groups, so a running
+    <>
+      <div className="relative min-h-dvh overflow-x-hidden">
+        <BackgroundManager />
+        <div className="relative z-10 flex min-h-dvh flex-col">
+          <NavDrawer />
+          {/* TimerEngine stays here, above the route groups, so a running
             timer survives navigation between sections. Do not move it. */}
-        <TimerEngine />
-        <NotesHost />
-        <div className="flex flex-1 flex-col">{children}</div>
-        <AudioPlayer />
-        <AlarmPlayer />
+          <TimerEngine />
+          <div className="flex flex-1 flex-col">{children}</div>
+          <AudioPlayer />
+          <AlarmPlayer />
+        </div>
       </div>
-    </div>
+      <NotesHost />
+    </>
   );
 }
