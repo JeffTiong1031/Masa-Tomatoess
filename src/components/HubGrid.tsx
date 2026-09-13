@@ -30,7 +30,6 @@ import type { Todo } from '@/lib/todo';
 import type { CountUpEntry } from '@/lib/countUpList';
 import TodayCalendarCard from '@/components/home/TodayCalendarCard';
 import RotatingBanner from '@/components/home/RotatingBanner';
-import HomeFocusTile from '@/components/home/HomeFocusTile';
 
 function greetingForHour(h: number): string {
   if (h < 12) return 'Good morning';
@@ -105,6 +104,7 @@ export default function HubGrid() {
     events.filter((event) => pinnedIds.has(event.id)),
     countUps.filter((entry) => pinnedIds.has(entry.id)),
     today,
+    stats.todayMinutes,
   );
 
   const sections = hubDoors();
@@ -199,8 +199,7 @@ export default function HubGrid() {
           ) : (
             <div className="mt-soft min-h-[22rem]" aria-hidden />
           )}
-          <HomeFocusTile minutes={stats.todayMinutes} />
-          <RotatingBanner cards={cards} streakDays={stats.streakDays} />
+          <RotatingBanner cards={cards} />
         </div>
 
         <div className="mt-8 border-t border-[var(--mt-border)] pt-8 md:col-span-7 md:row-start-2 md:mt-0">
