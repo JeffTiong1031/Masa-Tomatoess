@@ -47,6 +47,10 @@ import {
 } from '@/lib/noteHistory';
 import { noteLineGapStyle, type NoteLineGap } from '@/lib/noteLineGap';
 import {
+  NOTE_SELECTION_FILL,
+  noteSelectionCoversLine,
+} from '@/lib/noteSelectionPaint';
+import {
   isChecklistHotkey,
   isEditorCommandBlocked,
 } from '@/lib/noteShortcut';
@@ -159,6 +163,9 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
     const anchorRef = useRef<DocCaret>({ index: 0, offset: 0 });
     const dragAnchorRef = useRef<DocCaret | null>(null);
     const spanningRef = useRef(false);
+    const [paint, setPaint] = useState<{ start: DocCaret; end: DocCaret } | null>(
+      null,
+    );
 
     const reportCaret = (
       nextBlocks: Block[],
@@ -192,6 +199,7 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
       if (!spanningRef.current) {
         rangeRef.current = { start: caret, end: caret, focus: caret };
         anchorRef.current = caret;
+        setPaint(null);
       }
       setBlocks(nextBlocks);
       onChange(encodeBody(nextBlocks));
@@ -214,7 +222,13 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
       rangeRef.current = { start, end, focus };
       caretRef.current = focus;
       spanningRef.current = !collapsedRange(start, end);
+      setPaint(start.index !== end.index ? { start, end } : null);
       reportCaret(blocksRef.current, focus, true);
+    };
+
+    const dropSpan = () => {
+      spanningRef.current = false;
+      setPaint(null);
     };
 
     const placeNativeCaret = (caret: DocCaret) => {
@@ -380,7 +394,7 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
       const base = collapsed
         ? { blocks: blocksRef.current, caret: range.focus }
         : deleteSelection(blocksRef.current, range.start, range.end);
-      spanningRef.current = false;
+      dropSpan();
       const result = enterAt(base.blocks, base.caret);
       commit(result.blocks, result.caret);
     };
@@ -405,7 +419,7 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
       caretRef.current = caret;
       rangeRef.current = { start: caret, end: caret, focus: caret };
       anchorRef.current = caret;
-      spanningRef.current = false;
+      dropSpan();
       historyRef.current = EMPTY_HISTORY;
       typingRunRef.current = false;
       setBlocks(next);
@@ -531,6 +545,15 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
                 block.kind === 'item' ? block.indent * ITEM_INDENT_PX : 0,
               lineHeight: gap.lineHeight,
               paddingBlock: gap.paddingBlock,
+              background:
+                paint &&
+                noteSelectionCoversLine(
+                  paint.start.index,
+                  paint.end.index,
+                  index,
+                )
+                  ? NOTE_SELECTION_FILL
+                  : undefined,
             }}
           >
             {block.kind === 'item' && (
@@ -562,6 +585,8 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
               }}
               aria-label={index === 0 ? 'Note' : undefined}
               className={`mt-quiet-focus min-w-0 flex-1 outline-none ${
+                paint ? 'select-none' : ''
+              } ${
                 block.kind === 'item' && block.checked
                   ? 'text-[var(--mt-text-muted)] line-through'
                   : 'text-[var(--mt-text)]'
@@ -615,7 +640,7 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
                       range.end,
                       native.data ?? '',
                     );
-                    spanningRef.current = false;
+                    dropSpan();
                     commit(result.blocks, result.caret);
                     return;
                   }
@@ -627,7 +652,7 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
                       range.start,
                       range.end,
                     );
-                    spanningRef.current = false;
+                    dropSpan();
                     commit(result.blocks, result.caret);
                   }
                 }
@@ -778,7 +803,7 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
                     range.end,
                     event.key,
                   );
-                  spanningRef.current = false;
+                  dropSpan();
                   commit(result.blocks, result.caret);
                   return;
                 }
@@ -791,7 +816,7 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
                     range.start,
                     range.end,
                   );
-                  spanningRef.current = false;
+                  dropSpan();
                   commit(result.blocks, result.caret);
                   return;
                 }
@@ -923,7 +948,7 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
                   range.start,
                   range.end,
                 );
-                spanningRef.current = false;
+                dropSpan();
                 commit(result.blocks, result.caret);
               }}
               onPaste={(event) => {

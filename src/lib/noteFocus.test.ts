@@ -51,4 +51,10 @@ describe('the note typing area', () => {
     );
     expect(EDITOR).toContain('placeNativeRange');
   });
+
+  it('paints a multi-row highlight with the system blue, not the room accent', () => {
+    expect(EDITOR).toContain('noteSelectionCoversLine');
+    expect(EDITOR).toContain('NOTE_SELECTION_FILL');
+    expect(EDITOR).toContain('setPaint');
+  });
 });
