@@ -2,12 +2,14 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
+  firstRemoteError,
   isOfflineRemoteError,
   logRemoteError,
   remoteErrorText,
 } from './remoteError';
 
 const SYNC = readFileSync(path.resolve(process.cwd(), 'src/lib/sync.ts'), 'utf8');
+const MEAL = readFileSync(path.resolve(process.cwd(), 'src/lib/mealRepo.ts'), 'utf8');
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -71,6 +73,25 @@ describe('logRemoteError', () => {
       'Failed to pull from Supabase:',
       '42501 — permission denied',
     );
+  });
+});
+
+describe('firstRemoteError', () => {
+  it('picks the photo error that is actually there', () => {
+    expect(firstRemoteError(null, { message: 'Storage unknown' })).toEqual({
+      message: 'Storage unknown',
+    });
+    expect(firstRemoteError({ message: 'full failed' }, { message: 'thumb failed' })).toEqual({
+      message: 'full failed',
+    });
+    expect(firstRemoteError(null, null)).toBeNull();
+  });
+});
+
+describe('meal photo upload', () => {
+  it('does not pass a missing photo error into the logger', () => {
+    expect(MEAL).toContain('firstRemoteError');
+    expect(MEAL).not.toContain('fullResult.error ?? thumbResult.error');
   });
 });
 

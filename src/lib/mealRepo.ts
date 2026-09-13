@@ -1,4 +1,4 @@
-import { logRemoteError } from './remoteError';
+import { firstRemoteError, logRemoteError } from './remoteError';
 import { supabase } from './supabase';
 import { weekStart } from './mealWeek';
 import type { UserName } from './identity';
@@ -122,7 +122,8 @@ export async function uploadPhoto(
   ]);
 
   if (fullResult.error || thumbResult.error) {
-    logRemoteError('Failed to upload photo:', fullResult.error ?? thumbResult.error);
+    const uploadError = firstRemoteError(fullResult.error, thumbResult.error);
+    if (uploadError) logRemoteError('Failed to upload photo:', uploadError);
 
     const orphans = [
       ...(fullResult.error ? [] : [fullPath]),
