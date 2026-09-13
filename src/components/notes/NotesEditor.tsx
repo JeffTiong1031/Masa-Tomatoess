@@ -471,6 +471,7 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
         }
       }
       setMarks(next);
+      placeNativeCaret(rangeRef.current.focus);
     }, [paint, blocks, lineGap]);
 
     useLayoutEffect(() => {
@@ -535,7 +536,7 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
 
     return (
       <div
-        className="mt-quiet-focus min-h-11 flex-1 overflow-auto bg-[var(--mt-surface)] p-3 text-[var(--mt-text)]"
+        className="mt-note-sel mt-quiet-focus min-h-11 flex-1 overflow-auto bg-[var(--mt-surface)] p-3 text-[var(--mt-text)]"
         onPointerDown={(event) => {
           if ((event.target as HTMLElement).closest('[role="checkbox"]')) {
             return;

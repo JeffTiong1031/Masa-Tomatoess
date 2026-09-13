@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, it, expect } from 'vitest';
+import { NOTE_SELECTION_FILL } from './noteSelectionPaint';
 
 const CSS = readFileSync(path.resolve(process.cwd(), 'src/app/globals.css'), 'utf8');
 const EDITOR = readFileSync(
@@ -57,5 +58,11 @@ describe('the note typing area', () => {
     expect(EDITOR).toContain('getClientRects');
     expect(EDITOR).toContain('marks.map');
     expect(EDITOR).not.toContain('noteSelectionCoversLine');
+  });
+
+  it('uses one light highlight, not the browser dark blue on top', () => {
+    expect(EDITOR).toContain('mt-note-sel');
+    expect(ruleBody('.mt-note-sel ::selection')).toContain(NOTE_SELECTION_FILL);
+    expect(EDITOR).toMatch(/setMarks\(next\);[\s\S]{0,80}placeNativeCaret/);
   });
 });

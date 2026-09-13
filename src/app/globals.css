@@ -271,6 +271,16 @@ body {
   outline: none;
 }
 
+.mt-note-sel ::selection {
+  background-color: color-mix(in srgb, Highlight 32%, transparent);
+  color: inherit;
+}
+
+.mt-note-sel ::-moz-selection {
+  background-color: color-mix(in srgb, Highlight 32%, transparent);
+  color: inherit;
+}
+
 .mt-glass {
   background: var(--mt-glass);
   backdrop-filter: blur(24px);
