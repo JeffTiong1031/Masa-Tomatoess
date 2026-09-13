@@ -1,3 +1,7 @@
+export function coverStart(direction: 1 | -1): number {
+  return direction * 100;
+}
+
 export function nextIndex(index: number, length: number): number {
   if (length === 0) return 0;
   return (index + 1) % length;

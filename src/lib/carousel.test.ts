@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  coverStart,
   loopHome,
   loopedCards,
   nextIndex,
@@ -9,6 +10,11 @@ import {
 } from './carousel';
 
 describe('carousel', () => {
+  it('brings the next card in from the right and the previous from the left', () => {
+    expect(coverStart(1)).toBe(100);
+    expect(coverStart(-1)).toBe(-100);
+  });
+
   it('steps forward', () => {
     expect(nextIndex(0, 3)).toBe(1);
   });

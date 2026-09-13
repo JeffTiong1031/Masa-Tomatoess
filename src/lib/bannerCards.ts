@@ -3,6 +3,7 @@ import type { CountUpEntry } from './countUpList';
 import { formatTrackerDays, type TrackerMode } from './dayCount';
 
 export const BANNER_TICK_MS = 5000;
+export const BANNER_SLIDE_MS = 1000;
 
 export type BannerAccent = 'timer' | 'cycle' | 'dashboard' | 'countdown';
 

@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { BANNER_TICK_MS, buildBannerCards } from './bannerCards';
+import { BANNER_SLIDE_MS, BANNER_TICK_MS, buildBannerCards } from './bannerCards';
 import type { CalendarEvent } from './calendarEvent';
 import type { CountUpEntry } from './countUpList';
 
@@ -122,6 +122,10 @@ describe('buildBannerCards', () => {
   it('holds each card for five seconds', () => {
     expect(BANNER_TICK_MS).toBe(5000);
   });
+
+  it('slides the next card over in one second', () => {
+    expect(BANNER_SLIDE_MS).toBe(1000);
+  });
 });
 
 describe('the home banner', () => {
@@ -132,9 +136,12 @@ describe('the home banner', () => {
     expect(BANNER).toContain('aria-label="Previous"');
     expect(BANNER).toContain('aria-label="Next"');
     expect(BANNER).toContain('ChevronLeft');
-    expect(BANNER).toContain('transition-transform');
-    expect(BANNER).toContain('loopedCards');
+    expect(BANNER).toContain('translate3d');
+    expect(BANNER).toContain('coverStart');
     expect(BANNER).toContain('onTransitionEnd');
+    expect(BANNER).not.toContain('duration-500');
+    expect(BANNER).not.toContain('ease-out');
+    expect(BANNER).not.toContain('loopedCards');
     expect(BANNER).not.toContain('onPointerDown');
     expect(BANNER).not.toContain('swipeDirection');
   });
