@@ -5,6 +5,8 @@ import {
   NOTE_LINE_GAP_STYLE,
   isNoteLineGap,
   noteLineGapStyle,
+  noteTickLineBox,
+  noteTickLineEm,
 } from './noteLineGap';
 
 describe('note line gaps', () => {
@@ -27,5 +29,20 @@ describe('note line gaps', () => {
     expect(isNoteLineGap('tight')).toBe(true);
     expect(isNoteLineGap('huge')).toBe(false);
     expect(noteLineGapStyle('snug')).toEqual(NOTE_LINE_GAP_STYLE.snug);
+  });
+
+  it('sizes the tick to one line so its centre matches the words at every gap', () => {
+    const font = 16;
+    const oldTick = 44;
+    for (const name of NOTE_LINE_GAPS) {
+      const line = font * noteLineGapStyle(name).lineHeight;
+      const tick = font * noteTickLineEm(name);
+      expect(tick).toBe(line);
+      expect(tick / 2).toBe(line / 2);
+      expect(oldTick / 2).not.toBe(line / 2);
+      expect(noteTickLineBox(name)).toEqual({
+        height: `${noteLineGapStyle(name).lineHeight}em`,
+      });
+    }
   });
 });

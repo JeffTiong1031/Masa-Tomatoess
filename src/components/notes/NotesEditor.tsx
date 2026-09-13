@@ -45,7 +45,11 @@ import {
   undoTo,
   type NoteSnapshot,
 } from '@/lib/noteHistory';
-import { noteLineGapStyle, type NoteLineGap } from '@/lib/noteLineGap';
+import {
+  noteLineGapStyle,
+  noteTickLineBox,
+  type NoteLineGap,
+} from '@/lib/noteLineGap';
 import {
   NOTE_SELECTION_FILL,
   noteSelectionSlice,
@@ -615,7 +619,8 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
                 role="checkbox"
                 aria-checked={block.checked}
                 aria-label={block.checked ? 'Mark unchecked' : 'Mark checked'}
-                className="flex min-h-11 min-w-11 shrink-0 items-center justify-center text-[var(--mt-text)] disabled:text-[var(--mt-text-muted)]"
+                className="relative flex min-w-11 shrink-0 items-center justify-center text-[var(--mt-text)] disabled:text-[var(--mt-text-muted)]"
+                style={noteTickLineBox(lineGap)}
                 disabled={disabled}
                 onClick={() => {
                   if (composingRef.current) return;
@@ -625,10 +630,14 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
                 }}
                 onPointerDown={(event) => event.preventDefault()}
               >
+                <span
+                  aria-hidden
+                  className="absolute inset-x-0 top-1/2 h-11 -translate-y-1/2"
+                />
                 {block.checked ? (
-                  <CheckSquare2 aria-hidden="true" />
+                  <CheckSquare2 aria-hidden="true" className="size-[1em]" />
                 ) : (
-                  <Square aria-hidden="true" />
+                  <Square aria-hidden="true" className="size-[1em]" />
                 )}
               </button>
             )}

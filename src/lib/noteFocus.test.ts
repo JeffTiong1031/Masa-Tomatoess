@@ -41,6 +41,11 @@ describe('the note typing area', () => {
     );
   });
 
+  it('sizes the tick to one line instead of a 44px box that sits off centre', () => {
+    expect(EDITOR).toContain('noteTickLineBox(lineGap)');
+    expect(EDITOR).not.toMatch(/role="checkbox"[\s\S]{0,220}min-h-11/);
+  });
+
   it('uses the lucide tick that sits inside the square', () => {
     expect(EDITOR).toContain('<CheckSquare2');
     expect(EDITOR).not.toContain('<CheckSquare ');

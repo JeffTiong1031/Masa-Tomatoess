@@ -47,6 +47,11 @@ describe('notes line gap', () => {
     expect(EDITOR).toContain('noteLineGapStyle(lineGap)');
     expect(EDITOR).toContain('paddingBlock: gap.paddingBlock');
   });
+
+  it('keeps the tick centred on the first line after the gap is applied', () => {
+    expect(EDITOR).toContain('noteTickLineBox(lineGap)');
+    expect(EDITOR).toContain('size-[1em]');
+  });
 });
 
 describe('notes window host', () => {
