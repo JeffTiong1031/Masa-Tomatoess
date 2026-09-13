@@ -48,7 +48,7 @@ import {
 import { noteLineGapStyle, type NoteLineGap } from '@/lib/noteLineGap';
 import {
   NOTE_SELECTION_FILL,
-  noteSelectionCoversLine,
+  noteSelectionSlice,
 } from '@/lib/noteSelectionPaint';
 import {
   isChecklistHotkey,
@@ -166,6 +166,10 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
     const [paint, setPaint] = useState<{ start: DocCaret; end: DocCaret } | null>(
       null,
     );
+    const editorRef = useRef<HTMLDivElement>(null);
+    const [marks, setMarks] = useState<
+      { top: number; left: number; width: number; height: number }[]
+    >([]);
 
     const reportCaret = (
       nextBlocks: Block[],
@@ -428,6 +432,48 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
     }, [body, onChange]);
 
     useLayoutEffect(() => {
+      const root = editorRef.current;
+      if (!root || !paint) {
+        setMarks([]);
+        return;
+      }
+      const origin = root.getBoundingClientRect();
+      const next: { top: number; left: number; width: number; height: number }[] =
+        [];
+      for (
+        let index = paint.start.index;
+        index <= paint.end.index;
+        index += 1
+      ) {
+        const slice = noteSelectionSlice(
+          paint.start,
+          paint.end,
+          index,
+          blocks[index].text.length,
+        );
+        if (!slice) continue;
+        const element = blockNodesRef.current[index];
+        if (!element) continue;
+        const node = element.firstChild ?? element;
+        if (node === element) continue;
+        const max = node.textContent?.length ?? 0;
+        const range = document.createRange();
+        range.setStart(node, Math.min(slice.start, max));
+        range.setEnd(node, Math.min(slice.end, max));
+        for (const rect of range.getClientRects()) {
+          if (rect.width === 0 || rect.height === 0) continue;
+          next.push({
+            top: rect.top - origin.top,
+            left: rect.left - origin.left,
+            width: rect.width,
+            height: rect.height,
+          });
+        }
+      }
+      setMarks(next);
+    }, [paint, blocks, lineGap]);
+
+    useLayoutEffect(() => {
       if (!restoreCaretRef.current) return;
       restoreCaretRef.current = false;
       const caret = caretRef.current;
@@ -536,24 +582,30 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
           reportCaret(blocksRef.current, caretRef.current, false);
         }}
       >
+        <div ref={editorRef} className="relative">
+        {marks.map((mark, markIndex) => (
+          <span
+            key={markIndex}
+            aria-hidden
+            className="pointer-events-none absolute z-0"
+            style={{
+              top: mark.top,
+              left: mark.left,
+              width: mark.width,
+              height: mark.height,
+              background: NOTE_SELECTION_FILL,
+            }}
+          />
+        ))}
         {blocks.map((block, index) => (
           <div
             key={index}
-            className="flex items-start"
+            className="relative z-[1] flex items-start"
             style={{
               paddingLeft:
                 block.kind === 'item' ? block.indent * ITEM_INDENT_PX : 0,
               lineHeight: gap.lineHeight,
               paddingBlock: gap.paddingBlock,
-              background:
-                paint &&
-                noteSelectionCoversLine(
-                  paint.start.index,
-                  paint.end.index,
-                  index,
-                )
-                  ? NOTE_SELECTION_FILL
-                  : undefined,
             }}
           >
             {block.kind === 'item' && (
@@ -982,6 +1034,7 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
             </span>
           </div>
         ))}
+        </div>
       </div>
     );
   },
