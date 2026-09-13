@@ -18,4 +18,11 @@ describe('notes window chrome', () => {
     expect(WINDOW).toContain('hover:bg-[var(--mt-danger)]');
     expect(WINDOW).toContain('hover:text-[var(--mt-danger-contrast)]');
   });
+
+  it('has a maximise control that fills the website', () => {
+    expect(WINDOW).toContain("aria-label={maximised ? 'Restore' : 'Maximise'}");
+    expect(WINDOW).not.toContain('requestFullscreen');
+    expect(WINDOW).toContain('restoreNoteWindowAtPointer');
+    expect(WINDOW).toContain("inset: 0, width: '100%', height: '100%'");
+  });
 });

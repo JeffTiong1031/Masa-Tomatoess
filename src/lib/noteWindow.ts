@@ -9,6 +9,9 @@ export const NOTE_WINDOW_MIN_WIDTH = 280;
 export const NOTE_WINDOW_MIN_HEIGHT = 220;
 export const NOTE_WINDOW_DEFAULT_WIDTH = 360;
 export const NOTE_WINDOW_DEFAULT_HEIGHT = 420;
+export const NOTE_WINDOW_GRAB = 80;
+export const NOTE_WINDOW_TITLE = 44;
+export const NOTE_WINDOW_SLIVER = 8;
 
 export function defaultNoteWindow(viewW: number, viewH: number): NoteWindowBox {
   return clampNoteWindow(
@@ -30,10 +33,16 @@ export function clampNoteWindow(
   viewW: number,
   viewH: number,
 ): NoteWindowBox {
-  const width = Math.min(viewW, Math.max(NOTE_WINDOW_MIN_WIDTH, box.width));
-  const height = Math.min(viewH, Math.max(NOTE_WINDOW_MIN_HEIGHT, box.height));
-  const x = Math.min(Math.max(0, box.x), Math.max(0, viewW - width));
-  const y = Math.min(Math.max(0, box.y), Math.max(0, viewH - height));
+  const width = Math.max(NOTE_WINDOW_MIN_WIDTH, box.width);
+  const height = Math.max(NOTE_WINDOW_MIN_HEIGHT, box.height);
+  const x = Math.min(
+    Math.max(NOTE_WINDOW_GRAB - width, box.x),
+    viewW - NOTE_WINDOW_GRAB,
+  );
+  const y = Math.min(
+    Math.max(NOTE_WINDOW_SLIVER - NOTE_WINDOW_TITLE, box.y),
+    viewH - NOTE_WINDOW_SLIVER,
+  );
   return { x, y, width, height };
 }
 
@@ -50,22 +59,38 @@ export function resizeNoteWindow(
   let { x, y, width, height } = box;
 
   if (edge.includes('e')) {
-    width = Math.min(viewW - box.x, Math.max(NOTE_WINDOW_MIN_WIDTH, box.width + dx));
+    width = Math.max(NOTE_WINDOW_MIN_WIDTH, box.width + dx);
   }
   if (edge.includes('s')) {
-    height = Math.min(
-      viewH - box.y,
-      Math.max(NOTE_WINDOW_MIN_HEIGHT, box.height + dy),
-    );
+    height = Math.max(NOTE_WINDOW_MIN_HEIGHT, box.height + dy);
   }
   if (edge.includes('w')) {
-    x = Math.min(right - NOTE_WINDOW_MIN_WIDTH, Math.max(0, box.x + dx));
+    x = Math.min(right - NOTE_WINDOW_MIN_WIDTH, box.x + dx);
     width = right - x;
   }
   if (edge.includes('n')) {
-    y = Math.min(bottom - NOTE_WINDOW_MIN_HEIGHT, Math.max(0, box.y + dy));
+    y = Math.min(bottom - NOTE_WINDOW_MIN_HEIGHT, box.y + dy);
     height = bottom - y;
   }
 
-  return { x, y, width, height };
+  return clampNoteWindow({ x, y, width, height }, viewW, viewH);
+}
+
+export function restoreNoteWindowAtPointer(
+  restored: NoteWindowBox,
+  pointerX: number,
+  pointerY: number,
+  viewW: number,
+  viewH: number,
+): NoteWindowBox {
+  return clampNoteWindow(
+    {
+      x: pointerX - restored.width / 2,
+      y: pointerY - NOTE_WINDOW_TITLE / 2,
+      width: restored.width,
+      height: restored.height,
+    },
+    viewW,
+    viewH,
+  );
 }

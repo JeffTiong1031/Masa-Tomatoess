@@ -1,6 +1,6 @@
 'use client';
 
-import { Minus, StickyNote, X } from 'lucide-react';
+import { Copy, Minus, Square, StickyNote, X } from 'lucide-react';
 import { useEffect, type PointerEvent as ReactPointerEvent } from 'react';
 import { useHasMounted } from '@/hooks/useHasMounted';
 import { useIsMdUp } from '@/hooks/useMediaQuery';
@@ -10,6 +10,7 @@ import {
   clampNoteWindow,
   defaultNoteWindow,
   resizeNoteWindow,
+  restoreNoteWindowAtPointer,
   type NoteWindowEdge,
 } from '@/lib/noteWindow';
 import { useNotesUiStore } from '@/store/useNotesUiStore';
@@ -91,10 +92,13 @@ export function NotesWindow(props: NotesWindowProps) {
   const isMdUp = useIsMdUp();
   const open = useNotesUiStore((state) => state.open);
   const minimised = useNotesUiStore((state) => state.minimised);
+  const maximised = useNotesUiStore((state) => state.maximised);
   const box = useNotesUiStore((state) => state.box);
   const setOpen = useNotesUiStore((state) => state.setOpen);
   const setMinimised = useNotesUiStore((state) => state.setMinimised);
   const setBox = useNotesUiStore((state) => state.setBox);
+  const maximise = useNotesUiStore((state) => state.maximise);
+  const restoreFromMaximise = useNotesUiStore((state) => state.restoreFromMaximise);
   const activeTitle =
     props.notes.find((note) => note.id === props.activeId)?.title ??
     props.notes[0].title;
@@ -129,14 +133,24 @@ export function NotesWindow(props: NotesWindowProps) {
     event.preventDefault();
     const startX = event.clientX;
     const startY = event.clientY;
-    const start = box;
+    let origin = box;
+    if (maximised) {
+      origin = restoreNoteWindowAtPointer(
+        box,
+        startX,
+        startY,
+        window.innerWidth,
+        window.innerHeight,
+      );
+      restoreFromMaximise(origin);
+    }
     const move = (moveEvent: PointerEvent) => {
       setBox(
         clampNoteWindow(
           {
-            ...start,
-            x: start.x + moveEvent.clientX - startX,
-            y: start.y + moveEvent.clientY - startY,
+            ...origin,
+            x: origin.x + moveEvent.clientX - startX,
+            y: origin.y + moveEvent.clientY - startY,
           },
           window.innerWidth,
           window.innerHeight,
@@ -157,6 +171,7 @@ export function NotesWindow(props: NotesWindowProps) {
   ) => {
     event.preventDefault();
     event.stopPropagation();
+    if (maximised) return;
     const startX = event.clientX;
     const startY = event.clientY;
     const start = box;
@@ -184,13 +199,19 @@ export function NotesWindow(props: NotesWindowProps) {
     <div
       role="dialog"
       aria-label="Notes"
-      className="fixed z-50 flex flex-col rounded-2xl border border-[var(--mt-border)] bg-[var(--mt-surface)] text-[var(--mt-text)] shadow-[0_14px_36px_rgba(0,0,0,0.18)]"
-      style={{
-        left: box.x,
-        top: box.y,
-        width: box.width,
-        height: box.height,
-      }}
+      className={`fixed z-50 flex flex-col border border-[var(--mt-border)] bg-[var(--mt-surface)] text-[var(--mt-text)] shadow-[0_14px_36px_rgba(0,0,0,0.18)] ${
+        maximised ? 'rounded-none' : 'rounded-2xl'
+      }`}
+      style={
+        maximised
+          ? { inset: 0, width: '100%', height: '100%' }
+          : {
+              left: box.x,
+              top: box.y,
+              width: box.width,
+              height: box.height,
+            }
+      }
     >
       <div
         className="flex min-h-11 shrink-0 touch-none select-none items-center border-b border-[var(--mt-border)] pl-3"
@@ -216,6 +237,19 @@ export function NotesWindow(props: NotesWindowProps) {
         </button>
         <button
           type="button"
+          aria-label={maximised ? 'Restore' : 'Maximise'}
+          className={MINIMISE_CLASS}
+          onPointerDown={(event) => event.stopPropagation()}
+          onClick={() => (maximised ? restoreFromMaximise() : maximise())}
+        >
+          {maximised ? (
+            <Copy size={16} aria-hidden />
+          ) : (
+            <Square size={16} aria-hidden />
+          )}
+        </button>
+        <button
+          type="button"
           aria-label="Close"
           className={CLOSE_CLASS}
           onPointerDown={(event) => event.stopPropagation()}
@@ -227,16 +261,17 @@ export function NotesWindow(props: NotesWindowProps) {
       <div className="min-h-0 flex-1">
         <NotesPad {...props} />
       </div>
-      {EDGE_HANDLES.map((handle) => (
-        <button
-          key={handle.edge}
-          type="button"
-          aria-label={handle.label}
-          className={`absolute z-10 touch-none border-0 bg-transparent p-0 ${handle.className}`}
-          style={{ cursor: handle.cursor }}
-          onPointerDown={(event) => startResize(handle.edge, event)}
-        />
-      ))}
+      {!maximised &&
+        EDGE_HANDLES.map((handle) => (
+          <button
+            key={handle.edge}
+            type="button"
+            aria-label={handle.label}
+            className={`absolute z-10 touch-none border-0 bg-transparent p-0 ${handle.className}`}
+            style={{ cursor: handle.cursor }}
+            onPointerDown={(event) => startResize(handle.edge, event)}
+          />
+        ))}
     </div>
   );
 }

@@ -74,7 +74,18 @@ export function removeNote(
   nowIso: string,
   replacementId: string,
 ): Note[] {
-  const left = notes.filter((note) => note.id !== id);
+  return removeNotes(notes, [id], owner, nowIso, replacementId);
+}
+
+export function removeNotes(
+  notes: Note[],
+  ids: string[],
+  owner: UserName,
+  nowIso: string,
+  replacementId: string,
+): Note[] {
+  const drop = new Set(ids);
+  const left = notes.filter((note) => !drop.has(note.id));
   if (left.length > 0) return left;
   return seedPad(owner, nowIso, replacementId);
 }

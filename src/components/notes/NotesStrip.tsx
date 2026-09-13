@@ -5,15 +5,27 @@ import {
   IndentIncrease,
   ListChecks,
 } from 'lucide-react';
+import {
+  isNoteLineGap,
+  NOTE_LINE_GAP_LABEL,
+  NOTE_LINE_GAPS,
+  type NoteLineGap,
+} from '@/lib/noteLineGap';
 
 interface NotesStripProps {
   inWords: boolean;
   inChecklist: boolean;
   canIndent: boolean;
   canOutdent: boolean;
+  lineGap: NoteLineGap;
+  selecting: boolean;
+  canDeletePicked: boolean;
   onToggle: () => void;
   onIndent: () => void;
   onOutdent: () => void;
+  onLineGap: (gap: NoteLineGap) => void;
+  onSelect: () => void;
+  onDeletePicked: () => void;
 }
 
 interface StripButtonProps {
@@ -54,9 +66,15 @@ export function NotesStrip({
   inChecklist,
   canIndent,
   canOutdent,
+  lineGap,
+  selecting,
+  canDeletePicked,
   onToggle,
   onIndent,
   onOutdent,
+  onLineGap,
+  onSelect,
+  onDeletePicked,
 }: NotesStripProps) {
   return (
     <div className="flex min-h-11 shrink-0 items-center border-b border-[var(--mt-border)]">
@@ -71,6 +89,44 @@ export function NotesStrip({
       >
         <ListChecks aria-hidden="true" />
       </button>
+      <label className="flex min-h-11 items-center">
+        <span className="sr-only">Line and paragraph spacing</span>
+        <select
+          aria-label="Line and paragraph spacing"
+          className="min-h-11 bg-[color-mix(in_srgb,var(--mt-text)_6%,transparent)] px-3 text-sm text-[var(--mt-text)] focus:border-[var(--mt-focus)] focus:outline-none"
+          value={lineGap}
+          onChange={(event) => {
+            if (isNoteLineGap(event.target.value)) {
+              onLineGap(event.target.value);
+            }
+          }}
+        >
+          {NOTE_LINE_GAPS.map((gap) => (
+            <option key={gap} value={gap} className="bg-[var(--mt-surface)]">
+              {NOTE_LINE_GAP_LABEL[gap]}
+            </option>
+          ))}
+        </select>
+      </label>
+      <button
+        type="button"
+        aria-label={selecting ? 'Done' : 'Select notes'}
+        className="min-h-11 shrink-0 px-3 text-sm text-[var(--mt-text)]"
+        onClick={onSelect}
+      >
+        {selecting ? 'Done' : 'Select'}
+      </button>
+      {selecting && (
+        <button
+          type="button"
+          aria-label="Delete selected notes"
+          className="min-h-11 shrink-0 px-3 text-sm text-[var(--mt-text)] disabled:text-[var(--mt-text-muted)]"
+          disabled={!canDeletePicked}
+          onClick={onDeletePicked}
+        >
+          Delete
+        </button>
+      )}
       <StripButton
         label="Indent"
         visible={inChecklist}

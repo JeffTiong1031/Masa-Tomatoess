@@ -110,6 +110,11 @@ export function NotesHost() {
       if (action === 'open') setOpen(true);
       if (action === 'close') {
         if (open) event.preventDefault();
+        const ui = useNotesUiStore.getState();
+        if (ui.maximised) {
+          ui.restoreFromMaximise();
+          return;
+        }
         setOpen(false);
       }
     };

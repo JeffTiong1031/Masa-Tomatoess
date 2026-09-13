@@ -45,6 +45,7 @@ import {
   undoTo,
   type NoteSnapshot,
 } from '@/lib/noteHistory';
+import { noteLineGapStyle, type NoteLineGap } from '@/lib/noteLineGap';
 import {
   isChecklistHotkey,
   isEditorCommandBlocked,
@@ -67,6 +68,7 @@ export interface NotesEditorHandle {
 
 interface NotesEditorProps {
   body: string;
+  lineGap: NoteLineGap;
   disabled?: boolean;
   onChange: (body: string) => void;
   onCaret: (info: NotesCaretInfo) => void;
@@ -103,6 +105,32 @@ function rangeHasItem(blocks: Block[], from: number, to: number): boolean {
   return false;
 }
 
+function caretLineTop(element: HTMLSpanElement, offset: number): number {
+  const node = element.firstChild ?? element;
+  const range = document.createRange();
+  const max = node === element ? 0 : (node.textContent?.length ?? 0);
+  range.setStart(node, Math.min(offset, max));
+  range.collapse(true);
+  return range.getBoundingClientRect().top;
+}
+
+function caretOnFirstVisualLine(
+  element: HTMLSpanElement,
+  offset: number,
+): boolean {
+  return Math.abs(caretLineTop(element, offset) - caretLineTop(element, 0)) < 2;
+}
+
+function caretOnLastVisualLine(
+  element: HTMLSpanElement,
+  offset: number,
+  length: number,
+): boolean {
+  return (
+    Math.abs(caretLineTop(element, offset) - caretLineTop(element, length)) < 2
+  );
+}
+
 function slicedBlock(block: Block, start: number, end: number): Block {
   switch (block.kind) {
     case 'paragraph':
@@ -113,7 +141,7 @@ function slicedBlock(block: Block, start: number, end: number): Block {
 }
 
 export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
-  function NotesEditor({ body, disabled = false, onChange, onCaret }, ref) {
+  function NotesEditor({ body, lineGap, disabled = false, onChange, onCaret }, ref) {
     const [blocks, setBlocks] = useState<Block[]>(() => decodeBody(body));
     const blocksRef = useRef(blocks);
     const blockNodesRef = useRef<(HTMLSpanElement | null)[]>([]);
@@ -430,6 +458,8 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
       },
     }));
 
+    const gap = noteLineGapStyle(lineGap);
+
     return (
       <div
         className="mt-quiet-focus min-h-11 flex-1 overflow-auto bg-[var(--mt-surface)] p-3 text-[var(--mt-text)]"
@@ -480,7 +510,7 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
         {blocks.map((block, index) => (
           <div
             key={index}
-            className={`flex min-h-11 items-start ${
+            className={`flex items-start ${
               paint &&
               index >= paint.start.index &&
               index <= paint.end.index
@@ -490,6 +520,8 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
             style={{
               paddingLeft:
                 block.kind === 'item' ? block.indent * ITEM_INDENT_PX : 0,
+              lineHeight: gap.lineHeight,
+              paddingBlock: gap.paddingBlock,
             }}
           >
             {block.kind === 'item' && (
@@ -520,7 +552,7 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
                 blockNodesRef.current[index] = element;
               }}
               aria-label={index === 0 ? 'Note' : undefined}
-              className={`mt-quiet-focus min-h-11 min-w-0 flex-1 py-2 outline-none ${
+              className={`mt-quiet-focus min-w-0 flex-1 outline-none ${
                 spanningRef.current ? 'select-none' : ''
               } ${
                 block.kind === 'item' && block.checked
@@ -666,6 +698,36 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
                 if (!collapsed && !event.shiftKey && CARET_MOVES.has(event.key) && !ctrlOrMeta) {
                   applyRange(range.focus, range.focus);
                   placeNativeCaret(range.focus);
+                  return;
+                }
+
+                if (
+                  collapsed &&
+                  !ctrlOrMeta &&
+                  (event.key === 'ArrowUp' || event.key === 'ArrowDown')
+                ) {
+                  const element = blockNodesRef.current[range.focus.index];
+                  const block = blocksRef.current[range.focus.index];
+                  if (
+                    element &&
+                    (event.key === 'ArrowUp'
+                      ? !caretOnFirstVisualLine(element, range.focus.offset)
+                      : !caretOnLastVisualLine(
+                          element,
+                          range.focus.offset,
+                          block.text.length,
+                        ))
+                  ) {
+                    return;
+                  }
+                  event.preventDefault();
+                  const focus = extendCaret(
+                    blocksRef.current,
+                    range.focus,
+                    event.key,
+                  );
+                  applyRange(focus, focus);
+                  placeNativeCaret(focus);
                   return;
                 }
 
