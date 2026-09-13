@@ -2,6 +2,7 @@ import type { UserName } from './identity';
 import type { Note } from './note';
 import {
   clearPendingDelete,
+  deleteNoteLocally,
   loadNotes,
   loadPendingDeletes,
   saveNote,
@@ -9,6 +10,15 @@ import {
 import { mergeNotes } from './noteMerge';
 import { seedPad } from './notePad';
 import { deleteNoteRemote, fetchNotes, upsertNote } from './noteRepo';
+
+export async function forgetNote(
+  id: string,
+  owner: UserName,
+): Promise<void> {
+  await deleteNoteLocally(id, owner);
+  const gone = await deleteNoteRemote(id, owner);
+  if (gone) await clearPendingDelete(id);
+}
 
 export async function reconcileNotes(
   owner: UserName,

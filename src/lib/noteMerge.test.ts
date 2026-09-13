@@ -61,4 +61,13 @@ describe('mergeNotes', () => {
     );
     expect(merged.map((row) => row.id)).toEqual(['keep']);
   });
+
+  it('puts a cloud-only tab back when nothing is pending', () => {
+    const merged = mergeNotes(
+      [note({ id: 'keep' })],
+      [note({ id: 'keep' }), note({ id: 'gone', sortOrder: 200 })],
+      [],
+    );
+    expect(merged.map((row) => row.id)).toEqual(['keep', 'gone']);
+  });
 });

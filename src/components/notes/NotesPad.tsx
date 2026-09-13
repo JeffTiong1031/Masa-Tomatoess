@@ -3,8 +3,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { UserName } from '@/lib/identity';
 import { NOTE_SAVE_PAUSE_MS, titleOrDefault, type Note } from '@/lib/note';
-import { deleteNoteLocally, saveNote } from '@/lib/noteLocal';
+import { saveNote } from '@/lib/noteLocal';
 import { addNote, removeNote, removeNotes, renameNote } from '@/lib/notePad';
+import { forgetNote } from '@/lib/noteSync';
 import {
   DEFAULT_NOTE_LINE_GAP,
 } from '@/lib/noteLineGap';
@@ -102,7 +103,7 @@ export function NotesPad({
     );
     onNotes(next);
     onActiveId(next[0].id);
-    void deleteNoteLocally(note.id, owner);
+    void forgetNote(note.id, owner);
     clearLineGaps([note.id]);
     if (notes.length === 1) void saveNote(next[0]);
   };
@@ -127,7 +128,7 @@ export function NotesPad({
       next.some((item) => item.id === activeId) ? activeId : next[0].id,
     );
     for (const id of pickedIds) {
-      void deleteNoteLocally(id, owner);
+      void forgetNote(id, owner);
     }
     clearLineGaps(pickedIds);
     if (pickedIds.length === notes.length) void saveNote(next[0]);
