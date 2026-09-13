@@ -1,9 +1,11 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
   CalendarClock,
+  ChevronLeft,
+  ChevronRight,
   GraduationCap,
   HeartPulse,
   Timer,
@@ -14,14 +16,7 @@ import {
   type BannerCard,
   type BannerIcon,
 } from '@/lib/bannerCards';
-import {
-  BANNER_SWIPE_PX,
-  loopHome,
-  loopedCards,
-  snapLoop,
-  stepLoop,
-  swipeDirection,
-} from '@/lib/carousel';
+import { loopHome, loopedCards, snapLoop, stepLoop } from '@/lib/carousel';
 import { filledFocusBars, filledStreakPips } from '@/lib/homeField';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 
@@ -40,18 +35,13 @@ function meterMarks(card: BannerCard): boolean[] {
 
 export default function RotatingBanner({ cards }: { cards: BannerCard[] }) {
   const [index, setIndex] = useState(() => loopHome(cards.length));
-  const [drag, setDrag] = useState(0);
-  const [dragging, setDragging] = useState(false);
   const [quiet, setQuiet] = useState(false);
   const [pausedUntil, setPausedUntil] = useState(0);
   const stillMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
   const slides = loopedCards(cards);
-  const startRef = useRef<number | null>(null);
-  const draggedRef = useRef(false);
 
   useEffect(() => {
     setIndex(loopHome(cards.length));
-    setDrag(0);
   }, [cards.length]);
 
   useEffect(() => {
@@ -71,10 +61,7 @@ export default function RotatingBanner({ cards }: { cards: BannerCard[] }) {
 
     const id = window.setInterval(() => {
       if (Date.now() < pausedUntil) return;
-      setIndex((current) => {
-        const stepped = stepLoop(current, cards.length, 1);
-        return stepped.index;
-      });
+      setIndex((current) => stepLoop(current, cards.length, 1).index);
     }, BANNER_TICK_MS);
 
     return () => window.clearInterval(id);
@@ -88,110 +75,101 @@ export default function RotatingBanner({ cards }: { cards: BannerCard[] }) {
     });
   };
 
-  const finishDrag = (dx: number) => {
-    const step = swipeDirection(dx, BANNER_SWIPE_PX);
-    setDrag(0);
-    startRef.current = null;
-    if (step === 0) return;
-    go(step);
-  };
-
   return (
-    <div
-      className="mt-soft touch-pan-y select-none overflow-hidden"
-      onPointerDown={(event) => {
-        if (cards.length < 2 || event.button !== 0) return;
-        startRef.current = event.clientX;
-        draggedRef.current = false;
-        setDragging(true);
-        event.currentTarget.setPointerCapture(event.pointerId);
-      }}
-      onPointerMove={(event) => {
-        const start = startRef.current;
-        if (start === null) return;
-        const dx = event.clientX - start;
-        if (Math.abs(dx) > 8) draggedRef.current = true;
-        setDrag(dx);
-      }}
-      onPointerUp={(event) => {
-        if (startRef.current === null) return;
-        setDragging(false);
-        finishDrag(event.clientX - startRef.current);
-      }}
-      onPointerCancel={() => {
-        startRef.current = null;
-        setDragging(false);
-        setDrag(0);
-      }}
-    >
-      <div
-        className={`flex ${
-          stillMotion || quiet || dragging
-            ? ''
-            : 'transition-transform duration-500 ease-out'
-        }`}
-        style={{
-          transform: `translateX(calc(-${index * 100}% + ${drag}px))`,
-        }}
-        onTransitionEnd={() => {
-          const snap = snapLoop(index, cards.length);
-          if (snap === null) return;
-          setQuiet(true);
-          setIndex(snap);
-        }}
-      >
-        {slides.map((card, slideIndex) => {
-          const Icon = ICONS[card.icon];
-          const marks = meterMarks(card);
-          return (
-            <Link
-              key={`${card.id}-${slideIndex}`}
-              href={card.href}
-              className="flex min-h-11 min-w-full shrink-0 items-center justify-between p-4"
-              style={{
-                ['--mt-accent' as string]: accentVar(card.accent),
-                background:
-                  'color-mix(in srgb, var(--mt-accent) 18%, var(--mt-surface))',
-              }}
-              onClick={(event) => {
-                if (draggedRef.current) event.preventDefault();
-              }}
-            >
-              <div className="min-w-0">
-                <div className="text-[10px] font-bold uppercase tracking-widest text-[var(--mt-text-muted)]">
-                  {card.label}
+    <div>
+      <div className="mt-soft overflow-hidden">
+        <div
+          className={`flex ${
+            stillMotion || quiet
+              ? ''
+              : 'transition-transform duration-500 ease-out'
+          }`}
+          style={{ transform: `translateX(-${index * 100}%)` }}
+          onTransitionEnd={() => {
+            const snap = snapLoop(index, cards.length);
+            if (snap === null) return;
+            setQuiet(true);
+            setIndex(snap);
+          }}
+        >
+          {slides.map((card, slideIndex) => {
+            const Icon = ICONS[card.icon];
+            const marks = meterMarks(card);
+            return (
+              <Link
+                key={`${card.id}-${slideIndex}`}
+                href={card.href}
+                className="flex min-h-11 min-w-full shrink-0 items-center justify-between p-4"
+                style={{
+                  ['--mt-accent' as string]: accentVar(card.accent),
+                  background:
+                    'color-mix(in srgb, var(--mt-accent) 18%, var(--mt-surface))',
+                }}
+              >
+                <div className="min-w-0">
+                  <div className="text-[10px] font-bold uppercase tracking-widest text-[var(--mt-text-muted)]">
+                    {card.label}
+                  </div>
+                  <div className="mt-0.5 truncate text-2xl font-semibold tracking-tight text-[var(--mt-text)]">
+                    {card.value}
+                  </div>
+                  <div className="mt-3 flex h-1.5 items-center gap-1">
+                    {marks.map((filled, markIndex) => (
+                      <span
+                        key={markIndex}
+                        className={`h-1.5 rounded-full ${
+                          card.meter?.kind === 'streak' ? 'w-3' : 'w-6'
+                        }`}
+                        style={{
+                          background: filled
+                            ? 'var(--mt-accent)'
+                            : 'color-mix(in srgb, var(--mt-accent) 22%, transparent)',
+                        }}
+                      />
+                    ))}
+                  </div>
                 </div>
-                <div className="mt-0.5 truncate text-2xl font-semibold tracking-tight text-[var(--mt-text)]">
-                  {card.value}
-                </div>
-                <div className="mt-3 flex h-1.5 items-center gap-1">
-                  {marks.map((filled, markIndex) => (
-                    <span
-                      key={markIndex}
-                      className={`h-1.5 rounded-full ${
-                        card.meter?.kind === 'streak' ? 'w-3' : 'w-6'
-                      }`}
-                      style={{
-                        background: filled
-                          ? 'var(--mt-accent)'
-                          : 'color-mix(in srgb, var(--mt-accent) 22%, transparent)',
-                      }}
-                    />
-                  ))}
-                </div>
-              </div>
-              <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[var(--mt-accent)]">
-                <Icon
-                  size={20}
-                  strokeWidth={1.9}
-                  aria-hidden
-                  className="text-[var(--mt-accent-contrast)]"
-                />
-              </span>
-            </Link>
-          );
-        })}
+                <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[var(--mt-accent)]">
+                  <Icon
+                    size={20}
+                    strokeWidth={1.9}
+                    aria-hidden
+                    className="text-[var(--mt-accent-contrast)]"
+                  />
+                </span>
+              </Link>
+            );
+          })}
+        </div>
       </div>
+      {cards.length > 1 && (
+        <div className="mt-2 flex justify-center gap-2">
+          <button
+            type="button"
+            aria-label="Previous"
+            onClick={() => go(-1)}
+            className="inline-flex h-11 w-11 items-center justify-center rounded-xl text-[var(--mt-text)]"
+            style={{
+              background:
+                'color-mix(in srgb, var(--mt-text) 6%, var(--mt-surface))',
+            }}
+          >
+            <ChevronLeft size={18} aria-hidden />
+          </button>
+          <button
+            type="button"
+            aria-label="Next"
+            onClick={() => go(1)}
+            className="inline-flex h-11 w-11 items-center justify-center rounded-xl text-[var(--mt-text)]"
+            style={{
+              background:
+                'color-mix(in srgb, var(--mt-text) 6%, var(--mt-surface))',
+            }}
+          >
+            <ChevronRight size={18} aria-hidden />
+          </button>
+        </div>
+      )}
     </div>
   );
 }

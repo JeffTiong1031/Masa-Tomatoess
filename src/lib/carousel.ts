@@ -1,5 +1,3 @@
-export const BANNER_SWIPE_PX = 48;
-
 export function nextIndex(index: number, length: number): number {
   if (length === 0) return 0;
   return (index + 1) % length;
@@ -36,10 +34,4 @@ export function snapLoop(index: number, length: number): number | null {
   if (index === 0) return length;
   if (index === length + 1) return 1;
   return null;
-}
-
-export function swipeDirection(dx: number, threshold: number): 1 | -1 | 0 {
-  if (dx <= -threshold) return 1;
-  if (dx >= threshold) return -1;
-  return 0;
 }

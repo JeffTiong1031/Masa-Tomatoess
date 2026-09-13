@@ -129,12 +129,13 @@ describe('the home banner', () => {
     expect(HUB).toContain('RotatingBanner');
     expect(HUB).not.toContain('HomeFocusTile');
     expect(BANNER).toContain('href={card.href}');
-    expect(BANNER).not.toContain('ChevronLeft');
-    expect(BANNER).not.toContain('aria-label="Previous"');
+    expect(BANNER).toContain('aria-label="Previous"');
+    expect(BANNER).toContain('aria-label="Next"');
+    expect(BANNER).toContain('ChevronLeft');
     expect(BANNER).toContain('transition-transform');
     expect(BANNER).toContain('loopedCards');
     expect(BANNER).toContain('onTransitionEnd');
-    expect(BANNER).toContain('onPointerDown');
-    expect(BANNER).toContain('swipeDirection');
+    expect(BANNER).not.toContain('onPointerDown');
+    expect(BANNER).not.toContain('swipeDirection');
   });
 });

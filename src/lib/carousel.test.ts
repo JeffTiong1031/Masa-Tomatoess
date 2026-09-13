@@ -1,13 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
-  BANNER_SWIPE_PX,
   loopHome,
   loopedCards,
   nextIndex,
   prevIndex,
   snapLoop,
   stepLoop,
-  swipeDirection,
 } from './carousel';
 
 describe('carousel', () => {
@@ -65,13 +63,5 @@ describe('looped cards', () => {
     expect(snapLoop(3, 2)).toBe(1);
     expect(snapLoop(0, 2)).toBe(2);
     expect(snapLoop(2, 2)).toBeNull();
-  });
-});
-
-describe('swipe', () => {
-  it('reads a left drag as next and a right drag as previous', () => {
-    expect(swipeDirection(-BANNER_SWIPE_PX, BANNER_SWIPE_PX)).toBe(1);
-    expect(swipeDirection(BANNER_SWIPE_PX, BANNER_SWIPE_PX)).toBe(-1);
-    expect(swipeDirection(-20, BANNER_SWIPE_PX)).toBe(0);
   });
 });
