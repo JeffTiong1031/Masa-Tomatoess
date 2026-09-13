@@ -72,6 +72,6 @@ export function buildAgenda(
   return {
     items: all.slice(0, limit),
     hiddenCount: hidden.length,
-    moreHref: onlyTodosHidden ? '/timetable/todo' : '/calendar',
+    moreHref: onlyTodosHidden ? '/todo' : '/calendar',
   };
 }

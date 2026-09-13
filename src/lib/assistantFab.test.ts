@@ -12,15 +12,9 @@ function ruleBody(selector: string): string {
   return CSS.slice(braceStart + 1, braceEnd);
 }
 
-describe('the assistant floating button on Timetable', () => {
-  it('is raised above the bottom bar by a rule scoped to data-section timetable', () => {
-    const body = ruleBody("[data-section='timetable'] .mt-assistant-fab");
-    expect(body).not.toBe('');
-    expect(body).toMatch(/bottom:\s*calc\(/);
-    expect(body).toContain('var(--mt-nav-height)');
-  });
-
-  it('is not still raised by a Study-scoped rule', () => {
+describe('the assistant floating button', () => {
+  it('is not raised for a bottom bar on Timetable or Study', () => {
+    expect(ruleBody("[data-section='timetable'] .mt-assistant-fab")).toBe('');
     expect(ruleBody("[data-section='study'] .mt-assistant-fab")).toBe('');
   });
 });

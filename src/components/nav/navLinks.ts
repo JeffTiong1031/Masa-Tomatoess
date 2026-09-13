@@ -21,31 +21,25 @@ export interface NavLink {
 }
 
 /** The menu, as one flat list. There are deliberately no group headings:
- *  Study sits alongside Timetable, Calendar, Period, Countdown, Meals,
- *  Fitness and Finance as a peer, and splitting them under a "Life"
- *  heading made Study read as a different KIND of thing than the rest
- *  of the app.
+ *  Study sits alongside Timetable, To-do, Calendar, Period, Countdown,
+ *  Meals, Fitness and Finance as a peer, and splitting them under a
+ *  "Life" heading made Study read as a different KIND of thing than
+ *  the rest of the app.
  *
- *  To-do is absent on purpose -- it lives inside Timetable and is
- *  reached from its own panel (TIMETABLE_PANEL below), not from here. */
+ *  To-do is its own section. It used to sit under /timetable/todo,
+ *  reached from a bottom bar; nesting it made prefix matching light
+ *  Timetable on the task list. Do not put it back under Timetable. */
 export const ALL_LINKS: NavLink[] = [
   { href: '/', label: 'Home', icon: Home, accent: 'dashboard' },
   { href: '/study', label: 'Study', icon: GraduationCap, accent: 'timer' },
   { href: '/timetable', label: 'Timetable', icon: LayoutList, accent: 'timetable' },
+  { href: '/todo', label: 'To-do', icon: ListChecks, accent: 'todo' },
   { href: '/calendar', label: 'Calendar', icon: CalendarDays, accent: 'calendar' },
   { href: '/cycle', label: 'Period', icon: HeartPulse, accent: 'cycle' },
   { href: '/countdown', label: 'Countdown', icon: CalendarClock, accent: 'countdown' },
   { href: '/meals', label: 'Meals', icon: UtensilsCrossed, accent: 'meals' },
   { href: '/fitness', label: 'Fitness', icon: Dumbbell, accent: 'fitness' },
   { href: '/finance', label: 'Finance', icon: Wallet, accent: 'finance' },
-];
-
-/** Timetable's lower panel: the two views inside the section. The
- *  drawer lists the section once, as Timetable; this is how you switch
- *  between the week grid and the task list. */
-export const TIMETABLE_PANEL: NavLink[] = [
-  { href: '/timetable', label: 'Timetable', icon: LayoutList, accent: 'timetable' },
-  { href: '/timetable/todo', label: 'To-do', icon: ListChecks, accent: 'todo' },
 ];
 
 /** The three widgets behind Study, in pill order. FocusPill is Study's

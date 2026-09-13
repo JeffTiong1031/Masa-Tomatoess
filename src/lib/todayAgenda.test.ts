@@ -153,7 +153,7 @@ describe('buildAgenda', () => {
     ];
 
     expect(buildAgenda(events, todos, TODAY, 4).moreHref).toBe(
-      '/timetable/todo',
+      '/todo',
     );
   });
 

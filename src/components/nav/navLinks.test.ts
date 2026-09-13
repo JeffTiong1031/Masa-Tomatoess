@@ -1,15 +1,21 @@
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import { describe, it, expect } from 'vitest';
 import {
   ALL_LINKS,
   FOCUS_HREFS,
   FOCUS_SEGMENTS,
-  TIMETABLE_PANEL,
   hubDoors,
   isActiveHref,
   isFocusRoute,
   isHubRoute,
   isStudyRoute,
 } from './navLinks';
+
+const CONFIG = readFileSync(
+  path.resolve(process.cwd(), 'next.config.ts'),
+  'utf8',
+);
 
 /** Written out rather than derived. Asserting FOCUS_HREFS against
  *  FOCUS_HREFS (or against the list it is built from) restates the
@@ -39,6 +45,7 @@ describe('menu', () => {
       '/',
       '/study',
       '/timetable',
+      '/todo',
       '/calendar',
       '/cycle',
       '/countdown',
@@ -48,13 +55,13 @@ describe('menu', () => {
     ]);
   });
 
-  /* Calendar and Timetable are peers of Period and Finance. To-do lives
-     inside Timetable and is reached from TIMETABLE_PANEL. Listing it
-     here too would give one page two entry points at different depths. */
-  it('lists Calendar and Timetable as top-level destinations', () => {
+  /* Calendar, Timetable and To-do are peers of Period and Finance.
+     Nesting To-do under /timetable made prefix matching light Timetable
+     on the task list, and hid the door from Home and the menu. */
+  it('lists Calendar, Timetable and To-do as top-level destinations', () => {
     expect(ALL_LINKS.some((l) => l.href === '/calendar')).toBe(true);
     expect(ALL_LINKS.some((l) => l.href === '/timetable')).toBe(true);
-    expect(ALL_LINKS.some((l) => l.href === '/todo')).toBe(false);
+    expect(ALL_LINKS.some((l) => l.href === '/todo')).toBe(true);
     expect(ALL_LINKS.some((l) => l.href === '/timetable/todo')).toBe(false);
   });
 
@@ -80,6 +87,7 @@ describe('hubDoors', () => {
     expect(hubDoors().map((link) => link.href)).toEqual([
       '/study',
       '/timetable',
+      '/todo',
       '/calendar',
       '/cycle',
       '/countdown',
@@ -88,27 +96,12 @@ describe('hubDoors', () => {
       '/finance',
     ]);
   });
-});
 
-describe('timetable panel', () => {
-  it('is the two views inside Timetable', () => {
-    expect(TIMETABLE_PANEL.map((s) => s.href)).toEqual([
-      '/timetable',
-      '/timetable/todo',
-    ]);
-    expect(TIMETABLE_PANEL.map((s) => s.label)).toEqual(['Timetable', 'To-do']);
-  });
-
-  it('points only at routes inside Timetable', () => {
-    for (const { href } of TIMETABLE_PANEL) {
-      expect(
-        isActiveHref(href, '/timetable'),
-        `${href} is not under /timetable`,
-      ).toBe(true);
-      expect(isStudyRoute(href), `${href} should not be under /study`).toBe(
-        false,
-      );
-    }
+  it('puts an icon on the To-do door', () => {
+    const todo = hubDoors().find((link) => link.href === '/todo');
+    expect(todo?.label).toBe('To-do');
+    expect(todo?.icon).toBeDefined();
+    expect(todo?.accent).toBe('todo');
   });
 });
 
@@ -124,7 +117,7 @@ describe('isHubRoute', () => {
     '/study/dashboard',
     '/calendar',
     '/timetable',
-    '/timetable/todo',
+    '/todo',
     '/cycle',
     '/countdown',
     '/meals',
@@ -150,7 +143,7 @@ describe('isStudyRoute', () => {
     '/studying',
     '/calendar',
     '/timetable',
-    '/timetable/todo',
+    '/todo',
   ])('is false on %s', (path) => {
     expect(isStudyRoute(path)).toBe(false);
   });
@@ -170,7 +163,7 @@ describe('isFocusRoute', () => {
      are their own sections, and they use .mt-page-pad -- which carries
      its own hamburger clearance. A page that wore .mt-page-pad-focus
      without the pill above it would slide under the fixed hamburger. */
-  it.each(['/study', '/calendar', '/timetable', '/timetable/todo'])(
+  it.each(['/study', '/calendar', '/timetable', '/todo'])(
     'is false on %s, which wears no pill',
     (href) => {
       expect(isFocusRoute(href)).toBe(false);
@@ -200,19 +193,18 @@ describe('isActiveHref', () => {
     expect(isActiveHref(pathname, '/study')).toBe(true);
   });
 
-  it.each(['/calendar', '/timetable', '/timetable/todo'])(
+  it.each(['/calendar', '/timetable', '/todo'])(
     'does not light Study on %s',
     (pathname) => {
       expect(isActiveHref(pathname, '/study')).toBe(false);
     },
   );
 
-  it.each(['/timetable', '/timetable/todo'])(
-    'lights the Timetable menu entry on %s',
-    (pathname) => {
-      expect(isActiveHref(pathname, '/timetable')).toBe(true);
-    },
-  );
+  it('lights Timetable only on Timetable, not on To-do', () => {
+    expect(isActiveHref('/timetable', '/timetable')).toBe(true);
+    expect(isActiveHref('/todo', '/timetable')).toBe(false);
+    expect(isActiveHref('/timetable', '/todo')).toBe(false);
+  });
 
   it('keeps Home exact, so it does not light everywhere', () => {
     expect(isActiveHref('/', '/')).toBe(true);
@@ -236,5 +228,13 @@ describe('isActiveHref', () => {
         true,
       );
     }
+  });
+});
+
+describe('the old nested to-do path', () => {
+  it('sends /timetable/todo to /todo and does not bounce /todo away', () => {
+    expect(CONFIG).toContain("source: '/timetable/todo'");
+    expect(CONFIG).toContain("destination: '/todo'");
+    expect(CONFIG).not.toMatch(/source:\s*'\/todo'/);
   });
 });
