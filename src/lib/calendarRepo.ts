@@ -5,6 +5,7 @@ import {
   type CategorySwatchRow,
 } from './categories';
 import type { UserName } from './identity';
+import { logRemoteError } from './remoteError';
 import { supabase } from './supabase';
 
 export const CALENDAR_CATEGORY_COLUMNS = 'id, name, swatch_id, position';
@@ -71,7 +72,7 @@ export async function fetchEvents(): Promise<CalendarEvent[] | null> {
     .order('date', { ascending: true });
 
   if (error) {
-    console.error('Failed to load calendar events:', error);
+    logRemoteError('Failed to load calendar events:', error);
     return null;
   }
 
@@ -91,7 +92,7 @@ export async function insertEvent(input: EventInput): Promise<boolean> {
   const { error } = await supabase.from('calendar_events').insert(toColumns(input));
 
   if (error) {
-    console.error('Failed to add event:', error);
+    logRemoteError('Failed to add event:', error);
     return false;
   }
   return true;
@@ -107,7 +108,7 @@ export async function updateEvent(
     .eq('id', id);
 
   if (error) {
-    console.error('Failed to update event:', error);
+    logRemoteError('Failed to update event:', error);
     return false;
   }
   return true;
@@ -117,7 +118,7 @@ export async function deleteEvent(id: string): Promise<boolean> {
   const { error } = await supabase.from('calendar_events').delete().eq('id', id);
 
   if (error) {
-    console.error('Failed to delete event:', error);
+    logRemoteError('Failed to delete event:', error);
     return false;
   }
   return true;
@@ -130,7 +131,7 @@ export async function fetchCategories(): Promise<Category[] | null> {
     .order('position', { ascending: true });
 
   if (error) {
-    console.error('Failed to load categories:', error);
+    logRemoteError('Failed to load categories:', error);
     return null;
   }
 
@@ -147,7 +148,7 @@ export async function insertCategory(
     .insert({ name: name.trim(), swatch_id: swatchId, position });
 
   if (error) {
-    console.error('Failed to add category:', error);
+    logRemoteError('Failed to add category:', error);
     return false;
   }
   return true;
@@ -164,7 +165,7 @@ export async function updateCategory(
     .eq('id', id);
 
   if (error) {
-    console.error('Failed to update category:', error);
+    logRemoteError('Failed to update category:', error);
     return false;
   }
   return true;
@@ -174,7 +175,7 @@ export async function deleteCategory(id: string): Promise<boolean> {
   const { error } = await supabase.from('calendar_categories').delete().eq('id', id);
 
   if (error) {
-    console.error('Failed to delete category:', error);
+    logRemoteError('Failed to delete category:', error);
     return false;
   }
   return true;
@@ -190,7 +191,7 @@ export async function fetchPinnedEventIds(
     .eq('pinned', true);
 
   if (error) {
-    console.error('Failed to load starred dates:', error);
+    logRemoteError('Failed to load starred dates:', error);
     return new Set();
   }
 
@@ -207,7 +208,7 @@ export async function setEventPinned(
     .eq('id', id);
 
   if (error) {
-    console.error('Failed to star a date:', error);
+    logRemoteError('Failed to star a date:', error);
     return false;
   }
   return true;

@@ -1,5 +1,6 @@
 import type { CountUpEntry } from './countUpList';
 import type { UserName } from './identity';
+import { logRemoteError } from './remoteError';
 import { supabase } from './supabase';
 
 const COLUMNS = 'id, owner, label, date';
@@ -33,7 +34,7 @@ export async function fetchCountUpEntries(
     .order('date', { ascending: true });
 
   if (error) {
-    console.error('Failed to load count-up dates:', error);
+    logRemoteError('Failed to load count-up dates:', error);
     return null;
   }
 
@@ -50,7 +51,7 @@ export async function fetchCountUpInitialized(
     .maybeSingle();
 
   if (error) {
-    console.error('Failed to load count-up state:', error);
+    logRemoteError('Failed to load count-up state:', error);
     return null;
   }
 
@@ -65,7 +66,7 @@ export async function markCountUpInitialized(
     .upsert({ owner }, { onConflict: 'owner' });
 
   if (error) {
-    console.error('Failed to save count-up state:', error);
+    logRemoteError('Failed to save count-up state:', error);
     return false;
   }
 
@@ -84,7 +85,7 @@ export async function insertCountUpEntry(
     .single();
 
   if (error) {
-    console.error('Failed to add a count-up date:', error);
+    logRemoteError('Failed to add a count-up date:', error);
     return null;
   }
 
@@ -108,7 +109,7 @@ export async function updateCountUpEntry(
     .eq('owner', owner);
 
   if (error) {
-    console.error('Failed to edit a count-up date:', error);
+    logRemoteError('Failed to edit a count-up date:', error);
     return false;
   }
   return true;
@@ -125,7 +126,7 @@ export async function deleteCountUpEntry(
     .eq('owner', owner);
 
   if (error) {
-    console.error('Failed to delete a count-up date:', error);
+    logRemoteError('Failed to delete a count-up date:', error);
     return false;
   }
   return true;
@@ -208,7 +209,7 @@ export async function fetchPinnedCountUpIds(
     .eq('pinned', true);
 
   if (error) {
-    console.error('Failed to load starred count-up dates:', error);
+    logRemoteError('Failed to load starred count-up dates:', error);
     return new Set();
   }
 
@@ -227,7 +228,7 @@ export async function setCountUpPinned(
     .eq('owner', owner);
 
   if (error) {
-    console.error('Failed to star a count-up date:', error);
+    logRemoteError('Failed to star a count-up date:', error);
     return false;
   }
   return true;

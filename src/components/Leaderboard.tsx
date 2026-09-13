@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { logRemoteError } from '@/lib/remoteError';
 import { supabase } from '@/lib/supabase';
 import { Trophy } from 'lucide-react';
 
@@ -40,7 +41,7 @@ export default function Leaderboard() {
         .gte('created_at', startDate.toISOString());
 
       if (error) {
-        console.error('Error fetching leaderboard:', error);
+        logRemoteError('Error fetching leaderboard:', error);
         setIsLoading(false);
         return;
       }

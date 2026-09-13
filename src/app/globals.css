@@ -271,6 +271,16 @@ body {
   outline: none;
 }
 
+.mt-note-sel ::selection {
+  background-color: color-mix(in srgb, Highlight 32%, transparent);
+  color: inherit;
+}
+
+.mt-note-sel ::-moz-selection {
+  background-color: color-mix(in srgb, Highlight 32%, transparent);
+  color: inherit;
+}
+
 .mt-glass {
   background: var(--mt-glass);
   backdrop-filter: blur(24px);
@@ -350,20 +360,6 @@ body {
    the gap between the pill and the page content. */
 .mt-page-pad-focus {
   padding-top: 1rem;
-}
-
-/* Timetable only. TimetablePanel is fixed to the bottom edge at every
-   width -- it has to be, since the drawer lists the section once and
-   does not list To-do. No other section keeps a bar down there, so no
-   other section pays for one. Without this, a Timetable page runs its
-   last card underneath the panel. */
-[data-section='timetable'] .mt-page-pad,
-[data-section='timetable'] .mt-page-pad-focus {
-  padding-bottom: calc(var(--mt-safe-bottom) + var(--mt-nav-height) + 1.5rem);
-}
-
-[data-section='timetable'] .mt-assistant-fab {
-  bottom: calc(var(--mt-safe-bottom) + var(--mt-nav-height) + 1.5rem);
 }
 
 @media (min-width: 768px) {

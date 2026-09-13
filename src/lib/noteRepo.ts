@@ -1,5 +1,6 @@
 import type { UserName } from './identity';
 import { noteFromRow, rowFromNote, type Note, type NoteRow } from './note';
+import { logRemoteError } from './remoteError';
 import { supabase } from './supabase';
 
 export type NoteFetch =
@@ -19,7 +20,7 @@ export async function fetchNotes(owner: UserName): Promise<NoteFetch> {
 
   if (error) {
     if (MISSING_TABLE_CODES.includes(error.code)) return { status: 'missing-table' };
-    console.error('Failed to load notes:', error);
+    logRemoteError('Failed to load notes:', error);
     return { status: 'error' };
   }
 
@@ -30,7 +31,7 @@ export async function upsertNote(note: Note): Promise<boolean> {
   const { error } = await supabase.from('notes').upsert(rowFromNote(note));
 
   if (error) {
-    console.error('Failed to save a note:', error);
+    logRemoteError('Failed to save a note:', error);
     return false;
   }
   return true;
@@ -40,15 +41,29 @@ export async function deleteNoteRemote(
   id: string,
   owner: UserName,
 ): Promise<boolean> {
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('notes')
     .delete()
     .eq('id', id)
-    .eq('owner', owner);
+    .eq('owner', owner)
+    .select('id');
 
   if (error) {
-    console.error('Failed to delete a note:', error);
+    logRemoteError('Failed to delete a note:', error);
     return false;
   }
-  return true;
+  if ((data?.length ?? 0) > 0) return true;
+
+  const leftover = await supabase
+    .from('notes')
+    .select('id')
+    .eq('id', id)
+    .eq('owner', owner)
+    .maybeSingle();
+
+  if (leftover.error) {
+    logRemoteError('Failed to delete a note:', leftover.error);
+    return false;
+  }
+  return leftover.data === null;
 }

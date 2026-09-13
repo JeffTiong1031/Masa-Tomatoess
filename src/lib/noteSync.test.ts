@@ -26,7 +26,7 @@ vi.mock('./noteRepo', () => ({
   deleteNoteRemote: mocks.deleteNoteRemote,
 }));
 
-import { reconcileNotes } from './noteSync';
+import { forgetNote, reconcileNotes } from './noteSync';
 
 const EARLY = '2026-09-09T04:00:00.000Z';
 const LATE = '2026-09-09T05:00:00.000Z';
@@ -124,6 +124,42 @@ describe('reconcileNotes', () => {
 
     expect(mocks.saveNote).toHaveBeenCalledOnce();
     expect(mocks.upsertNote).not.toHaveBeenCalled();
+  });
+
+  it('keeps the pending delete when the cloud row is still there', async () => {
+    const gone = note({ id: 'gone' });
+    const keep = note({ id: 'keep', sortOrder: 200 });
+    mocks.loadNotes.mockResolvedValue([keep]);
+    mocks.loadPendingDeletes.mockResolvedValue(['gone']);
+    mocks.fetchNotes.mockResolvedValue({ status: 'ok', rows: [gone, keep] });
+    mocks.deleteNoteRemote.mockResolvedValue(false);
+
+    const result = await reconcileNotes('Jeff', LATE, 'seed');
+
+    expect(result.map((row) => row.id)).toEqual(['keep']);
+    expect(mocks.deleteNoteRemote).toHaveBeenCalledWith('gone', 'Jeff');
+    expect(mocks.clearPendingDelete).not.toHaveBeenCalled();
+    expect(mocks.upsertNote).toHaveBeenCalledWith(keep);
+  });
+
+  it('forgets a tab on this phone and in the cloud', async () => {
+    mocks.deleteNoteLocally.mockResolvedValue(true);
+    mocks.deleteNoteRemote.mockResolvedValue(true);
+
+    await forgetNote('gone', 'Jeff');
+
+    expect(mocks.deleteNoteLocally).toHaveBeenCalledWith('gone', 'Jeff');
+    expect(mocks.deleteNoteRemote).toHaveBeenCalledWith('gone', 'Jeff');
+    expect(mocks.clearPendingDelete).toHaveBeenCalledWith('gone');
+  });
+
+  it('leaves the pending delete when the cloud delete does not stick', async () => {
+    mocks.deleteNoteLocally.mockResolvedValue(true);
+    mocks.deleteNoteRemote.mockResolvedValue(false);
+
+    await forgetNote('gone', 'Jeff');
+
+    expect(mocks.clearPendingDelete).not.toHaveBeenCalled();
   });
 
   it('does not contact the cloud when the notes table is missing', async () => {

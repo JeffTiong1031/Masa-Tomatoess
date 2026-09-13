@@ -1,6 +1,13 @@
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { buildAgenda } from './todayAgenda';
+import { agendaItemHref, buildAgenda } from './todayAgenda';
 import type { CalendarEvent } from './calendarEvent';
+
+const HUB = readFileSync(
+  path.resolve(process.cwd(), 'src/components/HubGrid.tsx'),
+  'utf8',
+);
 import type { Todo } from './todo';
 
 function event(
@@ -153,7 +160,7 @@ describe('buildAgenda', () => {
     ];
 
     expect(buildAgenda(events, todos, TODAY, 4).moreHref).toBe(
-      '/timetable/todo',
+      '/todo',
     );
   });
 
@@ -176,6 +183,20 @@ describe('buildAgenda', () => {
     expect(agenda.moreHref).toBe('/calendar');
   });
 
+  it('sends a to-do row to To-do and an event row to Calendar', () => {
+    expect(agendaItemHref('todo')).toBe('/todo');
+    expect(agendaItemHref('event')).toBe('/calendar');
+
+    const agenda = buildAgenda(
+      [event('a', 'Class', TODAY, { kind: 'moment', startTime: '09:00' })],
+      [todo('t1', 'Buy milk', TODAY, null)],
+      TODAY,
+      4,
+    );
+
+    expect(agenda.items.map((item) => item.href)).toEqual(['/calendar', '/todo']);
+  });
+
   it('labels chips by kind', () => {
     const events = [
       event('a', 'Class', TODAY, { kind: 'moment', startTime: '09:00' }),
@@ -194,5 +215,13 @@ describe('buildAgenda', () => {
       'Late',
       'to-do',
     ]);
+  });
+});
+
+describe('the home list', () => {
+  it('opens the matching page from a row, not only from + more', () => {
+    expect(HUB).toContain('href={item.href}');
+    expect(HUB).toMatch(/agenda\.items\.map[\s\S]+<Link[\s\S]+href=\{item\.href\}/);
+    expect(HUB).toContain('href={agenda.moreHref}');
   });
 });

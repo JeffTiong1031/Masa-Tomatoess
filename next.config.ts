@@ -5,7 +5,7 @@ const nextConfig: NextConfig = {
     return [
       { source: '/study/calendar', destination: '/calendar', permanent: true },
       { source: '/study/timetable', destination: '/timetable', permanent: true },
-      { source: '/todo', destination: '/timetable/todo', permanent: true },
+      { source: '/timetable/todo', destination: '/todo', permanent: true },
     ];
   },
   async headers() {

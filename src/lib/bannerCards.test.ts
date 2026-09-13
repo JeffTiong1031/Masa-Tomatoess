@@ -1,7 +1,18 @@
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { buildBannerCards } from './bannerCards';
+import { BANNER_SLIDE_MS, BANNER_TICK_MS, buildBannerCards } from './bannerCards';
 import type { CalendarEvent } from './calendarEvent';
 import type { CountUpEntry } from './countUpList';
+
+const BANNER = readFileSync(
+  path.resolve(process.cwd(), 'src/components/home/RotatingBanner.tsx'),
+  'utf8',
+);
+const HUB = readFileSync(
+  path.resolve(process.cwd(), 'src/components/HubGrid.tsx'),
+  'utf8',
+);
 
 const TODAY = '2026-09-11';
 
@@ -23,32 +34,44 @@ function entry(id: string, label: string, date: string): CountUpEntry {
 }
 
 describe('buildBannerCards', () => {
-  it('leads with period, then streak', () => {
-    const cards = buildBannerCards('Period in 4 days', 6, [], [], TODAY);
+  it('leads with today, then period, then streak', () => {
+    const cards = buildBannerCards('Period in 4 days', 6, [], [], TODAY, 0);
 
-    expect(cards.map((card) => card.id)).toEqual(['cycle', 'streak']);
+    expect(cards.map((card) => card.id)).toEqual(['today', 'cycle', 'streak']);
     expect(cards[0]).toMatchObject({
-      title: 'Period in 4 days',
-      href: '/cycle',
-      accent: 'cycle',
+      label: 'Today',
+      value: '0 min',
+      href: '/study/timer',
+      accent: 'timer',
+      icon: 'timer',
     });
     expect(cards[1]).toMatchObject({
-      title: '6 day streak',
+      label: 'Period',
+      value: 'Period in 4 days',
+      href: '/cycle',
+      accent: 'cycle',
+      icon: 'cycle',
+    });
+    expect(cards[2]).toMatchObject({
+      label: 'Streak',
+      value: '6 days',
       href: '/study/dashboard',
       accent: 'dashboard',
+      icon: 'streak',
     });
   });
 
   it('says one day, not 1 days', () => {
-    const cards = buildBannerCards(null, 1, [], [], TODAY);
+    const cards = buildBannerCards(null, 1, [], [], TODAY, 12);
 
-    expect(cards[0].title).toBe('1 day streak');
+    expect(cards.find((card) => card.id === 'streak')?.value).toBe('1 day');
+    expect(cards[0].value).toBe('12 min');
   });
 
   it('drops the period card when the cycle has no label yet', () => {
-    const cards = buildBannerCards(null, 6, [], [], TODAY);
+    const cards = buildBannerCards(null, 6, [], [], TODAY, 0);
 
-    expect(cards.map((card) => card.id)).toEqual(['streak']);
+    expect(cards.map((card) => card.id)).toEqual(['today', 'streak']);
   });
 
   it('puts starred dates after the fixed cards, sorted by date', () => {
@@ -58,9 +81,11 @@ describe('buildBannerCards', () => {
       [event('e1', 'Exam', '2026-10-01')],
       [entry('c1', 'Together', '2025-08-09')],
       TODAY,
+      0,
     );
 
     expect(cards.map((card) => card.id)).toEqual([
+      'today',
       'cycle',
       'streak',
       'c1',
@@ -75,18 +100,49 @@ describe('buildBannerCards', () => {
       [event('e1', 'Exam', '2026-09-15')],
       [entry('c1', 'Together', '2026-09-01')],
       TODAY,
+      0,
     );
 
-    expect(cards[1]).toMatchObject({
-      title: 'Together',
-      detail: '10 days',
+    expect(cards[2]).toMatchObject({
+      label: 'Together',
+      value: '10 days',
       href: '/countdown',
       accent: 'countdown',
+      icon: 'countdown',
     });
-    expect(cards[2]).toMatchObject({ title: 'Exam', detail: '4 days' });
+    expect(cards[3]).toMatchObject({ label: 'Exam', value: '4 days' });
   });
 
-  it('still returns the fixed cards when nothing is starred', () => {
-    expect(buildBannerCards('Period today', 3, [], [], TODAY)).toHaveLength(2);
+  it('still returns today and streak when nothing is starred', () => {
+    expect(buildBannerCards('Period today', 3, [], [], TODAY, 0)).toHaveLength(
+      3,
+    );
+  });
+
+  it('holds each card for five seconds', () => {
+    expect(BANNER_TICK_MS).toBe(5000);
+  });
+
+  it('slides the next card over in one second', () => {
+    expect(BANNER_SLIDE_MS).toBe(1000);
+  });
+});
+
+describe('the home banner', () => {
+  it('is the only today card and still opens a page when tapped', () => {
+    expect(HUB).toContain('RotatingBanner');
+    expect(HUB).not.toContain('HomeFocusTile');
+    expect(BANNER).toContain('href={card.href}');
+    expect(BANNER).toContain('aria-label="Previous"');
+    expect(BANNER).toContain('aria-label="Next"');
+    expect(BANNER).toContain('ChevronLeft');
+    expect(BANNER).toContain('translate3d');
+    expect(BANNER).toContain('coverStart');
+    expect(BANNER).toContain('onTransitionEnd');
+    expect(BANNER).not.toContain('duration-500');
+    expect(BANNER).not.toContain('ease-out');
+    expect(BANNER).not.toContain('loopedCards');
+    expect(BANNER).not.toContain('onPointerDown');
+    expect(BANNER).not.toContain('swipeDirection');
   });
 });

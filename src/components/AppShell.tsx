@@ -1,6 +1,7 @@
 'use client';
 
 import NavDrawer from '@/components/nav/NavDrawer';
+import { HomeEscape } from '@/components/nav/HomeEscape';
 import BackgroundManager from '@/components/BackgroundManager';
 import AudioPlayer from '@/components/AudioPlayer';
 import AlarmPlayer from '@/components/AlarmPlayer';
@@ -10,6 +11,7 @@ import { NotesHost } from '@/components/notes/NotesHost';
 export default function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <>
+      <HomeEscape />
       <div className="relative min-h-dvh overflow-x-hidden">
         <BackgroundManager />
         <div className="relative z-10 flex min-h-dvh flex-col">

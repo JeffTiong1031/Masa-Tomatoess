@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useHasMounted } from '@/hooks/useHasMounted';
 import { isUserName } from '@/lib/identity';
 import type { Note } from '@/lib/note';
-import { loadNotes } from '@/lib/noteLocal';
+import { loadNotes, loadPendingDeletes } from '@/lib/noteLocal';
 import { mergeNotes } from '@/lib/noteMerge';
 import { isActiveNoteOwnedBy } from '@/lib/notePad';
 import { isTypingElement, notesShortcut } from '@/lib/noteShortcut';
@@ -45,9 +45,10 @@ export function NotesHost() {
           new Date().toISOString(),
           crypto.randomUUID(),
         )
-          .then((reconciled) => {
+          .then(async (reconciled) => {
             if (!active) return;
-            setNotes((current) => mergeNotes(current, reconciled, []));
+            const pending = await loadPendingDeletes(owner);
+            setNotes((current) => mergeNotes(current, reconciled, pending));
             setActiveId((current) =>
               reconciled.some((note) => note.id === current)
                 ? current
@@ -71,9 +72,10 @@ export function NotesHost() {
       owner,
       new Date().toISOString(),
       crypto.randomUUID(),
-    ).then((reconciled) => {
+    ).then(async (reconciled) => {
       if (!active) return;
-      setNotes((current) => mergeNotes(current, reconciled, []));
+      const pending = await loadPendingDeletes(owner);
+      setNotes((current) => mergeNotes(current, reconciled, pending));
       setActiveId((current) =>
         reconciled.some((note) => note.id === current)
           ? current

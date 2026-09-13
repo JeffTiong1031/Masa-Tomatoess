@@ -1,3 +1,4 @@
+import { logRemoteError } from './remoteError';
 import { supabase } from './supabase';
 import { weekStart } from './mealWeek';
 import type { UserName } from './identity';
@@ -97,7 +98,7 @@ export async function fetchMeals(
     .order('date', { ascending: true });
 
   if (error) {
-    console.error('Failed to load meals:', error);
+    logRemoteError('Failed to load meals:', error);
     return null;
   }
 
@@ -121,7 +122,7 @@ export async function uploadPhoto(
   ]);
 
   if (fullResult.error || thumbResult.error) {
-    console.error('Failed to upload photo:', fullResult.error ?? thumbResult.error);
+    logRemoteError('Failed to upload photo:', fullResult.error ?? thumbResult.error);
 
     const orphans = [
       ...(fullResult.error ? [] : [fullPath]),
@@ -130,7 +131,7 @@ export async function uploadPhoto(
     if (orphans.length > 0) {
       const { error: cleanupError } = await bucket.remove(orphans);
       if (cleanupError) {
-        console.error('Failed to remove an orphaned photo:', cleanupError);
+        logRemoteError('Failed to remove an orphaned photo:', cleanupError);
       }
     }
 
@@ -146,7 +147,7 @@ export async function removePhoto(photo: MealPhoto): Promise<boolean> {
     .remove([photo.fullPath, photo.thumbPath]);
 
   if (error) {
-    console.error('Failed to remove meal photos:', error);
+    logRemoteError('Failed to remove meal photos:', error);
     return false;
   }
   return true;
@@ -171,7 +172,7 @@ export async function insertMeal(input: MealInput): Promise<MealEntry | null> {
     .single();
 
   if (error) {
-    console.error('Failed to add meal:', error);
+    logRemoteError('Failed to add meal:', error);
     return null;
   }
 
@@ -195,7 +196,7 @@ export async function updateMeal(
     .single();
 
   if (error) {
-    console.error('Failed to update meal:', error);
+    logRemoteError('Failed to update meal:', error);
     return null;
   }
 
@@ -208,7 +209,7 @@ export async function deleteMeal(entry: MealEntry): Promise<boolean> {
   const { error } = await supabase.from('meal_entries').delete().eq('id', entry.id);
 
   if (error) {
-    console.error('Failed to delete meal:', error);
+    logRemoteError('Failed to delete meal:', error);
     return false;
   }
 
@@ -229,7 +230,7 @@ export async function fetchDays(
     .lte('date', to);
 
   if (error) {
-    console.error('Failed to load meal days:', error);
+    logRemoteError('Failed to load meal days:', error);
     return null;
   }
 
@@ -242,7 +243,7 @@ export async function sealDay(date: string, owner: UserName): Promise<boolean> {
     .upsert({ date, owner, sealed: true }, { onConflict: 'date,owner' });
 
   if (error) {
-    console.error('Failed to seal day:', error);
+    logRemoteError('Failed to seal day:', error);
     return false;
   }
 
@@ -262,7 +263,7 @@ export async function fetchReview(
     .maybeSingle();
 
   if (error) {
-    console.error('Failed to load review:', error);
+    logRemoteError('Failed to load review:', error);
     return null;
   }
   if (data === null) return null;
@@ -294,7 +295,7 @@ export async function saveReview(
   );
 
   if (error) {
-    console.error('Failed to save review:', error);
+    logRemoteError('Failed to save review:', error);
     return false;
   }
   return true;
@@ -310,5 +311,5 @@ export async function markReviewStale(
     .eq('week_start', week)
     .eq('owner', owner);
 
-  if (error) console.error('Failed to mark review stale:', error);
+  if (error) logRemoteError('Failed to mark review stale:', error);
 }

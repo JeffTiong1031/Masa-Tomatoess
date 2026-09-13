@@ -3,7 +3,7 @@ import {
   backgroundFieldFor,
   themedRoutesAreFocusRoutes,
 } from '@/lib/backgroundField';
-import { ALL_LINKS, FOCUS_HREFS, TIMETABLE_PANEL } from '@/components/nav/navLinks';
+import { ALL_LINKS, FOCUS_HREFS } from '@/components/nav/navLinks';
 
 describe('backgroundFieldFor', () => {
   it('gives all three Focus widgets the themed backdrop', () => {
@@ -23,7 +23,7 @@ describe('backgroundFieldFor', () => {
     '/study',
     '/calendar',
     '/timetable',
-    '/timetable/todo',
+    '/todo',
   ])('keeps %s on the plain field', (path) => {
     expect(backgroundFieldFor(path)).toBe('plain');
   });
@@ -59,13 +59,5 @@ describe('backgroundFieldFor', () => {
 
   it('only offers a wallpaper on routes that are inside Focus', () => {
     expect(themedRoutesAreFocusRoutes()).toBe(true);
-  });
-
-  /* Timetable's own panel must never land the user somewhere the
-     backdrop changes out from under them mid-section. */
-  it('keeps both Timetable panel tabs on the plain field', () => {
-    for (const { href, label } of TIMETABLE_PANEL) {
-      expect(backgroundFieldFor(href), `${label} should be plain`).toBe('plain');
-    }
   });
 });

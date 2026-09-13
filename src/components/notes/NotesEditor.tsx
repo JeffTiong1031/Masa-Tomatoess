@@ -45,7 +45,15 @@ import {
   undoTo,
   type NoteSnapshot,
 } from '@/lib/noteHistory';
-import { noteLineGapStyle, type NoteLineGap } from '@/lib/noteLineGap';
+import {
+  noteLineGapStyle,
+  noteTickLineBox,
+  type NoteLineGap,
+} from '@/lib/noteLineGap';
+import {
+  NOTE_SELECTION_FILL,
+  noteSelectionSlice,
+} from '@/lib/noteSelectionPaint';
 import {
   isChecklistHotkey,
   isEditorCommandBlocked,
@@ -162,6 +170,10 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
     const [paint, setPaint] = useState<{ start: DocCaret; end: DocCaret } | null>(
       null,
     );
+    const editorRef = useRef<HTMLDivElement>(null);
+    const [marks, setMarks] = useState<
+      { top: number; left: number; width: number; height: number }[]
+    >([]);
 
     const reportCaret = (
       nextBlocks: Block[],
@@ -218,8 +230,13 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
       rangeRef.current = { start, end, focus };
       caretRef.current = focus;
       spanningRef.current = !collapsedRange(start, end);
-      setPaint(spanningRef.current ? { start, end } : null);
+      setPaint(start.index !== end.index ? { start, end } : null);
       reportCaret(blocksRef.current, focus, true);
+    };
+
+    const dropSpan = () => {
+      spanningRef.current = false;
+      setPaint(null);
     };
 
     const placeNativeCaret = (caret: DocCaret) => {
@@ -230,6 +247,26 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
       const nativeRange = document.createRange();
       nativeRange.setStart(node, offset);
       nativeRange.collapse(true);
+      const selection = window.getSelection();
+      selection?.removeAllRanges();
+      selection?.addRange(nativeRange);
+    };
+
+    const placeNativeRange = (start: DocCaret, end: DocCaret) => {
+      if (start.index !== end.index) {
+        placeNativeCaret(rangeRef.current.focus);
+        return;
+      }
+      const element = blockNodesRef.current[start.index];
+      if (!element) return;
+      const node = element.firstChild ?? element;
+      if (node === element) {
+        placeNativeCaret(start);
+        return;
+      }
+      const nativeRange = document.createRange();
+      nativeRange.setStart(node, start.offset);
+      nativeRange.setEnd(node, end.offset);
       const selection = window.getSelection();
       selection?.removeAllRanges();
       selection?.addRange(nativeRange);
@@ -365,8 +402,7 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
       const base = collapsed
         ? { blocks: blocksRef.current, caret: range.focus }
         : deleteSelection(blocksRef.current, range.start, range.end);
-      spanningRef.current = false;
-      setPaint(null);
+      dropSpan();
       const result = enterAt(base.blocks, base.caret);
       commit(result.blocks, result.caret);
     };
@@ -391,14 +427,56 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
       caretRef.current = caret;
       rangeRef.current = { start: caret, end: caret, focus: caret };
       anchorRef.current = caret;
-      spanningRef.current = false;
+      dropSpan();
       historyRef.current = EMPTY_HISTORY;
       typingRunRef.current = false;
-      setPaint(null);
       setBlocks(next);
       const encoded = encodeBody(next);
       if (encoded !== body) onChange(encoded);
     }, [body, onChange]);
+
+    useLayoutEffect(() => {
+      const root = editorRef.current;
+      if (!root || !paint) {
+        setMarks([]);
+        return;
+      }
+      const origin = root.getBoundingClientRect();
+      const next: { top: number; left: number; width: number; height: number }[] =
+        [];
+      for (
+        let index = paint.start.index;
+        index <= paint.end.index;
+        index += 1
+      ) {
+        const slice = noteSelectionSlice(
+          paint.start,
+          paint.end,
+          index,
+          blocks[index].text.length,
+        );
+        if (!slice) continue;
+        const element = blockNodesRef.current[index];
+        if (!element) continue;
+        const node = element.firstChild ?? element;
+        if (node === element) continue;
+        const max = node.textContent?.length ?? 0;
+        const range = document.createRange();
+        range.setStart(node, Math.min(slice.start, max));
+        range.setEnd(node, Math.min(slice.end, max));
+        for (const rect of range.getClientRects()) {
+          if (rect.width === 0 || rect.height === 0) continue;
+          next.push({
+            top: rect.top - origin.top,
+            left: rect.left - origin.left,
+            width: rect.width,
+            height: rect.height,
+          });
+        }
+      }
+      setMarks(next);
+      placeNativeCaret(rangeRef.current.focus);
+    }, [paint, blocks, lineGap]);
 
     useLayoutEffect(() => {
       if (!restoreCaretRef.current) return;
@@ -462,7 +540,7 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
 
     return (
       <div
-        className="mt-quiet-focus min-h-11 flex-1 overflow-auto bg-[var(--mt-surface)] p-3 text-[var(--mt-text)]"
+        className="mt-note-sel mt-quiet-focus min-h-11 flex-1 overflow-auto bg-[var(--mt-surface)] p-3 text-[var(--mt-text)]"
         onPointerDown={(event) => {
           if ((event.target as HTMLElement).closest('[role="checkbox"]')) {
             return;
@@ -490,9 +568,11 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
           if (caret.index === origin.index && caret.offset === origin.offset) {
             return;
           }
-          event.preventDefault();
-          if (!event.currentTarget.hasPointerCapture(event.pointerId)) {
-            event.currentTarget.setPointerCapture(event.pointerId);
+          if (caret.index !== origin.index) {
+            event.preventDefault();
+            if (!event.currentTarget.hasPointerCapture(event.pointerId)) {
+              event.currentTarget.setPointerCapture(event.pointerId);
+            }
           }
           applyRange(origin, caret);
         }}
@@ -507,16 +587,25 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
           reportCaret(blocksRef.current, caretRef.current, false);
         }}
       >
+        <div ref={editorRef} className="relative">
+        {marks.map((mark, markIndex) => (
+          <span
+            key={markIndex}
+            aria-hidden
+            className="pointer-events-none absolute z-0"
+            style={{
+              top: mark.top,
+              left: mark.left,
+              width: mark.width,
+              height: mark.height,
+              background: NOTE_SELECTION_FILL,
+            }}
+          />
+        ))}
         {blocks.map((block, index) => (
           <div
             key={index}
-            className={`flex items-start ${
-              paint &&
-              index >= paint.start.index &&
-              index <= paint.end.index
-                ? 'bg-[color-mix(in_srgb,var(--mt-accent)_28%,transparent)]'
-                : ''
-            }`}
+            className="relative z-[1] flex items-start"
             style={{
               paddingLeft:
                 block.kind === 'item' ? block.indent * ITEM_INDENT_PX : 0,
@@ -530,7 +619,8 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
                 role="checkbox"
                 aria-checked={block.checked}
                 aria-label={block.checked ? 'Mark unchecked' : 'Mark checked'}
-                className="flex min-h-11 min-w-11 shrink-0 items-center justify-center text-[var(--mt-text)] disabled:text-[var(--mt-text-muted)]"
+                className="relative flex min-w-11 shrink-0 items-center justify-center text-[var(--mt-text)] disabled:text-[var(--mt-text-muted)]"
+                style={noteTickLineBox(lineGap)}
                 disabled={disabled}
                 onClick={() => {
                   if (composingRef.current) return;
@@ -540,10 +630,14 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
                 }}
                 onPointerDown={(event) => event.preventDefault()}
               >
+                <span
+                  aria-hidden
+                  className="absolute inset-x-0 top-1/2 h-11 -translate-y-1/2"
+                />
                 {block.checked ? (
-                  <CheckSquare2 aria-hidden="true" />
+                  <CheckSquare2 aria-hidden="true" className="size-[1em]" />
                 ) : (
-                  <Square aria-hidden="true" />
+                  <Square aria-hidden="true" className="size-[1em]" />
                 )}
               </button>
             )}
@@ -553,7 +647,7 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
               }}
               aria-label={index === 0 ? 'Note' : undefined}
               className={`mt-quiet-focus min-w-0 flex-1 outline-none ${
-                spanningRef.current ? 'select-none' : ''
+                paint ? 'select-none' : ''
               } ${
                 block.kind === 'item' && block.checked
                   ? 'text-[var(--mt-text-muted)] line-through'
@@ -608,8 +702,7 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
                       range.end,
                       native.data ?? '',
                     );
-                    spanningRef.current = false;
-                    setPaint(null);
+                    dropSpan();
                     commit(result.blocks, result.caret);
                     return;
                   }
@@ -621,8 +714,7 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
                       range.start,
                       range.end,
                     );
-                    spanningRef.current = false;
-                    setPaint(null);
+                    dropSpan();
                     commit(result.blocks, result.caret);
                   }
                 }
@@ -691,7 +783,7 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
                     event.key as CaretMove,
                   );
                   applyRange(anchorRef.current, focus);
-                  placeNativeCaret(focus);
+                  placeNativeRange(rangeRef.current.start, rangeRef.current.end);
                   return;
                 }
 
@@ -773,8 +865,7 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
                     range.end,
                     event.key,
                   );
-                  spanningRef.current = false;
-                  setPaint(null);
+                  dropSpan();
                   commit(result.blocks, result.caret);
                   return;
                 }
@@ -787,8 +878,7 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
                     range.start,
                     range.end,
                   );
-                  spanningRef.current = false;
-                  setPaint(null);
+                  dropSpan();
                   commit(result.blocks, result.caret);
                   return;
                 }
@@ -920,8 +1010,7 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
                   range.start,
                   range.end,
                 );
-                spanningRef.current = false;
-                setPaint(null);
+                dropSpan();
                 commit(result.blocks, result.caret);
               }}
               onPaste={(event) => {
@@ -955,6 +1044,7 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
             </span>
           </div>
         ))}
+        </div>
       </div>
     );
   },

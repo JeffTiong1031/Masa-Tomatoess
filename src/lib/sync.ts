@@ -1,4 +1,5 @@
 import { db } from '@/db/db';
+import { logRemoteError } from './remoteError';
 import { supabase } from './supabase';
 import { clampDurationMinutes } from './sessionDuration';
 import {
@@ -33,7 +34,7 @@ export async function pushSessions() {
     const { error } = await supabase.from('focus_sessions').insert(payload);
 
     if (error) {
-      console.error('Failed to sync to Supabase:', error);
+      logRemoteError('Failed to sync to Supabase:', error);
       return;
     }
 
@@ -65,7 +66,7 @@ export async function pullSessions() {
       .eq('user_name', userName);
 
     if (error) {
-      console.error('Failed to pull from Supabase:', error);
+      logRemoteError('Failed to pull from Supabase:', error);
       return;
     }
 

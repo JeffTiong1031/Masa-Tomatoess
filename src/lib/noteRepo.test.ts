@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => {
     order: vi.fn(),
     upsert: vi.fn(),
     delete: vi.fn(),
+    maybeSingle: vi.fn(),
     then: vi.fn(),
   };
   const from = vi.fn(() => query);
@@ -15,6 +16,7 @@ const mocks = vi.hoisted(() => {
   query.order.mockReturnValue(query);
   query.upsert.mockReturnValue(query);
   query.delete.mockReturnValue(query);
+  query.maybeSingle.mockResolvedValue({ data: null, error: null });
   return { from, query };
 });
 
@@ -52,6 +54,7 @@ describe('note cloud repository', () => {
     mocks.query.order.mockReturnValue(mocks.query);
     mocks.query.upsert.mockReturnValue(mocks.query);
     mocks.query.delete.mockReturnValue(mocks.query);
+    mocks.query.maybeSingle.mockResolvedValue({ data: null, error: null });
     mocks.query.then.mockImplementation((resolve) => resolve({ data: [], error: null }));
   });
 
@@ -143,12 +146,26 @@ describe('note cloud repository', () => {
   });
 
   it('deletes a note belonging to the selected owner', async () => {
+    mocks.query.then.mockImplementation((resolve) =>
+      resolve({ data: [{ id: 'a' }], error: null }),
+    );
+
     await expect(deleteNoteRemote('a', 'Jeff')).resolves.toBe(true);
 
     expect(mocks.from).toHaveBeenCalledWith('notes');
     expect(mocks.query.delete).toHaveBeenCalledOnce();
+    expect(mocks.query.select).toHaveBeenCalledWith('id');
     expect(mocks.query.eq).toHaveBeenNthCalledWith(1, 'id', 'a');
     expect(mocks.query.eq).toHaveBeenNthCalledWith(2, 'owner', 'Jeff');
+  });
+
+  it('does not treat a silent miss as a delete when the row is still there', async () => {
+    mocks.query.then.mockImplementation((resolve) =>
+      resolve({ data: [], error: null }),
+    );
+    mocks.query.maybeSingle.mockResolvedValue({ data: { id: 'a' }, error: null });
+
+    await expect(deleteNoteRemote('a', 'Jeff')).resolves.toBe(false);
   });
 
   it('reports a failed delete', async () => {

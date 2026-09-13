@@ -2,8 +2,21 @@ import { occursOn, type CalendarEvent } from './calendarEvent';
 import type { Todo } from './todo';
 
 export type AgendaItem =
-  | { kind: 'event'; id: string; title: string; chip: string }
-  | { kind: 'todo'; id: string; title: string; chip: string; late: boolean };
+  | { kind: 'event'; id: string; title: string; chip: string; href: '/calendar' }
+  | {
+      kind: 'todo';
+      id: string;
+      title: string;
+      chip: string;
+      late: boolean;
+      href: '/todo';
+    };
+
+export function agendaItemHref(kind: 'todo'): '/todo';
+export function agendaItemHref(kind: 'event'): '/calendar';
+export function agendaItemHref(kind: AgendaItem['kind']): '/todo' | '/calendar' {
+  return kind === 'todo' ? '/todo' : '/calendar';
+}
 
 export interface Agenda {
   items: AgendaItem[];
@@ -33,6 +46,7 @@ function eventItems(events: CalendarEvent[], today: string): AgendaItem[] {
       id: event.id,
       title: event.title,
       chip: eventChip(event),
+      href: agendaItemHref('event'),
     }));
 }
 
@@ -54,6 +68,7 @@ function todoItems(todos: Todo[], today: string): AgendaItem[] {
         title: item.title,
         chip: late ? 'Late' : 'to-do',
         late,
+        href: agendaItemHref('todo'),
       };
     });
 }
@@ -72,6 +87,6 @@ export function buildAgenda(
   return {
     items: all.slice(0, limit),
     hiddenCount: hidden.length,
-    moreHref: onlyTodosHidden ? '/timetable/todo' : '/calendar',
+    moreHref: onlyTodosHidden ? '/todo' : '/calendar',
   };
 }

@@ -18,6 +18,10 @@ const SHELL = readFileSync(
   path.resolve(process.cwd(), 'src/components/AppShell.tsx'),
   'utf8',
 );
+const HOST = readFileSync(
+  path.resolve(process.cwd(), 'src/components/notes/NotesHost.tsx'),
+  'utf8',
+);
 
 describe('notes pad select', () => {
   it('lets you pick tabs and delete the picked ones', () => {
@@ -25,6 +29,8 @@ describe('notes pad select', () => {
     expect(STRIP).toContain('Delete selected notes');
     expect(PAD).toContain('removeNotes(');
     expect(PAD).toContain('h-3.5 w-3.5');
+    expect(PAD).toContain('forgetNote(');
+    expect(PAD).not.toContain('deleteNoteLocally(');
   });
 });
 
@@ -41,11 +47,21 @@ describe('notes line gap', () => {
     expect(EDITOR).toContain('noteLineGapStyle(lineGap)');
     expect(EDITOR).toContain('paddingBlock: gap.paddingBlock');
   });
+
+  it('keeps the tick centred on the first line after the gap is applied', () => {
+    expect(EDITOR).toContain('noteTickLineBox(lineGap)');
+    expect(EDITOR).toContain('size-[1em]');
+  });
 });
 
 describe('notes window host', () => {
   it('keeps Notes outside the page clip so the pad can hang off the edge', () => {
     const clip = SHELL.slice(SHELL.indexOf('overflow-x-hidden'));
     expect(clip).toMatch(/<\/div>\s*<NotesHost/);
+  });
+
+  it('does not let a cloud copy walk a deleted tab back in on refresh', () => {
+    expect(HOST).toContain('loadPendingDeletes');
+    expect(HOST).not.toContain('mergeNotes(current, reconciled, [])');
   });
 });

@@ -31,3 +31,13 @@ export function noteLineGapStyle(gap: NoteLineGap): {
 } {
   return NOTE_LINE_GAP_STYLE[gap];
 }
+
+export function noteTickLineEm(gap: NoteLineGap): number {
+  return NOTE_LINE_GAP_STYLE[gap].lineHeight;
+}
+
+export function noteTickLineBox(gap: NoteLineGap): {
+  height: string;
+} {
+  return { height: `${noteTickLineEm(gap)}em` };
+}
