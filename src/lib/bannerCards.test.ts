@@ -132,5 +132,9 @@ describe('the home banner', () => {
     expect(BANNER).not.toContain('ChevronLeft');
     expect(BANNER).not.toContain('aria-label="Previous"');
     expect(BANNER).toContain('transition-transform');
+    expect(BANNER).toContain('loopedCards');
+    expect(BANNER).toContain('onTransitionEnd');
+    expect(BANNER).toContain('onPointerDown');
+    expect(BANNER).toContain('swipeDirection');
   });
 });
