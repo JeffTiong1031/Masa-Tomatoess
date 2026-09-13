@@ -44,4 +44,11 @@ describe('the note typing area', () => {
     expect(EDITOR).toContain('<CheckSquare2');
     expect(EDITOR).not.toContain('<CheckSquare ');
   });
+
+  it('does not wash a selected line with the section accent', () => {
+    expect(EDITOR).not.toContain(
+      'bg-[color-mix(in_srgb,var(--mt-accent)_28%,transparent)]',
+    );
+    expect(EDITOR).toContain('placeNativeRange');
+  });
 });

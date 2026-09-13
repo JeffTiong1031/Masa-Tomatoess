@@ -159,9 +159,6 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
     const anchorRef = useRef<DocCaret>({ index: 0, offset: 0 });
     const dragAnchorRef = useRef<DocCaret | null>(null);
     const spanningRef = useRef(false);
-    const [paint, setPaint] = useState<{ start: DocCaret; end: DocCaret } | null>(
-      null,
-    );
 
     const reportCaret = (
       nextBlocks: Block[],
@@ -195,7 +192,6 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
       if (!spanningRef.current) {
         rangeRef.current = { start: caret, end: caret, focus: caret };
         anchorRef.current = caret;
-        setPaint(null);
       }
       setBlocks(nextBlocks);
       onChange(encodeBody(nextBlocks));
@@ -218,7 +214,6 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
       rangeRef.current = { start, end, focus };
       caretRef.current = focus;
       spanningRef.current = !collapsedRange(start, end);
-      setPaint(spanningRef.current ? { start, end } : null);
       reportCaret(blocksRef.current, focus, true);
     };
 
@@ -230,6 +225,26 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
       const nativeRange = document.createRange();
       nativeRange.setStart(node, offset);
       nativeRange.collapse(true);
+      const selection = window.getSelection();
+      selection?.removeAllRanges();
+      selection?.addRange(nativeRange);
+    };
+
+    const placeNativeRange = (start: DocCaret, end: DocCaret) => {
+      if (start.index !== end.index) {
+        placeNativeCaret(rangeRef.current.focus);
+        return;
+      }
+      const element = blockNodesRef.current[start.index];
+      if (!element) return;
+      const node = element.firstChild ?? element;
+      if (node === element) {
+        placeNativeCaret(start);
+        return;
+      }
+      const nativeRange = document.createRange();
+      nativeRange.setStart(node, start.offset);
+      nativeRange.setEnd(node, end.offset);
       const selection = window.getSelection();
       selection?.removeAllRanges();
       selection?.addRange(nativeRange);
@@ -366,7 +381,6 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
         ? { blocks: blocksRef.current, caret: range.focus }
         : deleteSelection(blocksRef.current, range.start, range.end);
       spanningRef.current = false;
-      setPaint(null);
       const result = enterAt(base.blocks, base.caret);
       commit(result.blocks, result.caret);
     };
@@ -394,7 +408,6 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
       spanningRef.current = false;
       historyRef.current = EMPTY_HISTORY;
       typingRunRef.current = false;
-      setPaint(null);
       setBlocks(next);
       const encoded = encodeBody(next);
       if (encoded !== body) onChange(encoded);
@@ -490,9 +503,11 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
           if (caret.index === origin.index && caret.offset === origin.offset) {
             return;
           }
-          event.preventDefault();
-          if (!event.currentTarget.hasPointerCapture(event.pointerId)) {
-            event.currentTarget.setPointerCapture(event.pointerId);
+          if (caret.index !== origin.index) {
+            event.preventDefault();
+            if (!event.currentTarget.hasPointerCapture(event.pointerId)) {
+              event.currentTarget.setPointerCapture(event.pointerId);
+            }
           }
           applyRange(origin, caret);
         }}
@@ -510,13 +525,7 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
         {blocks.map((block, index) => (
           <div
             key={index}
-            className={`flex items-start ${
-              paint &&
-              index >= paint.start.index &&
-              index <= paint.end.index
-                ? 'bg-[color-mix(in_srgb,var(--mt-accent)_28%,transparent)]'
-                : ''
-            }`}
+            className="flex items-start"
             style={{
               paddingLeft:
                 block.kind === 'item' ? block.indent * ITEM_INDENT_PX : 0,
@@ -553,8 +562,6 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
               }}
               aria-label={index === 0 ? 'Note' : undefined}
               className={`mt-quiet-focus min-w-0 flex-1 outline-none ${
-                spanningRef.current ? 'select-none' : ''
-              } ${
                 block.kind === 'item' && block.checked
                   ? 'text-[var(--mt-text-muted)] line-through'
                   : 'text-[var(--mt-text)]'
@@ -609,7 +616,6 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
                       native.data ?? '',
                     );
                     spanningRef.current = false;
-                    setPaint(null);
                     commit(result.blocks, result.caret);
                     return;
                   }
@@ -622,7 +628,6 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
                       range.end,
                     );
                     spanningRef.current = false;
-                    setPaint(null);
                     commit(result.blocks, result.caret);
                   }
                 }
@@ -691,7 +696,7 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
                     event.key as CaretMove,
                   );
                   applyRange(anchorRef.current, focus);
-                  placeNativeCaret(focus);
+                  placeNativeRange(rangeRef.current.start, rangeRef.current.end);
                   return;
                 }
 
@@ -774,7 +779,6 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
                     event.key,
                   );
                   spanningRef.current = false;
-                  setPaint(null);
                   commit(result.blocks, result.caret);
                   return;
                 }
@@ -788,7 +792,6 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
                     range.end,
                   );
                   spanningRef.current = false;
-                  setPaint(null);
                   commit(result.blocks, result.caret);
                   return;
                 }
@@ -921,7 +924,6 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
                   range.end,
                 );
                 spanningRef.current = false;
-                setPaint(null);
                 commit(result.blocks, result.caret);
               }}
               onPaste={(event) => {
