@@ -1,3 +1,4 @@
+import { logRemoteError } from './remoteError';
 import { supabase } from './supabase';
 import type { UserName } from './identity';
 import type { Todo, TodoDraft } from './todo';
@@ -73,7 +74,7 @@ export async function fetchTodos(owner: UserName): Promise<TodoFetch> {
 
   if (error) {
     if (MISSING_TABLE_CODES.includes(error.code)) return { status: 'missing-table' };
-    console.error('Failed to load todos:', error);
+    logRemoteError('Failed to load todos:', error);
     return { status: 'error' };
   }
 
@@ -89,7 +90,7 @@ export async function insertTodo(draft: TodoDraft): Promise<Todo | null> {
     .single();
 
   if (error) {
-    console.error('Failed to add a todo:', error);
+    logRemoteError('Failed to add a todo:', error);
     return null;
   }
 
@@ -107,7 +108,7 @@ export async function setTodoDone(id: string, done: boolean): Promise<boolean> {
     .eq('id', id);
 
   if (error) {
-    console.error('Failed to change a todo:', error);
+    logRemoteError('Failed to change a todo:', error);
     return false;
   }
   return true;
@@ -127,7 +128,7 @@ export async function updateTodo(id: string, fields: TodoDraft): Promise<boolean
     .eq('id', id);
 
   if (error) {
-    console.error('Failed to edit a todo:', error);
+    logRemoteError('Failed to edit a todo:', error);
     return false;
   }
   return true;
@@ -148,7 +149,7 @@ export async function reorderTodos(
 
   const failed = results.find(({ error }) => error !== null);
   if (failed?.error) {
-    console.error('Failed to reorder todos:', failed.error);
+    logRemoteError('Failed to reorder todos:', failed.error);
     return false;
   }
   return true;
@@ -158,7 +159,7 @@ export async function deleteTodo(id: string): Promise<boolean> {
   const { error } = await supabase.from('todos').delete().eq('id', id);
 
   if (error) {
-    console.error('Failed to delete a todo:', error);
+    logRemoteError('Failed to delete a todo:', error);
     return false;
   }
   return true;
@@ -172,7 +173,7 @@ export async function deleteCompletedTodos(owner: UserName): Promise<boolean> {
     .eq('done', true);
 
   if (error) {
-    console.error('Failed to delete completed todos:', error);
+    logRemoteError('Failed to delete completed todos:', error);
     return false;
   }
   return true;

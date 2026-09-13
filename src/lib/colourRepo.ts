@@ -5,6 +5,7 @@ import {
   type PaletteKind,
 } from './colourPalette';
 import type { UserName } from './identity';
+import { logRemoteError } from './remoteError';
 import { supabase } from './supabase';
 
 const SWATCH_COLUMNS = 'id, owner, kind, fill, text_color, position';
@@ -41,7 +42,7 @@ async function selectPalette(
     .order('position', { ascending: true });
 
   if (error) {
-    console.error('Failed to load colour palette:', error);
+    logRemoteError('Failed to load colour palette:', error);
     return { rows: null, error: true };
   }
 
@@ -68,7 +69,7 @@ export async function fetchPalette(
   );
 
   if (seedError) {
-    console.error('Failed to seed colour palette:', seedError);
+    logRemoteError('Failed to seed colour palette:', seedError);
     return null;
   }
 
@@ -95,7 +96,7 @@ export async function insertSwatch(
     .eq('kind', kind);
 
   if (countError) {
-    console.error('Failed to size colour palette:', countError);
+    logRemoteError('Failed to size colour palette:', countError);
     return null;
   }
 
@@ -112,7 +113,7 @@ export async function insertSwatch(
     .single();
 
   if (error) {
-    console.error('Failed to add colour swatch:', error);
+    logRemoteError('Failed to add colour swatch:', error);
     return null;
   }
 
@@ -133,7 +134,7 @@ export async function updateSwatch(
     .eq('id', id);
 
   if (error) {
-    console.error('Failed to update colour swatch:', error);
+    logRemoteError('Failed to update colour swatch:', error);
     return false;
   }
   return true;
@@ -146,7 +147,7 @@ export async function deleteSwatch(id: string): Promise<boolean> {
     .eq('id', id);
 
   if (error) {
-    console.error('Failed to delete colour swatch:', error);
+    logRemoteError('Failed to delete colour swatch:', error);
     return false;
   }
   return true;

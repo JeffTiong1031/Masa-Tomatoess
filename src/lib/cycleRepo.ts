@@ -1,3 +1,4 @@
+import { logRemoteError } from './remoteError';
 import { supabase } from './supabase';
 import type { PeriodLog } from './cycle';
 
@@ -19,7 +20,7 @@ export async function fetchPeriods(): Promise<PeriodLog[] | null> {
     .order('start_date', { ascending: false });
 
   if (error) {
-    console.error('Failed to load cycle periods:', error);
+    logRemoteError('Failed to load cycle periods:', error);
     return null;
   }
 
@@ -41,7 +42,7 @@ export async function fetchSymptoms(
     .lte('date', to);
 
   if (error) {
-    console.error('Failed to load cycle symptoms:', error);
+    logRemoteError('Failed to load cycle symptoms:', error);
     return null;
   }
 
@@ -56,7 +57,7 @@ export async function insertPeriod(startDate: string): Promise<boolean> {
     .insert({ start_date: startDate });
 
   if (error) {
-    console.error('Failed to log period start:', error);
+    logRemoteError('Failed to log period start:', error);
     return false;
   }
   return true;
@@ -77,7 +78,7 @@ export async function updatePeriod(
     .eq('id', id);
 
   if (error) {
-    console.error('Failed to update period:', error);
+    logRemoteError('Failed to update period:', error);
     return false;
   }
   return true;
@@ -87,7 +88,7 @@ export async function deletePeriod(id: string): Promise<boolean> {
   const { error } = await supabase.from('cycle_periods').delete().eq('id', id);
 
   if (error) {
-    console.error('Failed to delete period:', error);
+    logRemoteError('Failed to delete period:', error);
     return false;
   }
   return true;
@@ -103,7 +104,7 @@ export async function saveSymptoms(
   );
 
   if (error) {
-    console.error('Failed to save symptoms:', error);
+    logRemoteError('Failed to save symptoms:', error);
     return false;
   }
   return true;

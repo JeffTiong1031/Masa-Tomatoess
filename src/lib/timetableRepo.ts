@@ -1,4 +1,5 @@
 import type { UserName } from './identity';
+import { logRemoteError } from './remoteError';
 import { supabase } from './supabase';
 import {
   rulesFromSwatchRows,
@@ -27,7 +28,7 @@ export async function fetchRules(): Promise<TimetableRule[] | null> {
     .select(TIMETABLE_RULE_COLUMNS);
 
   if (error) {
-    console.error('Failed to load timetable rules:', error);
+    logRemoteError('Failed to load timetable rules:', error);
     return null;
   }
 
@@ -43,7 +44,7 @@ export async function insertRule(
     .insert({ owner, ...toColumns(draft) });
 
   if (error) {
-    console.error('Failed to add timetable rule:', error);
+    logRemoteError('Failed to add timetable rule:', error);
     return false;
   }
   return true;
@@ -59,7 +60,7 @@ export async function updateRule(
     .eq('id', id);
 
   if (error) {
-    console.error('Failed to update timetable rule:', error);
+    logRemoteError('Failed to update timetable rule:', error);
     return false;
   }
   return true;
@@ -69,7 +70,7 @@ export async function deleteRule(id: string): Promise<boolean> {
   const { error } = await supabase.from('timetable_rules').delete().eq('id', id);
 
   if (error) {
-    console.error('Failed to delete timetable rule:', error);
+    logRemoteError('Failed to delete timetable rule:', error);
     return false;
   }
   return true;
@@ -82,7 +83,7 @@ export async function deleteRulesOf(owner: UserName): Promise<boolean> {
     .eq('owner', owner);
 
   if (error) {
-    console.error('Failed to clear timetable rules:', error);
+    logRemoteError('Failed to clear timetable rules:', error);
     return false;
   }
   return true;
