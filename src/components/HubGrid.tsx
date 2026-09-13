@@ -141,31 +141,36 @@ export default function HubGrid() {
               ) : (
                 <ul className="flex max-w-sm flex-col gap-4">
                   {agenda.items.map((item) => (
-                    <li key={item.id} className="flex items-center gap-4">
-                      <span
-                        className="inline-flex min-w-16 shrink-0 justify-center rounded-full border border-[var(--mt-border)] bg-[var(--mt-bg)] px-3 py-1 text-xs font-semibold text-[var(--mt-text)]"
-                        style={
-                          item.kind === 'todo' && item.late
-                            ? {
-                                background:
-                                  'color-mix(in srgb, var(--mt-danger) 16%, transparent)',
-                                borderColor: 'transparent',
-                              }
-                            : undefined
-                        }
+                    <li key={item.id}>
+                      <Link
+                        href={item.href}
+                        className="flex min-h-11 items-center gap-4"
                       >
-                        {item.chip}
-                      </span>
-                      <span className="truncate text-lg font-medium text-[var(--mt-text)] md:text-xl">
-                        {item.title}
-                      </span>
-                      {item.kind === 'todo' && item.late ? (
                         <span
-                          className="h-1.5 w-1.5 shrink-0 rounded-full"
-                          style={{ background: 'var(--mt-danger)' }}
-                          aria-hidden
-                        />
-                      ) : null}
+                          className="inline-flex min-w-16 shrink-0 justify-center rounded-full border border-[var(--mt-border)] bg-[var(--mt-bg)] px-3 py-1 text-xs font-semibold text-[var(--mt-text)]"
+                          style={
+                            item.kind === 'todo' && item.late
+                              ? {
+                                  background:
+                                    'color-mix(in srgb, var(--mt-danger) 16%, transparent)',
+                                  borderColor: 'transparent',
+                                }
+                              : undefined
+                          }
+                        >
+                          {item.chip}
+                        </span>
+                        <span className="truncate text-lg font-medium text-[var(--mt-text)] md:text-xl">
+                          {item.title}
+                        </span>
+                        {item.kind === 'todo' && item.late ? (
+                          <span
+                            className="h-1.5 w-1.5 shrink-0 rounded-full"
+                            style={{ background: 'var(--mt-danger)' }}
+                            aria-hidden
+                          />
+                        ) : null}
+                      </Link>
                     </li>
                   ))}
                 </ul>
