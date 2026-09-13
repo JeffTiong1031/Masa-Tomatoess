@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 788" role="img" aria-labelledby="title desc">
+  <title id="title">Masa Tomato tech stack</title>
+  <desc id="desc">Next.js, React, TypeScript, Tailwind, Lucide, Zustand, Dexie, Supabase, Gemini, Recharts, and Vitest.</desc>
+  <rect width="1400" height="788" fill="#FDF8F3"/>
+  <circle cx="90" cy="70" r="86" fill="#F0CE87" opacity="0.55"/>
+  <circle cx="1310" cy="80" r="78" fill="#C4B0E0" opacity="0.5"/>
+  <circle cx="70" cy="720" r="92" fill="#F2A7BE" opacity="0.45"/>
+  <circle cx="1330" cy="730" r="88" fill="#A8DCD1" opacity="0.5"/>
+  <circle cx="200" cy="400" r="54" fill="#B4D9A0" opacity="0.35"/>
+  <circle cx="1200" cy="430" r="50" fill="#A9C4E8" opacity="0.4"/>
+
+  <g transform="translate(700 78)">
+    <circle cy="18" r="22" fill="#EF9A8D"/>
+    <rect x="-4" y="-12" width="8" height="12" rx="3" fill="#7CB342"/>
+    <circle cx="-11" cy="12" r="3.2" fill="#FDF8F3" opacity="0.45"/>
+  </g>
+  <text x="700" y="148" text-anchor="middle" fill="#3B2E2A" font-family="ui-sans-serif, system-ui, Segoe UI, sans-serif" font-size="40" font-weight="650">Masa Tomato</text>
+  <text x="700" y="182" text-anchor="middle" fill="#796763" font-family="ui-sans-serif, system-ui, Segoe UI, sans-serif" font-size="18">How the house is built</text>
+
+  <g>
+    <rect x="88" y="228" width="384" height="232" rx="28" fill="#FFFFFF"/>
+    <rect x="88" y="228" width="384" height="18" rx="9" fill="#EF9A8D"/>
+    <rect x="88" y="237" width="384" height="9" fill="#EF9A8D"/>
+    <text x="120" y="292" fill="#796763" font-family="ui-sans-serif, system-ui, sans-serif" font-size="13" font-weight="700" letter-spacing="2.4">APP</text>
+    <text x="120" y="338" fill="#3B2E2A" font-family="ui-sans-serif, system-ui, sans-serif" font-size="26" font-weight="650">Next.js 16</text>
+    <text x="120" y="378" fill="#3B2E2A" font-family="ui-sans-serif, system-ui, sans-serif" font-size="22">React 19 &#183; TypeScript</text>
+  </g>
+
+  <g>
+    <rect x="508" y="228" width="384" height="232" rx="28" fill="#FFFFFF"/>
+    <rect x="508" y="228" width="384" height="18" rx="9" fill="#F0CE87"/>
+    <rect x="508" y="237" width="384" height="9" fill="#F0CE87"/>
+    <text x="540" y="292" fill="#796763" font-family="ui-sans-serif, system-ui, sans-serif" font-size="13" font-weight="700" letter-spacing="2.4">LOOK</text>
+    <text x="540" y="338" fill="#3B2E2A" font-family="ui-sans-serif, system-ui, sans-serif" font-size="26" font-weight="650">Tailwind 4</text>
+    <text x="540" y="378" fill="#3B2E2A" font-family="ui-sans-serif, system-ui, sans-serif" font-size="22">Lucide &#183; macaron tokens</text>
+  </g>
+
+  <g>
+    <rect x="928" y="228" width="384" height="232" rx="28" fill="#FFFFFF"/>
+    <rect x="928" y="228" width="384" height="18" rx="9" fill="#C4B0E0"/>
+    <rect x="928" y="237" width="384" height="9" fill="#C4B0E0"/>
+    <text x="960" y="292" fill="#796763" font-family="ui-sans-serif, system-ui, sans-serif" font-size="13" font-weight="700" letter-spacing="2.4">MEMORY</text>
+    <text x="960" y="338" fill="#3B2E2A" font-family="ui-sans-serif, system-ui, sans-serif" font-size="26" font-weight="650">Zustand &#183; Dexie</text>
+    <text x="960" y="378" fill="#3B2E2A" font-family="ui-sans-serif, system-ui, sans-serif" font-size="22">IndexedDB on this phone</text>
+  </g>
+
+  <g>
+    <rect x="88" y="492" width="384" height="232" rx="28" fill="#FFFFFF"/>
+    <rect x="88" y="492" width="384" height="18" rx="9" fill="#A8DCD1"/>
+    <rect x="88" y="501" width="384" height="9" fill="#A8DCD1"/>
+    <text x="120" y="556" fill="#796763" font-family="ui-sans-serif, system-ui, sans-serif" font-size="13" font-weight="700" letter-spacing="2.4">CLOUD</text>
+    <text x="120" y="602" fill="#3B2E2A" font-family="ui-sans-serif, system-ui, sans-serif" font-size="26" font-weight="650">Supabase</text>
+    <text x="120" y="642" fill="#3B2E2A" font-family="ui-sans-serif, system-ui, sans-serif" font-size="22">PWA &#183; shared backup</text>
+  </g>
+
+  <g>
+    <rect x="508" y="492" width="384" height="232" rx="28" fill="#FFFFFF"/>
+    <rect x="508" y="492" width="384" height="18" rx="9" fill="#F2A7BE"/>
+    <rect x="508" y="501" width="384" height="9" fill="#F2A7BE"/>
+    <text x="540" y="556" fill="#796763" font-family="ui-sans-serif, system-ui, sans-serif" font-size="13" font-weight="700" letter-spacing="2.4">AI</text>
+    <text x="540" y="602" fill="#3B2E2A" font-family="ui-sans-serif, system-ui, sans-serif" font-size="26" font-weight="650">Gemini</text>
+    <text x="540" y="642" fill="#3B2E2A" font-family="ui-sans-serif, system-ui, sans-serif" font-size="22">Meals &#183; Calendar &#183; To-do</text>
+  </g>
+
+  <g>
+    <rect x="928" y="492" width="384" height="232" rx="28" fill="#FFFFFF"/>
+    <rect x="928" y="492" width="384" height="18" rx="9" fill="#A9C4E8"/>
+    <rect x="928" y="501" width="384" height="9" fill="#A9C4E8"/>
+    <text x="960" y="556" fill="#796763" font-family="ui-sans-serif, system-ui, sans-serif" font-size="13" font-weight="700" letter-spacing="2.4">PROOF</text>
+    <text x="960" y="602" fill="#3B2E2A" font-family="ui-sans-serif, system-ui, sans-serif" font-size="26" font-weight="650">Recharts &#183; Vitest</text>
+    <text x="960" y="642" fill="#3B2E2A" font-family="ui-sans-serif, system-ui, sans-serif" font-size="22">Heatmap &#183; Web Worker</text>
+  </g>
+</svg>
