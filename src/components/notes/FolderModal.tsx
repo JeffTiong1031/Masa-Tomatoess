@@ -137,11 +137,6 @@ function FolderModalOpen({
             >
               {wheel ? 'Done' : 'More colours'}
             </button>
-            <span
-              className="size-11 shrink-0 rounded-full border border-[var(--mt-border)]"
-              style={{ background: colour }}
-              aria-hidden
-            />
           </div>
           {wheel && (
             <div className="mt-4">
