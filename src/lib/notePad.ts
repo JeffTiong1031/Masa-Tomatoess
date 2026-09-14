@@ -1,6 +1,6 @@
 import type { UserName } from './identity';
 import {
-  DEFAULT_NOTE_TITLE,
+  DRAFT_NOTE_TITLE,
   titleOrDefault,
   type Note,
 } from './note';
@@ -12,38 +12,27 @@ export function nextSortOrder(notes: Note[]): number {
   return Math.max(...notes.map((note) => note.sortOrder)) + 100;
 }
 
-export function seedPad(owner: UserName, nowIso: string, id: string): Note[] {
-  return [
-    {
-      id,
-      owner,
-      title: DEFAULT_NOTE_TITLE,
-      body: '',
-      sortOrder: 100,
-      createdAt: nowIso,
-      updatedAt: nowIso,
-    },
-  ];
-}
-
-export function addNote(
+/** A fresh note starts as a draft: on this device, in no folder, and out
+ *  of the files page until it is saved. */
+export function newDraft(
   notes: Note[],
   owner: UserName,
   nowIso: string,
   id: string,
-): Note[] {
-  return [
-    ...notes,
-    {
-      id,
-      owner,
-      title: DEFAULT_NOTE_TITLE,
-      body: '',
-      sortOrder: nextSortOrder(notes),
-      createdAt: nowIso,
-      updatedAt: nowIso,
-    },
-  ];
+): Note {
+  return {
+    id,
+    owner,
+    title: DRAFT_NOTE_TITLE,
+    body: '',
+    sortOrder: nextSortOrder(notes),
+    createdAt: nowIso,
+    updatedAt: nowIso,
+    folderId: null,
+    saved: false,
+    binGroup: null,
+    deletedAt: null,
+  };
 }
 
 export function isActiveNoteOwnedBy(
@@ -67,25 +56,15 @@ export function renameNote(
   );
 }
 
-export function removeNote(
-  notes: Note[],
-  id: string,
-  owner: UserName,
-  nowIso: string,
-  replacementId: string,
-): Note[] {
-  return removeNotes(notes, [id], owner, nowIso, replacementId);
+export function patchNotes(notes: Note[], patches: Note[]): Note[] {
+  if (patches.length === 0) return notes;
+  const byId = new Map(patches.map((note) => [note.id, note]));
+  const merged = notes.map((note) => byId.get(note.id) ?? note);
+  const known = new Set(notes.map((note) => note.id));
+  return [...merged, ...patches.filter((note) => !known.has(note.id))];
 }
 
-export function removeNotes(
-  notes: Note[],
-  ids: string[],
-  owner: UserName,
-  nowIso: string,
-  replacementId: string,
-): Note[] {
+export function dropNotes(notes: Note[], ids: string[]): Note[] {
   const drop = new Set(ids);
-  const left = notes.filter((note) => !drop.has(note.id));
-  if (left.length > 0) return left;
-  return seedPad(owner, nowIso, replacementId);
+  return notes.filter((note) => !drop.has(note.id));
 }

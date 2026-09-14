@@ -9,6 +9,7 @@ import {
   UtensilsCrossed,
   Dumbbell,
   Wallet,
+  StickyNote,
   type LucideIcon,
 } from 'lucide-react';
 import type { AccentName } from '@/components/ui/PageShell';
@@ -28,12 +29,20 @@ export interface NavLink {
  *
  *  To-do is its own section. It used to sit under /timetable/todo,
  *  reached from a bottom bar; nesting it made prefix matching light
- *  Timetable on the task list. Do not put it back under Timetable. */
+ *  Timetable on the task list. Do not put it back under Timetable.
+ *
+ *  Notes IS a destination, and the earlier design said the opposite. The
+ *  pad is still an overlay you can raise from anywhere -- that part was
+ *  right, and writing must not cost you your place. What changed is that
+ *  notes now live in folders, and choosing where a file goes is a
+ *  deliberate errand that needs a page. /notes is the files page; the pad
+ *  opens from a file on it, from the N key, or from Back to pad. */
 export const ALL_LINKS: NavLink[] = [
   { href: '/', label: 'Home', icon: Home, accent: 'dashboard' },
   { href: '/study', label: 'Study', icon: GraduationCap, accent: 'timer' },
   { href: '/timetable', label: 'Timetable', icon: LayoutList, accent: 'timetable' },
   { href: '/todo', label: 'To-do', icon: ListChecks, accent: 'todo' },
+  { href: '/notes', label: 'Notes', icon: StickyNote, accent: 'notes' },
   { href: '/calendar', label: 'Calendar', icon: CalendarDays, accent: 'calendar' },
   { href: '/cycle', label: 'Period', icon: HeartPulse, accent: 'cycle' },
   { href: '/countdown', label: 'Countdown', icon: CalendarClock, accent: 'countdown' },

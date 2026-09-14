@@ -34,6 +34,23 @@ export interface NoteRecord {
   sortOrder: number;
   createdAt: string;
   updatedAt: string;
+  folderId: string | null;
+  saved: boolean;
+  binGroup: string | null;
+  deletedAt: string | null;
+}
+
+export interface NoteFolderRecord {
+  id: string;
+  owner: UserName;
+  parentId: string | null;
+  name: string;
+  colour: string;
+  position: number;
+  binGroup: string | null;
+  deletedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface PendingNoteDelete {
@@ -45,6 +62,7 @@ const db = new Dexie('PomodoroDB') as Dexie & {
   sessions: EntityTable<SessionRecord, 'id'>;
   pendingMeals: EntityTable<PendingMeal, 'id'>;
   notes: EntityTable<NoteRecord, 'id'>;
+  noteFolders: EntityTable<NoteFolderRecord, 'id'>;
   pendingNoteDeletes: EntityTable<PendingNoteDelete, 'id'>;
 };
 
@@ -76,5 +94,30 @@ db.version(6).stores({
   notes: 'id, owner, updatedAt',
   pendingNoteDeletes: 'id, owner',
 });
+
+/* folderId and deletedAt are deliberately unindexed: IndexedDB skips rows
+   whose indexed value is null, so a `where('folderId').equals(null)` query
+   would silently miss every unfiled note -- which is most of them. saved is
+   a boolean, which IndexedDB cannot index at all. Notes are few enough that
+   one owner's rows are filtered in memory. */
+db.version(7)
+  .stores({
+    sessions: '++id, date, mode, taskName, synced, userName',
+    pendingMeals: '++id, date',
+    notes: 'id, owner, updatedAt',
+    noteFolders: 'id, owner',
+    pendingNoteDeletes: 'id, owner',
+  })
+  .upgrade((tx) =>
+    tx
+      .table<NoteRecord>('notes')
+      .toCollection()
+      .modify((note) => {
+        note.folderId = null;
+        note.saved = true;
+        note.binGroup = null;
+        note.deletedAt = null;
+      }),
+  );
 
 export { db };

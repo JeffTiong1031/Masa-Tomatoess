@@ -7,6 +7,7 @@ import {
   useLayoutEffect,
   useRef,
   useState,
+  type ReactNode,
 } from 'react';
 import { CheckSquare2, Square } from 'lucide-react';
 import {
@@ -23,14 +24,18 @@ import {
   pasteExternal,
   pasteInternal,
   selectedRoots,
+  selectionHasMark,
   toggleChecked,
   toggleChecklist,
+  toggleMarkInRange,
   typeOverRange,
   type CaretMove,
   type DocCaret,
+  type NoteMark,
+  type NoteStyle,
 } from '@/lib/noteEdit';
 import { copyOut, NOTE_CLIPBOARD_TYPE } from '@/lib/noteCopy';
-import { decodeBody, encodeBody, type Block } from '@/lib/noteDoc';
+import { decodeBody, encodeBody, withVisible, type Block } from '@/lib/noteDoc';
 import {
   beforeInputAction,
   clipboardAction,
@@ -57,7 +62,15 @@ import {
 import {
   isChecklistHotkey,
   isEditorCommandBlocked,
+  isStyleHotkey,
 } from '@/lib/noteShortcut';
+import {
+  inheritStyle,
+  noteRuns,
+  sliceVisible,
+  spansFromLeaves,
+  type NoteSpan,
+} from '@/lib/noteStyle';
 
 const ITEM_INDENT_PX = 24;
 
@@ -66,12 +79,16 @@ export interface NotesCaretInfo {
   inChecklist: boolean;
   canIndent: boolean;
   canOutdent: boolean;
+  bold: boolean;
+  underline: boolean;
 }
 
 export interface NotesEditorHandle {
   toggle: () => void;
   indent: () => void;
   outdent: () => void;
+  bold: () => void;
+  underline: () => void;
 }
 
 interface NotesEditorProps {
@@ -114,10 +131,9 @@ function rangeHasItem(blocks: Block[], from: number, to: number): boolean {
 }
 
 function caretLineTop(element: HTMLSpanElement, offset: number): number {
-  const node = element.firstChild ?? element;
+  const point = textPoint(element, offset);
   const range = document.createRange();
-  const max = node === element ? 0 : (node.textContent?.length ?? 0);
-  range.setStart(node, Math.min(offset, max));
+  range.setStart(point.node, point.offset);
   range.collapse(true);
   return range.getBoundingClientRect().top;
 }
@@ -140,12 +156,71 @@ function caretOnLastVisualLine(
 }
 
 function slicedBlock(block: Block, start: number, end: number): Block {
-  switch (block.kind) {
-    case 'paragraph':
-      return { kind: 'paragraph', text: block.text.slice(start, end) };
-    case 'item':
-      return { ...block, text: block.text.slice(start, end) };
+  const sliced = sliceVisible(block.text, block.spans, start, end);
+  return withVisible(block, sliced.text, sliced.spans);
+}
+
+function textPoint(
+  element: HTMLElement,
+  offset: number,
+): { node: Node; offset: number } {
+  let remaining = offset;
+  const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+  let node = walker.nextNode();
+  if (!node) {
+    return { node: element, offset: 0 };
   }
+  for (;;) {
+    const length = node.textContent?.length ?? 0;
+    if (remaining <= length) {
+      return { node, offset: remaining };
+    }
+    remaining -= length;
+    const next = walker.nextNode();
+    if (!next) {
+      return { node, offset: length };
+    }
+    node = next;
+  }
+}
+
+function leavesFrom(
+  element: HTMLElement,
+): { text: string; bold: boolean; underline: boolean }[] {
+  const leaves: { text: string; bold: boolean; underline: boolean }[] = [];
+  const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+  let node = walker.nextNode();
+  while (node) {
+    const parent = node.parentElement;
+    leaves.push({
+      text: node.textContent ?? '',
+      bold: Boolean(parent?.closest('strong, b')),
+      underline:
+        Boolean(parent?.closest('u')) || Boolean(parent?.closest('.underline')),
+    });
+    node = walker.nextNode();
+  }
+  return leaves;
+}
+
+function noteRunNodes(text: string, spans?: NoteSpan[]): ReactNode {
+  const runs = noteRuns(text, spans);
+  if (runs.length === 1 && !runs[0].bold && !runs[0].underline) {
+    return text;
+  }
+  return runs.map((run, index) => {
+    if (!run.bold && !run.underline) {
+      return run.text;
+    }
+    if (run.bold) {
+      return (
+        <strong key={index} className={run.underline ? 'underline' : undefined}>
+          {run.text}
+        </strong>
+      );
+    }
+    return <u key={index}>{run.text}</u>;
+  });
 }
 
 export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
@@ -167,6 +242,7 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
     const anchorRef = useRef<DocCaret>({ index: 0, offset: 0 });
     const dragAnchorRef = useRef<DocCaret | null>(null);
     const spanningRef = useRef(false);
+    const pendingRef = useRef<NoteStyle | null>(null);
     const [paint, setPaint] = useState<{ start: DocCaret; end: DocCaret } | null>(
       null,
     );
@@ -184,6 +260,10 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
       const to = rangeRef.current.end;
       const inChecklist = inWords && rangeHasItem(nextBlocks, from.index, to.index);
       const roots = selectedRoots(nextBlocks, from.index, to.index);
+      const collapsed = collapsedRange(from, to);
+      const pending = pendingRef.current;
+      const block = nextBlocks[caret.index];
+      const inherited = inheritStyle(block.text, block.spans, caret.offset);
       onCaret({
         inWords,
         inChecklist,
@@ -193,6 +273,20 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
         canOutdent:
           inChecklist &&
           roots.some((index) => canOutdentBlock(nextBlocks, index)),
+        bold: inWords
+          ? pending
+            ? pending.bold
+            : collapsed
+              ? inherited.bold
+              : selectionHasMark(nextBlocks, from, to, 'bold')
+          : false,
+        underline: inWords
+          ? pending
+            ? pending.underline
+            : collapsed
+              ? inherited.underline
+              : selectionHasMark(nextBlocks, from, to, 'underline')
+          : false,
       });
     };
 
@@ -225,6 +319,7 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
     };
 
     const applyRange = (anchor: DocCaret, focus: DocCaret) => {
+      pendingRef.current = null;
       const [start, end] = ordered(anchor, focus);
       anchorRef.current = anchor;
       rangeRef.current = { start, end, focus };
@@ -242,10 +337,9 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
     const placeNativeCaret = (caret: DocCaret) => {
       const element = blockNodesRef.current[caret.index];
       if (!element) return;
-      const node = element.firstChild ?? element;
-      const offset = node === element ? 0 : caret.offset;
+      const point = textPoint(element, caret.offset);
       const nativeRange = document.createRange();
-      nativeRange.setStart(node, offset);
+      nativeRange.setStart(point.node, point.offset);
       nativeRange.collapse(true);
       const selection = window.getSelection();
       selection?.removeAllRanges();
@@ -259,14 +353,11 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
       }
       const element = blockNodesRef.current[start.index];
       if (!element) return;
-      const node = element.firstChild ?? element;
-      if (node === element) {
-        placeNativeCaret(start);
-        return;
-      }
+      const startPoint = textPoint(element, start.offset);
+      const endPoint = textPoint(element, end.offset);
       const nativeRange = document.createRange();
-      nativeRange.setStart(node, start.offset);
-      nativeRange.setEnd(node, end.offset);
+      nativeRange.setStart(startPoint.node, startPoint.offset);
+      nativeRange.setEnd(endPoint.node, endPoint.offset);
       const selection = window.getSelection();
       selection?.removeAllRanges();
       selection?.addRange(nativeRange);
@@ -380,20 +471,52 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
       );
     };
 
-    const applyText = (index: number, text: string, caret: DocCaret) => {
+    const applyText = (index: number, element: HTMLElement, caret: DocCaret) => {
       const current = blocksRef.current;
-      const block = current[index];
-      const deleted = deleteSelection(
-        current,
-        { index, offset: 0 },
-        { index, offset: block.text.length },
-      );
-      const inserted = insertText(deleted.blocks, deleted.caret, text);
+      const parsed = spansFromLeaves(leavesFrom(element));
+      const next = [...current];
+      next[index] = withVisible(current[index], parsed.text, parsed.spans);
       commit(
-        inserted.blocks,
+        next,
         caret,
         shouldRestoreCaretAfterTextCommit(composingRef.current),
       );
+    };
+
+    const applyMark = (mark: NoteMark) => {
+      if (composingRef.current) return;
+      const current = blocksRef.current;
+      const range = editorSelection();
+      const collapsed = collapsedRange(range.start, range.end);
+      if (collapsed) {
+        const pending = pendingRef.current;
+        const inherited = inheritStyle(
+          current[range.focus.index].text,
+          current[range.focus.index].spans,
+          range.focus.offset,
+        );
+        const base = pending ?? inherited;
+        switch (mark) {
+          case 'bold':
+            pendingRef.current = { ...base, bold: !base.bold };
+            break;
+          case 'underline':
+            pendingRef.current = { ...base, underline: !base.underline };
+            break;
+        }
+        reportCaret(current, range.focus, true);
+        return;
+      }
+      pendingRef.current = null;
+      rememberCurrent();
+      const result = toggleMarkInRange(
+        current,
+        range.start,
+        range.end,
+        range.focus,
+        mark,
+      );
+      commit(result.blocks, result.caret);
     };
 
     const applyEnter = (range: EditorSelection) => {
@@ -458,12 +581,12 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
         if (!slice) continue;
         const element = blockNodesRef.current[index];
         if (!element) continue;
-        const node = element.firstChild ?? element;
-        if (node === element) continue;
-        const max = node.textContent?.length ?? 0;
+        const startPoint = textPoint(element, slice.start);
+        const endPoint = textPoint(element, slice.end);
+        if (startPoint.node === element) continue;
         const range = document.createRange();
-        range.setStart(node, Math.min(slice.start, max));
-        range.setEnd(node, Math.min(slice.end, max));
+        range.setStart(startPoint.node, startPoint.offset);
+        range.setEnd(endPoint.node, endPoint.offset);
         for (const rect of range.getClientRects()) {
           if (rect.width === 0 || rect.height === 0) continue;
           next.push({
@@ -484,14 +607,11 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
       const caret = caretRef.current;
       const element = blockNodesRef.current[caret.index];
       if (!element) return;
-      const node = element.firstChild ?? element;
-      const offset = node === element ? 0 : caret.offset;
-      const range = document.createRange();
-      range.setStart(node, offset);
-      range.collapse(true);
-      const selection = window.getSelection();
-      selection?.removeAllRanges();
-      selection?.addRange(range);
+      if (spanningRef.current) {
+        placeNativeRange(rangeRef.current.start, rangeRef.current.end);
+        return;
+      }
+      placeNativeCaret(caret);
     }, [blocks]);
 
     useImperativeHandle(ref, () => ({
@@ -533,6 +653,12 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
           range.focus,
         );
         commit(result.blocks, result.caret);
+      },
+      bold() {
+        applyMark('bold');
+      },
+      underline() {
+        applyMark('underline');
       },
     }));
 
@@ -671,7 +797,7 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
                 }
                 applyText(
                   index,
-                  event.currentTarget.textContent ?? '',
+                  event.currentTarget,
                   editorSelection().focus,
                 );
               }}
@@ -680,6 +806,26 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
                 const range = editorSelection();
                 const collapsed = collapsedRange(range.start, range.end);
                 const native = event.nativeEvent;
+                if (
+                  pendingRef.current &&
+                  collapsed &&
+                  native.inputType === 'insertText' &&
+                  native.data
+                ) {
+                  event.preventDefault();
+                  if (!typingRunRef.current) {
+                    historyRef.current = remember(historyRef.current, snapshot());
+                    typingRunRef.current = true;
+                  }
+                  const result = insertText(
+                    blocksRef.current,
+                    range.focus,
+                    native.data,
+                    pendingRef.current,
+                  );
+                  commit(result.blocks, result.caret);
+                  return;
+                }
                 switch (
                   beforeInputAction(
                     native.inputType,
@@ -701,6 +847,7 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
                       range.start,
                       range.end,
                       native.data ?? '',
+                      pendingRef.current ?? undefined,
                     );
                     dropSpan();
                     commit(result.blocks, result.caret);
@@ -736,7 +883,7 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
                 const caret = editorSelection().focus;
                 applyText(
                   index,
-                  event.currentTarget.textContent ?? '',
+                  event.currentTarget,
                   caret,
                 );
               }}
@@ -772,6 +919,18 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
                       offset: blocksRef.current[last].text.length,
                     },
                   );
+                  return;
+                }
+
+                const styleMark = isStyleHotkey(
+                  event.key,
+                  event.shiftKey,
+                  ctrlOrMeta,
+                  event.altKey,
+                );
+                if (styleMark) {
+                  event.preventDefault();
+                  applyMark(styleMark);
                   return;
                 }
 
@@ -864,6 +1023,7 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
                     range.start,
                     range.end,
                     event.key,
+                    pendingRef.current ?? undefined,
                   );
                   dropSpan();
                   commit(result.blocks, result.caret);
@@ -1040,7 +1200,7 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
               onKeyUp={() => updateCaret(index)}
               onPointerUp={() => updateCaret(index)}
             >
-              {block.text}
+              {noteRunNodes(block.text, block.spans)}
             </span>
           </div>
         ))}

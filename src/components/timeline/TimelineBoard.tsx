@@ -5,12 +5,18 @@ import { Pencil } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { USERS, isUserName, partnerOf, type UserName } from '@/lib/identity';
 import type { TimelineEntry } from '@/lib/timeline';
-import { todayWeekday, type Weekday } from '@/lib/dates';
+import {
+  malaysiaDate,
+  malaysiaWeekday,
+  msUntilNextMalaysiaMidnight,
+  type Weekday,
+} from '@/lib/dates';
 import {
   weeksFromRows,
   type TimelineRow,
   type WeekByUser,
 } from '@/lib/timelineWeek';
+import { staleTimelineKeys } from '@/lib/timelineExpiry';
 import { useHasMounted } from '@/hooks/useHasMounted';
 import TimelinePane, { type PaneState } from './TimelinePane';
 import TimelineEditor from './TimelineEditor';
@@ -23,7 +29,7 @@ export default function TimelineBoard() {
   const me = isUserName(stored) ? stored : null;
 
   const [weeks, setWeeks] = useState<WeekByUser | null>(null);
-  const [selected, setSelected] = useState<Weekday>(() => todayWeekday());
+  const [selected, setSelected] = useState<Weekday>(() => malaysiaWeekday());
   const [failed, setFailed] = useState(false);
   const [editing, setEditing] = useState(false);
   const [clearing, setClearing] = useState(false);
@@ -42,14 +48,54 @@ export default function TimelineBoard() {
       return;
     }
 
-    setWeeks(weeksFromRows((data ?? []) as TimelineRow[]));
+    const rows = (data ?? []) as TimelineRow[];
+    const stale = staleTimelineKeys(rows, malaysiaDate());
+    let nextRows = rows;
+    if (stale.length > 0) {
+      const { error: clearError } = await supabase.from('timetables').upsert(
+        stale.map((key) => ({
+          user_name: key.user_name,
+          weekday: key.weekday,
+          entries: [],
+          updated_at: new Date().toISOString(),
+        })),
+        { onConflict: 'user_name,weekday' },
+      );
+      if (clearError) {
+        console.error('Failed to clear timeline:', clearError);
+        setSaveError('Could not clear. Check your connection and try again.');
+      } else {
+        const gone = new Set(
+          stale.map((key) => `${key.user_name}:${key.weekday}`),
+        );
+        nextRows = rows.map((item) =>
+          gone.has(`${item.user_name}:${item.weekday}`)
+            ? { ...item, entries: [] }
+            : item,
+        );
+      }
+    }
+
+    setFailed(false);
+    setWeeks(weeksFromRows(nextRows));
   }, []);
 
   useEffect(() => {
     if (!me) return;
-    (async () => {
+    let active = true;
+    let timeoutId: ReturnType<typeof setTimeout>;
+    const run = async () => {
       await load();
-    })();
+      if (!active) return;
+      timeoutId = setTimeout(() => {
+        void run();
+      }, msUntilNextMalaysiaMidnight());
+    };
+    void run();
+    return () => {
+      active = false;
+      clearTimeout(timeoutId);
+    };
   }, [me, load]);
 
   if (!me) return null;
@@ -127,7 +173,7 @@ export default function TimelineBoard() {
   return (
     <div className="mb-4">
       <div className="mb-4 flex w-full items-center gap-3">
-        <DayTabs selected={selected} today={todayWeekday()} onSelect={(day) => {
+        <DayTabs selected={selected} today={malaysiaWeekday()} onSelect={(day) => {
           setSelected(day);
           setEditing(false);
           setSaveError(null);

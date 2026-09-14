@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { NOTE_MARK_START, NOTE_MARK_SEP } from './noteDoc';
-import { mergeNotes } from './noteMerge';
+import { NOTE_MARK_START, NOTE_MARK_SEP, NOTE_RUN_BOLD, NOTE_RUN_SEP, NOTE_RUN_START } from './noteDoc';
+import { mergeNotes, mergeNotesAfterReconcile } from './noteMerge';
 import { DEFAULT_NOTE_TITLE, type Note } from './note';
 
 const EARLY = '2026-09-09T04:00:00.000Z';
@@ -14,6 +14,10 @@ function note(partial: Partial<Note> & Pick<Note, 'id'>): Note {
     sortOrder: 100,
     createdAt: EARLY,
     updatedAt: EARLY,
+    folderId: null,
+    saved: true,
+    binGroup: null,
+    deletedAt: null,
     ...partial,
   };
 }
@@ -27,6 +31,13 @@ describe('mergeNotes', () => {
 
   it('does not tidy checklist marks when the later row wins', () => {
     const body = `${NOTE_MARK_START}0/0${NOTE_MARK_SEP}Milk`;
+    const local = [note({ id: 'a', body: 'plain', updatedAt: EARLY })];
+    const remote = [note({ id: 'a', body, updatedAt: LATE })];
+    expect(mergeNotes(local, remote, [])[0].body).toBe(body);
+  });
+
+  it('does not tidy bold marks when the later row wins', () => {
+    const body = `${NOTE_RUN_START}${NOTE_RUN_BOLD}${NOTE_RUN_SEP}Milk`;
     const local = [note({ id: 'a', body: 'plain', updatedAt: EARLY })];
     const remote = [note({ id: 'a', body, updatedAt: LATE })];
     expect(mergeNotes(local, remote, [])[0].body).toBe(body);
@@ -69,5 +80,31 @@ describe('mergeNotes', () => {
       [],
     );
     expect(merged.map((row) => row.id)).toEqual(['keep', 'gone']);
+  });
+});
+
+describe('mergeNotesAfterReconcile', () => {
+  it('does not let this phone put a just-deleted tab back on the pad', () => {
+    const keep = note({ id: 'keep' });
+    const gone = note({ id: 'gone', sortOrder: 200 });
+    const next = mergeNotesAfterReconcile(
+      [keep, gone],
+      [keep],
+      [],
+      ['keep', 'gone'],
+    );
+    expect(next.map((row) => row.id)).toEqual(['keep']);
+  });
+
+  it('keeps a tab that was added while the cloud refresh was running', () => {
+    const keep = note({ id: 'keep' });
+    const added = note({ id: 'added', sortOrder: 200 });
+    const next = mergeNotesAfterReconcile(
+      [keep, added],
+      [keep],
+      [],
+      ['keep'],
+    );
+    expect(next.map((row) => row.id)).toEqual(['keep', 'added']);
   });
 });

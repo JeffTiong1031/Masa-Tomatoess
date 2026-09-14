@@ -1,14 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import { DEFAULT_NOTE_TITLE, type Note } from './note';
+import { DEFAULT_NOTE_TITLE, DRAFT_NOTE_TITLE, type Note } from './note';
 import {
   titleOrDefault,
   nextSortOrder,
-  seedPad,
-  addNote,
+  newDraft,
   isActiveNoteOwnedBy,
   renameNote,
-  removeNote,
-  removeNotes,
+  patchNotes,
+  dropNotes,
 } from './notePad';
 
 const NOW = '2026-09-09T04:00:00.000Z';
@@ -22,6 +21,10 @@ function sample(overrides: Partial<Note> = {}): Note {
     sortOrder: 100,
     createdAt: NOW,
     updatedAt: NOW,
+    folderId: null,
+    saved: true,
+    binGroup: null,
+    deletedAt: null,
     ...overrides,
   };
 }
@@ -37,35 +40,33 @@ describe('titleOrDefault', () => {
   });
 });
 
-describe('seedPad', () => {
-  it('starts with one empty Note for that person', () => {
-    expect(seedPad('Rachel', NOW, 'seed')).toEqual([
-      {
-        id: 'seed',
-        owner: 'Rachel',
-        title: 'Note',
-        body: '',
-        sortOrder: 100,
-        createdAt: NOW,
-        updatedAt: NOW,
-      },
-    ]);
-  });
-});
-
-describe('addNote', () => {
-  it('appends a blank tab after the current last sort order', () => {
+describe('newDraft', () => {
+  it('appends after the current last sort order', () => {
     const notes = [sample({ sortOrder: 100 }), sample({ id: 'b', sortOrder: 200 })];
     expect(nextSortOrder(notes)).toBe(300);
-    const next = addNote(notes, 'Jeff', NOW, 'c');
-    expect(next).toHaveLength(3);
-    expect(next[2]).toMatchObject({
-      id: 'c',
-      owner: 'Jeff',
-      title: 'Note',
+    expect(newDraft(notes, 'Jeff', NOW, 'c').sortOrder).toBe(300);
+  });
+
+  /* A new note is a scribble, not a file. It has no folder, it is not
+     pushed to the cloud, and it does not appear on the files page until
+     you save it -- which is the whole point of the red dot on its tab. */
+  it('starts unsaved, unfiled, and named Untitled', () => {
+    const made = newDraft([], 'Rachel', NOW, 'first');
+
+    expect(made).toEqual({
+      id: 'first',
+      owner: 'Rachel',
+      title: DRAFT_NOTE_TITLE,
       body: '',
-      sortOrder: 300,
+      sortOrder: 100,
+      createdAt: NOW,
+      updatedAt: NOW,
+      folderId: null,
+      saved: false,
+      binGroup: null,
+      deletedAt: null,
     });
+    expect(DRAFT_NOTE_TITLE).toBe('Untitled');
   });
 });
 
@@ -91,36 +92,34 @@ describe('renameNote', () => {
   });
 });
 
-describe('removeNote', () => {
-  it('drops that tab when others remain', () => {
-    const notes = [sample(), sample({ id: 'b', title: 'Keep' })];
-    expect(removeNote(notes, 'a', 'Jeff', NOW, 'unused')).toEqual([
-      sample({ id: 'b', title: 'Keep' }),
-    ]);
+describe('patchNotes', () => {
+  it('replaces rows in place, keeping their order', () => {
+    const notes = [sample(), sample({ id: 'b' })];
+    const next = patchNotes(notes, [sample({ id: 'b', title: 'Changed' })]);
+
+    expect(next.map((n) => n.id)).toEqual(['a', 'b']);
+    expect(next[1].title).toBe('Changed');
   });
 
-  it('plants a fresh empty Note when the last tab is deleted', () => {
-    const next = removeNote([sample({ body: 'gone' })], 'a', 'Jeff', NOW, 'fresh');
-    expect(next).toEqual(seedPad('Jeff', NOW, 'fresh'));
+  it('adds rows it has not seen before', () => {
+    const next = patchNotes([sample()], [sample({ id: 'new' })]);
+
+    expect(next.map((n) => n.id)).toEqual(['a', 'new']);
+  });
+
+  it('returns the same array when there is nothing to patch', () => {
+    const notes = [sample()];
+    expect(patchNotes(notes, [])).toBe(notes);
   });
 });
 
-describe('removeNotes', () => {
-  it('drops every picked tab and keeps the rest', () => {
-    const notes = [
-      sample(),
-      sample({ id: 'b', title: 'Keep' }),
-      sample({ id: 'c', title: 'Also' }),
-    ];
-    expect(removeNotes(notes, ['a', 'c'], 'Jeff', NOW, 'unused')).toEqual([
-      sample({ id: 'b', title: 'Keep' }),
-    ]);
-  });
+describe('dropNotes', () => {
+  /* No re-seeding. Deleting the last note leaves nothing, and the pad
+     shows its two doors instead of a note you did not ask for. */
+  it('drops every id given and does not plant a replacement', () => {
+    const notes = [sample(), sample({ id: 'b' })];
 
-  it('plants a fresh empty Note when every tab is deleted', () => {
-    const notes = [sample(), sample({ id: 'b', title: 'Gone' })];
-    expect(removeNotes(notes, ['a', 'b'], 'Jeff', NOW, 'fresh')).toEqual(
-      seedPad('Jeff', NOW, 'fresh'),
-    );
+    expect(dropNotes(notes, ['a', 'b'])).toEqual([]);
+    expect(dropNotes(notes, ['a']).map((n) => n.id)).toEqual(['b']);
   });
 });

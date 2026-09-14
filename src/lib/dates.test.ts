@@ -9,6 +9,10 @@ import {
   isValidISODate,
   monthGridDates,
   monthOf,
+  malaysiaDate,
+  malaysiaWeekday,
+  msUntilNextMalaysiaMidnight,
+  nextDateOnOrAfter,
   timeISO,
   todayISO,
   todayWeekday,
@@ -164,6 +168,48 @@ describe('isValidISODate', () => {
 
   it('rejects an empty string', () => {
     expect(isValidISODate('')).toBe(false);
+  });
+});
+
+describe('malaysiaDate', () => {
+  it('is still the old day one second before Malaysia midnight', () => {
+    expect(malaysiaDate(new Date('2026-09-14T15:59:59.000Z'))).toBe('2026-09-14');
+  });
+
+  it('is the new day at Malaysia midnight', () => {
+    expect(malaysiaDate(new Date('2026-09-14T16:00:00.000Z'))).toBe('2026-09-15');
+  });
+});
+
+describe('malaysiaWeekday', () => {
+  it('is Tuesday at Malaysia midnight on 15 September 2026', () => {
+    expect(malaysiaWeekday(new Date('2026-09-14T16:00:00.000Z'))).toBe(1);
+  });
+});
+
+describe('nextDateOnOrAfter', () => {
+  it('returns the same date when that date is the weekday', () => {
+    expect(nextDateOnOrAfter('2026-09-14', 0)).toBe('2026-09-14');
+  });
+
+  it('returns the coming weekday when that date is earlier in the week', () => {
+    expect(nextDateOnOrAfter('2026-09-16', 3)).toBe('2026-09-17');
+  });
+
+  it('returns next week when that weekday has already gone', () => {
+    expect(nextDateOnOrAfter('2026-09-18', 3)).toBe('2026-09-24');
+  });
+});
+
+describe('msUntilNextMalaysiaMidnight', () => {
+  it('is one second just before Malaysia midnight', () => {
+    expect(msUntilNextMalaysiaMidnight(new Date('2026-09-14T15:59:59.000Z'))).toBe(1000);
+  });
+
+  it('is a full day at Malaysia midnight', () => {
+    expect(msUntilNextMalaysiaMidnight(new Date('2026-09-14T16:00:00.000Z'))).toBe(
+      86_400_000,
+    );
   });
 });
 

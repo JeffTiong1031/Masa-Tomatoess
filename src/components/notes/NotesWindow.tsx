@@ -1,11 +1,11 @@
 'use client';
 
-import { Copy, Minus, Square, StickyNote, X } from 'lucide-react';
-import { useEffect, type PointerEvent as ReactPointerEvent } from 'react';
+import { Copy, FolderOpen, Minus, Save, Square, StickyNote, X } from 'lucide-react';
+import { useEffect, useRef, type PointerEvent as ReactPointerEvent } from 'react';
+import Link from 'next/link';
+import { accentVar } from '@/components/ui/PageShell';
 import { useHasMounted } from '@/hooks/useHasMounted';
 import { useIsMdUp } from '@/hooks/useMediaQuery';
-import type { UserName } from '@/lib/identity';
-import type { Note } from '@/lib/note';
 import {
   clampNoteWindow,
   defaultNoteWindow,
@@ -13,16 +13,10 @@ import {
   restoreNoteWindowAtPointer,
   type NoteWindowEdge,
 } from '@/lib/noteWindow';
+import { openTabs } from '@/lib/noteTabs';
+import { useNotesDataStore } from '@/store/useNotesDataStore';
 import { useNotesUiStore } from '@/store/useNotesUiStore';
-import { NotesPad } from './NotesPad';
-
-interface NotesWindowProps {
-  owner: UserName;
-  notes: Note[];
-  activeId: string;
-  onNotes: (notes: Note[]) => void;
-  onActiveId: (id: string) => void;
-}
+import { NotesPad, type NotesPadHandle } from './NotesPad';
 
 const CONTROL_CLASS =
   'inline-flex min-h-11 min-w-11 items-center justify-center text-[var(--mt-text-muted)]';
@@ -87,9 +81,13 @@ const EDGE_HANDLES: {
   },
 ];
 
-export function NotesWindow(props: NotesWindowProps) {
+export function NotesWindow() {
   const mounted = useHasMounted();
   const isMdUp = useIsMdUp();
+  const padRef = useRef<NotesPadHandle>(null);
+  const notes = useNotesDataStore((state) => state.notes);
+  const openIds = useNotesUiStore((state) => state.openIds);
+  const activeId = useNotesUiStore((state) => state.activeId);
   const open = useNotesUiStore((state) => state.open);
   const minimised = useNotesUiStore((state) => state.minimised);
   const maximised = useNotesUiStore((state) => state.maximised);
@@ -99,9 +97,11 @@ export function NotesWindow(props: NotesWindowProps) {
   const setBox = useNotesUiStore((state) => state.setBox);
   const maximise = useNotesUiStore((state) => state.maximise);
   const restoreFromMaximise = useNotesUiStore((state) => state.restoreFromMaximise);
+  const tabs = openTabs(notes, openIds);
   const activeTitle =
-    props.notes.find((note) => note.id === props.activeId)?.title ??
-    props.notes[0].title;
+    tabs.find((note) => note.id === activeId)?.title ??
+    tabs[0]?.title ??
+    'Nothing open';
 
   useEffect(() => {
     if (mounted && isMdUp && box === null) {
@@ -202,16 +202,17 @@ export function NotesWindow(props: NotesWindowProps) {
       className={`fixed z-50 flex flex-col border border-[var(--mt-border)] bg-[var(--mt-surface)] text-[var(--mt-text)] shadow-[0_14px_36px_rgba(0,0,0,0.18)] ${
         maximised ? 'rounded-none' : 'rounded-2xl'
       }`}
-      style={
-        maximised
+      style={{
+        ['--mt-accent' as string]: accentVar('notes'),
+        ...(maximised
           ? { inset: 0, width: '100%', height: '100%' }
           : {
               left: box.x,
               top: box.y,
               width: box.width,
               height: box.height,
-            }
-      }
+            }),
+      }}
     >
       <div
         className="flex min-h-11 shrink-0 touch-none select-none items-center border-b border-[var(--mt-border)] pl-3"
@@ -226,6 +227,29 @@ export function NotesWindow(props: NotesWindowProps) {
         <span className="min-w-0 flex-1 truncate text-sm font-semibold">
           Notes
         </span>
+        {/* Open and Save sit with the window controls, not in the strip
+            below: they are things you do to the whole pad, the way
+            minimise and close are, and the strip belongs to the words. */}
+        <Link
+          href="/notes"
+          aria-label="Open a file"
+          title="Open a file"
+          className={MINIMISE_CLASS}
+          onPointerDown={(event) => event.stopPropagation()}
+        >
+          <FolderOpen size={16} aria-hidden />
+        </Link>
+        <button
+          type="button"
+          aria-label="Save"
+          title="Save (Ctrl+S)"
+          className={MINIMISE_CLASS}
+          onPointerDown={(event) => event.stopPropagation()}
+          onClick={() => padRef.current?.save()}
+        >
+          <Save size={16} aria-hidden />
+        </button>
+        <span className="mx-1 h-5 w-px bg-[var(--mt-border)]" aria-hidden />
         <button
           type="button"
           aria-label="Minimise"
@@ -259,7 +283,7 @@ export function NotesWindow(props: NotesWindowProps) {
         </button>
       </div>
       <div className="min-h-0 flex-1">
-        <NotesPad {...props} />
+        <NotesPad ref={padRef} />
       </div>
       {!maximised &&
         EDGE_HANDLES.map((handle) => (

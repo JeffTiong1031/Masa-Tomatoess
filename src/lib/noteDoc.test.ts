@@ -2,6 +2,10 @@ import { describe, it, expect } from 'vitest';
 import {
   NOTE_MARK_START,
   NOTE_MARK_SEP,
+  NOTE_RUN_BOLD,
+  NOTE_RUN_SEP,
+  NOTE_RUN_START,
+  NOTE_RUN_UNDERLINE,
   decodeBody,
   encodeBody,
   decodeLine,
@@ -58,5 +62,29 @@ describe('decodeBody / encodeBody', () => {
       { kind: 'paragraph' as const, text: 'Below' },
     ];
     expect(decodeBody(encodeBody(blocks))).toEqual(blocks);
+  });
+
+  it('round-trips bold and underline without changing a plain note', () => {
+    const blocks = [
+      {
+        kind: 'paragraph' as const,
+        text: 'hello world',
+        spans: [{ start: 6, end: 11, bold: true, underline: true }],
+      },
+    ];
+    const encoded = encodeBody(blocks);
+    expect(encoded).toContain(NOTE_RUN_START);
+    expect(encoded).toContain(NOTE_RUN_BOLD);
+    expect(encoded).toContain(NOTE_RUN_UNDERLINE);
+    expect(encoded).toContain(NOTE_RUN_SEP);
+    expect(decodeBody(encoded)).toEqual(blocks);
+    expect(encodeBody(decodeBody('plain'))).toBe('plain');
+  });
+
+  it('opens a broken style mark as plain words', () => {
+    expect(decodeLine(`${NOTE_RUN_START}nope`)).toEqual({
+      kind: 'paragraph',
+      text: 'nope',
+    });
   });
 });

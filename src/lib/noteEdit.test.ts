@@ -17,8 +17,10 @@ import {
   pasteExternal,
   pasteInternal,
   selectedRoots,
+  selectionHasMark,
   toggleChecked,
   toggleChecklist,
+  toggleMarkInRange,
 } from './noteEdit';
 import type { Block } from './noteDoc';
 
@@ -405,6 +407,41 @@ describe('pasteInternal', () => {
       kind: 'item',
       text: 'C',
       indent: 1,
+    });
+  });
+});
+
+describe('toggleMarkInRange', () => {
+  it('bolds the selected letters and turns bold off when they are already bold', () => {
+    const blocks: Block[] = [{ kind: 'paragraph', text: 'hello world' }];
+    const start = { index: 0, offset: 6 };
+    const end = { index: 0, offset: 11 };
+    const bolded = toggleMarkInRange(blocks, start, end, end, 'bold');
+    expect(bolded.blocks[0]).toEqual({
+      kind: 'paragraph',
+      text: 'hello world',
+      spans: [{ start: 6, end: 11, bold: true, underline: false }],
+    });
+    expect(selectionHasMark(bolded.blocks, start, end, 'bold')).toBe(true);
+    expect(
+      toggleMarkInRange(bolded.blocks, start, end, end, 'bold').blocks[0],
+    ).toEqual({ kind: 'paragraph', text: 'hello world' });
+  });
+
+  it('keeps bold when Enter splits a styled line', () => {
+    const blocks: Block[] = [
+      {
+        kind: 'paragraph',
+        text: 'hello world',
+        spans: [{ start: 6, end: 11, bold: true, underline: false }],
+      },
+    ];
+    const next = enterAt(blocks, { index: 0, offset: 6 });
+    expect(next.blocks[0]).toEqual({ kind: 'paragraph', text: 'hello ' });
+    expect(next.blocks[1]).toEqual({
+      kind: 'paragraph',
+      text: 'world',
+      spans: [{ start: 0, end: 5, bold: true, underline: false }],
     });
   });
 });
