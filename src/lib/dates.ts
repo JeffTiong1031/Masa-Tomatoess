@@ -89,6 +89,28 @@ export function todayWeekday(now: Date = new Date()): Weekday {
   return ((now.getDay() + 6) % 7) as Weekday;
 }
 
+const MALAYSIA_OFFSET_MS = 8 * 3_600_000;
+
+export function malaysiaDate(now: Date = new Date()): string {
+  const shifted = new Date(now.getTime() + MALAYSIA_OFFSET_MS);
+  return `${shifted.getUTCFullYear()}-${pad(shifted.getUTCMonth() + 1)}-${pad(shifted.getUTCDate())}`;
+}
+
+export function malaysiaWeekday(now: Date = new Date()): Weekday {
+  return weekdayIndex(malaysiaDate(now)) as Weekday;
+}
+
+export function nextDateOnOrAfter(date: string, weekday: Weekday): string {
+  const delta = (weekday - weekdayIndex(date) + 7) % 7;
+  return addDays(date, delta);
+}
+
+export function msUntilNextMalaysiaMidnight(now: Date = new Date()): number {
+  const tomorrow = addDays(malaysiaDate(now), 1);
+  const [year, month, day] = tomorrow.split('-').map(Number);
+  return Date.UTC(year, month - 1, day) - MALAYSIA_OFFSET_MS - now.getTime();
+}
+
 export function isValidISODate(value: string): boolean {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
   const [year, month, day] = value.split('-').map(Number);
