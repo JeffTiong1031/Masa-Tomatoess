@@ -79,6 +79,7 @@ describe('notes window host', () => {
 
   it('does not let a cloud copy walk a deleted tab back in on refresh', () => {
     expect(HOST).toContain('loadPendingDeletes');
+    expect(HOST).toContain('mergeNotesAfterReconcile');
     expect(HOST).not.toContain('mergeNotes(current, reconciled, [])');
   });
 });

@@ -2,16 +2,26 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useHasMounted } from '@/hooks/useHasMounted';
-import { isUserName } from '@/lib/identity';
+import { isUserName, type UserName } from '@/lib/identity';
 import type { Note } from '@/lib/note';
 import { loadNotes, loadPendingDeletes } from '@/lib/noteLocal';
-import { mergeNotes } from '@/lib/noteMerge';
+import { mergeNotesAfterReconcile } from '@/lib/noteMerge';
 import { isActiveNoteOwnedBy } from '@/lib/notePad';
 import { isTypingElement, notesShortcut } from '@/lib/noteShortcut';
 import { reconcileNotes } from '@/lib/noteSync';
 import { useNotesUiStore } from '@/store/useNotesUiStore';
 import { NotesSheet } from './NotesSheet';
 import { NotesWindow } from './NotesWindow';
+
+async function padFromReconcile(
+  owner: UserName,
+  reconciled: Note[],
+  latest: Note[],
+  beforeIds: string[],
+): Promise<Note[]> {
+  const pending = await loadPendingDeletes(owner);
+  return mergeNotesAfterReconcile(latest, reconciled, pending, beforeIds);
+}
 
 export function NotesHost() {
   const mounted = useHasMounted();
@@ -22,6 +32,8 @@ export function NotesHost() {
   const [notes, setNotes] = useState<Note[]>([]);
   const [activeId, setActiveId] = useState('');
   const previousOpen = useRef(open);
+  const notesRef = useRef(notes);
+  notesRef.current = notes;
   const activeNoteOwned =
     owner !== null && isActiveNoteOwnedBy(notes, activeId, owner);
 
@@ -47,12 +59,18 @@ export function NotesHost() {
         )
           .then(async (reconciled) => {
             if (!active) return;
-            const pending = await loadPendingDeletes(owner);
-            setNotes((current) => mergeNotes(current, reconciled, pending));
+            const beforeIds = notesRef.current.map((note) => note.id);
+            const next = await padFromReconcile(
+              owner,
+              reconciled,
+              notesRef.current,
+              beforeIds,
+            );
+            setNotes(next);
             setActiveId((current) =>
-              reconciled.some((note) => note.id === current)
+              next.some((note) => note.id === current)
                 ? current
-                : reconciled[0].id,
+                : next[0].id,
             );
           })
           .catch(console.error);
@@ -74,12 +92,16 @@ export function NotesHost() {
       crypto.randomUUID(),
     ).then(async (reconciled) => {
       if (!active) return;
-      const pending = await loadPendingDeletes(owner);
-      setNotes((current) => mergeNotes(current, reconciled, pending));
+      const beforeIds = notesRef.current.map((note) => note.id);
+      const next = await padFromReconcile(
+        owner,
+        reconciled,
+        notesRef.current,
+        beforeIds,
+      );
+      setNotes(next);
       setActiveId((current) =>
-        reconciled.some((note) => note.id === current)
-          ? current
-          : reconciled[0].id,
+        next.some((note) => note.id === current) ? current : next[0].id,
       );
     }).catch(console.error);
     return () => {

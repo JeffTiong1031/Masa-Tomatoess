@@ -1,5 +1,6 @@
 import type { UserName } from './identity';
 import type { Note } from './note';
+import { extraNoteIds, NOTE_CULL_FLAG, NOTE_KEEP_TITLES } from './noteCull';
 import {
   clearPendingDelete,
   deleteNoteLocally,
@@ -54,6 +55,8 @@ async function reconcileNotesNow(
     merged = seedPad(owner, nowIso, newId);
   }
 
+  merged = await dropJeffExtras(owner, merged);
+
   const blocked = new Set(await loadPendingDeletes(owner));
   merged = merged.filter((row) => !blocked.has(row.id));
   if (merged.length === 0) {
@@ -92,4 +95,21 @@ async function reconcileNotesNow(
   }
 
   return written;
+}
+
+async function dropJeffExtras(
+  owner: UserName,
+  notes: Note[],
+): Promise<Note[]> {
+  if (owner !== 'Jeff') return notes;
+  if (typeof localStorage === 'undefined') return notes;
+  if (localStorage.getItem(NOTE_CULL_FLAG) === '1') return notes;
+  const extras = extraNoteIds(notes, NOTE_KEEP_TITLES);
+  if (extras === null) return notes;
+  for (const id of extras) {
+    await deleteNoteLocally(id, owner);
+  }
+  localStorage.setItem(NOTE_CULL_FLAG, '1');
+  const gone = new Set(extras);
+  return notes.filter((note) => !gone.has(note.id));
 }

@@ -20,3 +20,15 @@ export function mergeNotes(
   }
   return [...byId.values()].sort((a, b) => a.sortOrder - b.sortOrder);
 }
+
+export function mergeNotesAfterReconcile(
+  current: Note[],
+  reconciled: Note[],
+  pendingDeleteIds: string[],
+  beforeIds: string[],
+): Note[] {
+  const merged = mergeNotes(current, reconciled, pendingDeleteIds);
+  const kept = new Set(reconciled.map((note) => note.id));
+  const before = new Set(beforeIds);
+  return merged.filter((note) => kept.has(note.id) || !before.has(note.id));
+}

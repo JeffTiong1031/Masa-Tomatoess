@@ -26,6 +26,7 @@ vi.mock('./noteRepo', () => ({
   deleteNoteRemote: mocks.deleteNoteRemote,
 }));
 
+import { NOTE_CULL_FLAG } from './noteCull';
 import { forgetNote, reconcileNotes } from './noteSync';
 
 const EARLY = '2026-09-09T04:00:00.000Z';
@@ -45,6 +46,7 @@ function note(partial: Partial<Note> & Pick<Note, 'id'>): Note {
 
 describe('reconcileNotes', () => {
   beforeEach(() => {
+    vi.unstubAllGlobals();
     vi.clearAllMocks();
     mocks.loadNotes.mockReset();
     mocks.loadPendingDeletes.mockReset();
@@ -53,6 +55,7 @@ describe('reconcileNotes', () => {
     mocks.clearPendingDelete.mockResolvedValue(undefined);
     mocks.upsertNote.mockResolvedValue(true);
     mocks.deleteNoteRemote.mockResolvedValue(true);
+    mocks.deleteNoteLocally.mockResolvedValue(true);
   });
 
   it('returns the newer device body when the cloud copy is older', async () => {
@@ -222,6 +225,42 @@ describe('reconcileNotes', () => {
     await forgetNote('gone', 'Jeff');
 
     expect(mocks.clearPendingDelete).not.toHaveBeenCalled();
+  });
+
+  it('drops Jeff tabs that are not jeff, MFF, or hi on the first refresh', async () => {
+    const store: Record<string, string> = {};
+    vi.stubGlobal('localStorage', {
+      getItem: (key: string) => store[key] ?? null,
+      setItem: (key: string, value: string) => {
+        store[key] = value;
+      },
+    });
+    const jeff = note({ id: 'j', title: 'jeff' });
+    const mff = note({ id: 'm', title: 'MFF', sortOrder: 200 });
+    const hi = note({ id: 'h', title: 'hi', sortOrder: 300 });
+    const extra = note({ id: 'x', title: 'Walk', sortOrder: 400 });
+    mocks.loadNotes.mockResolvedValue([jeff, mff, hi, extra]);
+    mocks.loadPendingDeletes.mockResolvedValue([]);
+    mocks.deleteNoteLocally.mockImplementation(async (id: string) => {
+      mocks.loadPendingDeletes.mockResolvedValue([id]);
+      return true;
+    });
+    mocks.fetchNotes.mockResolvedValue({
+      status: 'ok',
+      rows: [jeff, mff, hi, extra],
+    });
+
+    const result = await reconcileNotes('Jeff', LATE, 'seed');
+
+    expect(result.map((row) => row.title)).toEqual(['jeff', 'MFF', 'hi']);
+    expect(mocks.upsertNote.mock.calls.map((call) => call[0].id)).toEqual([
+      'j',
+      'm',
+      'h',
+    ]);
+    expect(mocks.deleteNoteLocally).toHaveBeenCalledWith('x', 'Jeff');
+    expect(mocks.deleteNoteRemote).toHaveBeenCalledWith('x', 'Jeff');
+    expect(store[NOTE_CULL_FLAG]).toBe('1');
   });
 
   it('does not contact the cloud when the notes table is missing', async () => {
