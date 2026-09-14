@@ -1,5 +1,17 @@
 import { joinIntoLine, stripIncoming } from './noteCopy';
-import { decodeBody, encodeBody, type Block } from './noteDoc';
+import { decodeBody, encodeBody, withVisible, type Block } from './noteDoc';
+import {
+  applyMark,
+  concatVisible,
+  deleteVisible,
+  insertVisible,
+  rangeHasMark,
+  sliceVisible,
+  type NoteMark,
+  type NoteSpan,
+  type NoteStyle,
+} from './noteStyle';
+export type { NoteMark, NoteStyle };
 
 export interface DocCaret {
   index: number;
@@ -29,33 +41,20 @@ export function deleteSelection(
   const next = [...blocks];
 
   if (from.index === to.index) {
-    const text = first.text.slice(0, from.offset) + first.text.slice(to.offset);
-    switch (first.kind) {
-      case 'paragraph':
-        next[from.index] = { kind: 'paragraph', text };
-        break;
-      case 'item':
-        next[from.index] = { ...first, text };
-    }
+    const visible = deleteVisible(first.text, first.spans, from.offset, to.offset);
+    next[from.index] = withVisible(first, visible.text, visible.spans);
     return { blocks: next, caret: from };
   }
 
-  let head: Block;
-  switch (first.kind) {
-    case 'paragraph':
-      head = { kind: 'paragraph', text: first.text.slice(0, from.offset) };
-      break;
-    case 'item':
-      head = { ...first, text: first.text.slice(0, from.offset) };
-  }
-  let tail: Block;
-  switch (last.kind) {
-    case 'paragraph':
-      tail = { kind: 'paragraph', text: last.text.slice(to.offset) };
-      break;
-    case 'item':
-      tail = { ...last, text: last.text.slice(to.offset) };
-  }
+  const headVisible = sliceVisible(first.text, first.spans, 0, from.offset);
+  const tailVisible = sliceVisible(
+    last.text,
+    last.spans,
+    to.offset,
+    last.text.length,
+  );
+  const head = withVisible(first, headVisible.text, headVisible.spans);
+  const tail = withVisible(last, tailVisible.text, tailVisible.spans);
   next.splice(
     from.index,
     to.index - from.index + 1,
@@ -68,18 +67,18 @@ export function insertText(
   blocks: Block[],
   caret: DocCaret,
   text: string,
+  style?: NoteStyle,
 ): EditResult {
   const block = blocks[caret.index];
   const next = [...blocks];
-  const inserted = block.text.slice(0, caret.offset) + text + block.text.slice(caret.offset);
-
-  switch (block.kind) {
-    case 'paragraph':
-      next[caret.index] = { kind: 'paragraph', text: inserted };
-      break;
-    case 'item':
-      next[caret.index] = { ...block, text: inserted };
-  }
+  const inserted = insertVisible(
+    block.text,
+    block.spans,
+    caret.offset,
+    text,
+    style,
+  );
+  next[caret.index] = withVisible(block, inserted.text, inserted.spans);
 
   return {
     blocks: next,
@@ -92,9 +91,10 @@ export function typeOverRange(
   start: DocCaret,
   end: DocCaret,
   text: string,
+  style?: NoteStyle,
 ): EditResult {
   const deleted = deleteSelection(blocks, start, end);
-  return insertText(deleted.blocks, deleted.caret, text);
+  return insertText(deleted.blocks, deleted.caret, text, style);
 }
 
 export type CaretMove =
@@ -175,12 +175,34 @@ export function pasteExternal(
         return insertText(deleted.blocks, deleted.caret, incoming[0].text);
       }
 
-      const prefix = block.text.slice(0, deleted.caret.offset);
-      const suffix = block.text.slice(deleted.caret.offset);
+      const prefix = sliceVisible(
+        block.text,
+        block.spans,
+        0,
+        deleted.caret.offset,
+      );
+      const suffix = sliceVisible(
+        block.text,
+        block.spans,
+        deleted.caret.offset,
+        block.text.length,
+      );
       const paragraphs = incoming.map((line, index): Block => {
-        const leading = index === 0 ? prefix : '';
-        const trailing = index === incoming.length - 1 ? suffix : '';
-        return { kind: 'paragraph', text: leading + line.text + trailing };
+        let visible: { text: string; spans?: NoteSpan[] } = {
+          text: line.text,
+          spans: line.spans,
+        };
+        if (index === 0) {
+          visible = concatVisible(prefix, visible);
+        }
+        if (index === incoming.length - 1) {
+          visible = concatVisible(visible, suffix);
+        }
+        return withVisible(
+          { kind: 'paragraph', text: '' },
+          visible.text,
+          visible.spans,
+        );
       });
       const next = [...deleted.blocks];
       next.splice(deleted.caret.index, 1, ...paragraphs);
@@ -207,26 +229,56 @@ export function pasteInternal(
     : deleteSelection(blocks, from, to);
   const block = deleted.blocks[deleted.caret.index];
   const inserted = decodeBody(encodeBody(fragment));
-  const prefixText = block.text.slice(0, deleted.caret.offset);
-  const suffixText = block.text.slice(deleted.caret.offset);
+  const prefixVisible = sliceVisible(
+    block.text,
+    block.spans,
+    0,
+    deleted.caret.offset,
+  );
+  const suffixVisible = sliceVisible(
+    block.text,
+    block.spans,
+    deleted.caret.offset,
+    block.text.length,
+  );
   const prefix: Block[] = [];
   const suffix: Block[] = [];
 
   switch (block.kind) {
     case 'paragraph':
-      if (prefixText !== '') {
-        prefix.push({ kind: 'paragraph', text: prefixText });
+      if (prefixVisible.text !== '') {
+        prefix.push(
+          withVisible(
+            { kind: 'paragraph', text: '' },
+            prefixVisible.text,
+            prefixVisible.spans,
+          ),
+        );
       }
-      if (suffixText !== '') {
-        suffix.push({ kind: 'paragraph', text: suffixText });
+      if (suffixVisible.text !== '') {
+        suffix.push(
+          withVisible(
+            { kind: 'paragraph', text: '' },
+            suffixVisible.text,
+            suffixVisible.spans,
+          ),
+        );
       }
       break;
     case 'item':
-      if (prefixText !== '') {
-        prefix.push({ ...block, text: prefixText });
+      if (prefixVisible.text !== '') {
+        prefix.push(
+          withVisible(block, prefixVisible.text, prefixVisible.spans),
+        );
       }
-      if (suffixText !== '') {
-        suffix.push({ ...block, text: suffixText, checked: false });
+      if (suffixVisible.text !== '') {
+        suffix.push(
+          withVisible(
+            { ...block, checked: false },
+            suffixVisible.text,
+            suffixVisible.spans,
+          ),
+        );
       }
   }
 
@@ -367,12 +419,11 @@ export function toggleChecklist(
       const block = next[index];
       switch (block.kind) {
         case 'paragraph':
-          next[index] = {
-            kind: 'item',
-            text: block.text,
-            checked: false,
-            indent: 0,
-          };
+          next[index] = withVisible(
+            { kind: 'item', text: '', checked: false, indent: 0 },
+            block.text,
+            block.spans,
+          );
           break;
         case 'item':
           break;
@@ -388,7 +439,11 @@ export function toggleChecklist(
         break;
       case 'item': {
         const end = familyEnd(next, index);
-        next[index] = { kind: 'paragraph', text: block.text };
+        next[index] = withVisible(
+          { kind: 'paragraph', text: '' },
+          block.text,
+          block.spans,
+        );
         for (let descendant = index + 1; descendant <= end; descendant += 1) {
           const child = next[descendant];
           switch (child.kind) {
@@ -460,14 +515,21 @@ export function outdentSelection(
 
 export function enterAt(blocks: Block[], caret: DocCaret): EditResult {
   const block = blocks[caret.index];
+  const head = sliceVisible(block.text, block.spans, 0, caret.offset);
+  const tail = sliceVisible(
+    block.text,
+    block.spans,
+    caret.offset,
+    block.text.length,
+  );
   switch (block.kind) {
     case 'paragraph': {
       const next = [...blocks];
       next.splice(
         caret.index,
         1,
-        { kind: 'paragraph', text: block.text.slice(0, caret.offset) },
-        { kind: 'paragraph', text: block.text.slice(caret.offset) },
+        withVisible({ kind: 'paragraph', text: '' }, head.text, head.spans),
+        withVisible({ kind: 'paragraph', text: '' }, tail.text, tail.spans),
       );
       return {
         blocks: next,
@@ -486,13 +548,17 @@ export function enterAt(blocks: Block[], caret: DocCaret): EditResult {
       next.splice(
         caret.index,
         1,
-        { ...block, text: block.text.slice(0, caret.offset) },
-        {
-          kind: 'item',
-          text: block.text.slice(caret.offset),
-          checked: false,
-          indent: block.indent,
-        },
+        withVisible(block, head.text, head.spans),
+        withVisible(
+          {
+            kind: 'item',
+            text: '',
+            checked: false,
+            indent: block.indent,
+          },
+          tail.text,
+          tail.spans,
+        ),
       );
       return {
         blocks: next,
@@ -526,19 +592,12 @@ export function backspaceAtStart(
       const previous = blocks[previousIndex];
       const joinOffset = previous.text.length;
       const next = [...blocks];
-      switch (previous.kind) {
-        case 'paragraph':
-          next[previousIndex] = {
-            kind: 'paragraph',
-            text: previous.text + block.text,
-          };
-          break;
-        case 'item':
-          next[previousIndex] = {
-            ...previous,
-            text: previous.text + block.text,
-          };
-      }
+      const joined = concatVisible(previous, block);
+      next[previousIndex] = withVisible(
+        previous,
+        joined.text,
+        joined.spans,
+      );
       next.splice(caret.index, 1);
       return {
         blocks: next,
@@ -546,4 +605,66 @@ export function backspaceAtStart(
       };
     }
   }
+}
+
+export function selectionHasMark(
+  blocks: Block[],
+  start: DocCaret,
+  end: DocCaret,
+  mark: NoteMark,
+): boolean {
+  const [from, to] = ordered(start, end);
+  if (from.index === to.index && from.offset === to.offset) {
+    return false;
+  }
+  let any = false;
+  for (let index = from.index; index <= to.index; index += 1) {
+    const fromOff = index === from.index ? from.offset : 0;
+    const toOff = index === to.index ? to.offset : blocks[index].text.length;
+    if (fromOff >= toOff) {
+      continue;
+    }
+    any = true;
+    if (
+      !rangeHasMark(
+        blocks[index].text,
+        blocks[index].spans,
+        fromOff,
+        toOff,
+        mark,
+      )
+    ) {
+      return false;
+    }
+  }
+  return any;
+}
+
+export function toggleMarkInRange(
+  blocks: Block[],
+  start: DocCaret,
+  end: DocCaret,
+  caret: DocCaret,
+  mark: NoteMark,
+): EditResult {
+  const [from, to] = ordered(start, end);
+  if (from.index === to.index && from.offset === to.offset) {
+    return { blocks, caret };
+  }
+  const value = !selectionHasMark(blocks, from, to, mark);
+  const next = [...blocks];
+  for (let index = from.index; index <= to.index; index += 1) {
+    const fromOff = index === from.index ? from.offset : 0;
+    const toOff = index === to.index ? to.offset : next[index].text.length;
+    const updated = applyMark(
+      next[index].text,
+      next[index].spans,
+      fromOff,
+      toOff,
+      mark,
+      value,
+    );
+    next[index] = withVisible(next[index], updated.text, updated.spans);
+  }
+  return { blocks: next, caret };
 }

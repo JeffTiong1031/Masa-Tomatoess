@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   isChecklistHotkey,
   isEditorCommandBlocked,
+  isStyleHotkey,
   isTypingElement,
   isTypingTag,
   notesShortcut,
@@ -44,6 +45,15 @@ describe('isChecklistHotkey', () => {
     expect(isChecklistHotkey('9', true, true, false)).toBe(true);
     expect(isChecklistHotkey('9', true, true, true)).toBe(false);
     expect(isChecklistHotkey('9', false, true, false)).toBe(false);
+  });
+});
+
+describe('isStyleHotkey', () => {
+  it('matches Ctrl+B and Ctrl+U, not Shift or Alt', () => {
+    expect(isStyleHotkey('b', false, true, false)).toBe('bold');
+    expect(isStyleHotkey('u', false, true, false)).toBe('underline');
+    expect(isStyleHotkey('b', true, true, false)).toBe(null);
+    expect(isStyleHotkey('u', false, true, true)).toBe(null);
   });
 });
 

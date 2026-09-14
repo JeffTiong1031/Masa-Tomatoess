@@ -1,9 +1,11 @@
 'use client';
 
 import {
+  Bold,
   IndentDecrease,
   IndentIncrease,
   ListChecks,
+  Underline,
 } from 'lucide-react';
 import {
   isNoteLineGap,
@@ -17,10 +19,14 @@ interface NotesStripProps {
   inChecklist: boolean;
   canIndent: boolean;
   canOutdent: boolean;
+  bold: boolean;
+  underline: boolean;
   lineGap: NoteLineGap;
   selecting: boolean;
   canDeletePicked: boolean;
   onToggle: () => void;
+  onBold: () => void;
+  onUnderline: () => void;
   onIndent: () => void;
   onOutdent: () => void;
   onLineGap: (gap: NoteLineGap) => void;
@@ -66,10 +72,14 @@ export function NotesStrip({
   inChecklist,
   canIndent,
   canOutdent,
+  bold,
+  underline,
   lineGap,
   selecting,
   canDeletePicked,
   onToggle,
+  onBold,
+  onUnderline,
   onIndent,
   onOutdent,
   onLineGap,
@@ -88,6 +98,36 @@ export function NotesStrip({
         onPointerDown={(event) => event.preventDefault()}
       >
         <ListChecks aria-hidden="true" />
+      </button>
+      <button
+        type="button"
+        aria-label="Bold"
+        aria-pressed={bold}
+        className={`min-h-11 min-w-11 text-[var(--mt-text)] disabled:text-[var(--mt-text-muted)] ${
+          bold
+            ? 'bg-[color-mix(in_srgb,var(--mt-text)_8%,transparent)]'
+            : ''
+        }`}
+        disabled={!inWords}
+        onClick={onBold}
+        onPointerDown={(event) => event.preventDefault()}
+      >
+        <Bold aria-hidden="true" />
+      </button>
+      <button
+        type="button"
+        aria-label="Underline"
+        aria-pressed={underline}
+        className={`min-h-11 min-w-11 text-[var(--mt-text)] disabled:text-[var(--mt-text-muted)] ${
+          underline
+            ? 'bg-[color-mix(in_srgb,var(--mt-text)_8%,transparent)]'
+            : ''
+        }`}
+        disabled={!inWords}
+        onClick={onUnderline}
+        onPointerDown={(event) => event.preventDefault()}
+      >
+        <Underline aria-hidden="true" />
       </button>
       <label className="flex min-h-11 items-center">
         <span className="sr-only">Line and paragraph spacing</span>

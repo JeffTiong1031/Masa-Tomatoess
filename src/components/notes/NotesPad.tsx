@@ -44,6 +44,8 @@ export function NotesPad({
     inChecklist: false,
     canIndent: false,
     canOutdent: false,
+    bold: false,
+    underline: false,
   });
   const editorRef = useRef<NotesEditorHandle>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -243,10 +245,14 @@ export function NotesPad({
         inChecklist={strip.inChecklist}
         canIndent={strip.canIndent}
         canOutdent={strip.canOutdent}
+        bold={strip.bold}
+        underline={strip.underline}
         lineGap={lineGap}
         selecting={selecting}
         canDeletePicked={pickedIds.length > 0}
         onToggle={() => editorRef.current?.toggle()}
+        onBold={() => editorRef.current?.bold()}
+        onUnderline={() => editorRef.current?.underline()}
         onIndent={() => editorRef.current?.indent()}
         onOutdent={() => editorRef.current?.outdent()}
         onLineGap={(gap) => setLineGap(active.id, gap)}

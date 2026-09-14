@@ -22,7 +22,7 @@ const mocks = vi.hoisted(() => {
 
 vi.mock('./supabase', () => ({ supabase: { from: mocks.from } }));
 
-import { NOTE_MARK_START, NOTE_MARK_SEP } from './noteDoc';
+import { NOTE_MARK_START, NOTE_MARK_SEP, NOTE_RUN_BOLD, NOTE_RUN_SEP, NOTE_RUN_START } from './noteDoc';
 import { noteFromRow, rowFromNote, type Note } from './note';
 import { deleteNoteRemote, fetchNotes, upsertNote } from './noteRepo';
 
@@ -81,6 +81,13 @@ describe('note cloud repository', () => {
 
   it('passes checklist marks through cloud mapping unchanged', () => {
     const body = `Above\n${NOTE_MARK_START}1/1${NOTE_MARK_SEP}Eggs`;
+    const marked = { ...note, body };
+    expect(rowFromNote(marked).body).toBe(body);
+    expect(noteFromRow({ ...row, body }).body).toBe(body);
+  });
+
+  it('passes bold marks through cloud mapping unchanged', () => {
+    const body = `${NOTE_RUN_START}${NOTE_RUN_BOLD}${NOTE_RUN_SEP}Eggs`;
     const marked = { ...note, body };
     expect(rowFromNote(marked).body).toBe(body);
     expect(noteFromRow({ ...row, body }).body).toBe(body);

@@ -43,6 +43,23 @@ describe('notes line gap', () => {
     );
   });
 
+  it('puts bold and underline next to the checklist', () => {
+    expect(STRIP).toContain('aria-label="Bold"');
+    expect(STRIP).toContain('aria-label="Underline"');
+    expect(STRIP.indexOf('aria-label="Checklist"')).toBeLessThan(
+      STRIP.indexOf('aria-label="Bold"'),
+    );
+    expect(STRIP.indexOf('aria-label="Bold"')).toBeLessThan(
+      STRIP.indexOf('aria-label="Underline"'),
+    );
+    expect(PAD).toContain('editorRef.current?.bold()');
+    expect(PAD).toContain('editorRef.current?.underline()');
+    expect(EDITOR).toContain('noteRunNodes(');
+    expect(EDITOR).toContain('isStyleHotkey(');
+    expect(EDITOR).toContain('<strong');
+    expect(EDITOR).toContain('<u');
+  });
+
   it('applies the chosen gap to every row in that note', () => {
     expect(EDITOR).toContain('noteLineGapStyle(lineGap)');
     expect(EDITOR).toContain('paddingBlock: gap.paddingBlock');

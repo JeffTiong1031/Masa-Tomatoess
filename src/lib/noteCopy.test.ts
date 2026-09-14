@@ -26,6 +26,18 @@ describe('copyOut', () => {
       ]),
     ).toBe('notetail\n[ ] itembody');
   });
+
+  it('writes styled words without the private run marks', () => {
+    expect(
+      copyOut([
+        {
+          kind: 'paragraph',
+          text: 'hello world',
+          spans: [{ start: 6, end: 11, bold: true, underline: true }],
+        },
+      ]),
+    ).toBe('hello world');
+  });
 });
 
 describe('stripIncoming', () => {

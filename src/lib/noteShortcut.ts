@@ -20,6 +20,24 @@ export function isChecklistHotkey(
   return key === '9' && shift && ctrlOrMeta && !alt;
 }
 
+export function isStyleHotkey(
+  key: string,
+  shift: boolean,
+  ctrlOrMeta: boolean,
+  alt: boolean,
+): 'bold' | 'underline' | null {
+  if (!ctrlOrMeta || shift || alt) {
+    return null;
+  }
+  if (key === 'b' || key === 'B') {
+    return 'bold';
+  }
+  if (key === 'u' || key === 'U') {
+    return 'underline';
+  }
+  return null;
+}
+
 export function isEditorCommandBlocked(
   composing: boolean,
   eventComposing: boolean,
