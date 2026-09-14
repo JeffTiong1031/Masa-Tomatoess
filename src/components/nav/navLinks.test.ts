@@ -46,6 +46,7 @@ describe('menu', () => {
       '/study',
       '/timetable',
       '/todo',
+      '/notes',
       '/calendar',
       '/cycle',
       '/countdown',
@@ -76,9 +77,15 @@ describe('menu', () => {
     expect(new Set(hrefs).size).toBe(hrefs.length);
   });
 
-  it('does not add Notes as a destination', () => {
-    expect(ALL_LINKS.map((l) => l.href)).not.toContain('/notes');
-    expect(ALL_LINKS.map((l) => l.label)).not.toContain('Notes');
+  /* This test used to assert the opposite, and the reversal is the point.
+     Notes was an overlay with nowhere to go, so a destination would have
+     been a door to nothing. Now /notes is the files page: folders, cards,
+     and a bin. The pad is still an overlay raised from anywhere, which is
+     what the old rule was really protecting. */
+  it('lists Notes as a destination with its own accent', () => {
+    const notes = ALL_LINKS.find((l) => l.href === '/notes');
+    expect(notes?.label).toBe('Notes');
+    expect(notes?.accent).toBe('notes');
   });
 });
 
@@ -88,6 +95,7 @@ describe('hubDoors', () => {
       '/study',
       '/timetable',
       '/todo',
+      '/notes',
       '/calendar',
       '/cycle',
       '/countdown',
@@ -118,6 +126,7 @@ describe('isHubRoute', () => {
     '/calendar',
     '/timetable',
     '/todo',
+    '/notes',
     '/cycle',
     '/countdown',
     '/meals',

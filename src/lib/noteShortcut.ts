@@ -46,6 +46,12 @@ export function isEditorCommandBlocked(
   return composing || eventComposing || key === 'Process';
 }
 
+/** Ctrl+S, and the browser's own Save page can wait. Deliberately fires
+ *  while typing: that is the moment the hand reaches for it. */
+export function isSaveShortcut(key: string, ctrlOrMeta: boolean): boolean {
+  return ctrlOrMeta && (key === 's' || key === 'S');
+}
+
 export function notesShortcut(
   key: string,
   typing: boolean,

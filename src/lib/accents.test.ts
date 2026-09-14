@@ -24,7 +24,7 @@ function readAccents(): Record<string, string> {
  *  eye and are grandfathered — flexible/meals sit 11 deg and delta E
  *  17.2 apart, and dashboard/finance delta E 17.8, both of which would
  *  fail the thresholds below. */
-const NEW_ACCENTS = ['calendar', 'timetable', 'todo'];
+const NEW_ACCENTS = ['calendar', 'timetable', 'todo', 'notes'];
 
 /** The real guard. Below roughly this, two accent chips read as the same
  *  colour at icon size — which is what Timetable and Countdown did at
@@ -44,7 +44,7 @@ const MIN_DELTA_E = 20;
 const MIN_HUE_SEPARATION_DEG = 20;
 
 describe('accent palette', () => {
-  it('declares all eleven accents', () => {
+  it('declares all twelve accents', () => {
     const accents = readAccents();
     expect(Object.keys(accents).sort()).toEqual([
       'calendar',
@@ -55,6 +55,7 @@ describe('accent palette', () => {
       'fitness',
       'flexible',
       'meals',
+      'notes',
       'timer',
       'timetable',
       'todo',
@@ -95,6 +96,18 @@ describe('accent palette', () => {
 
   it('pins the todo accent to the value the palette search found', () => {
     expect(readAccents().todo).toBe('#64B880');
+  });
+
+  it('pins the notes accent to the value the palette search found', () => {
+    expect(readAccents().notes).toBe('#A8B257');
+  });
+
+  it('keeps cocoa readable on the notes accent', () => {
+    // The files page paints a chosen folder row in flat accent with cocoa
+    // text on it, so this is body text on the colour itself, not a tint.
+    const ratio = contrastRatio('#3B2E2A', readAccents().notes);
+
+    expect(ratio).toBeGreaterThanOrEqual(4.5);
   });
 
   it('leaves the new accents no worse than the grandfathered pairs', () => {

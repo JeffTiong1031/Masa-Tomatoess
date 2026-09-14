@@ -14,6 +14,10 @@ function note(partial: Partial<Note> & Pick<Note, 'id'>): Note {
     sortOrder: 100,
     createdAt: EARLY,
     updatedAt: EARLY,
+    folderId: null,
+    saved: true,
+    binGroup: null,
+    deletedAt: null,
     ...partial,
   };
 }

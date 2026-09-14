@@ -1,27 +1,14 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect } from 'react';
 import { useHasMounted } from '@/hooks/useHasMounted';
-import { isUserName, type UserName } from '@/lib/identity';
-import type { Note } from '@/lib/note';
-import { loadNotes, loadPendingDeletes } from '@/lib/noteLocal';
-import { mergeNotesAfterReconcile } from '@/lib/noteMerge';
-import { isActiveNoteOwnedBy } from '@/lib/notePad';
+import { isUserName } from '@/lib/identity';
 import { isTypingElement, notesShortcut } from '@/lib/noteShortcut';
-import { reconcileNotes } from '@/lib/noteSync';
+import { seedOpenIds } from '@/lib/noteTabs';
+import { useNotesDataStore } from '@/store/useNotesDataStore';
 import { useNotesUiStore } from '@/store/useNotesUiStore';
 import { NotesSheet } from './NotesSheet';
 import { NotesWindow } from './NotesWindow';
-
-async function padFromReconcile(
-  owner: UserName,
-  reconciled: Note[],
-  latest: Note[],
-  beforeIds: string[],
-): Promise<Note[]> {
-  const pending = await loadPendingDeletes(owner);
-  return mergeNotesAfterReconcile(latest, reconciled, pending, beforeIds);
-}
 
 export function NotesHost() {
   const mounted = useHasMounted();
@@ -29,95 +16,34 @@ export function NotesHost() {
   const owner = isUserName(ownerValue) ? ownerValue : null;
   const open = useNotesUiStore((state) => state.open);
   const setOpen = useNotesUiStore((state) => state.setOpen);
-  const [notes, setNotes] = useState<Note[]>([]);
-  const [activeId, setActiveId] = useState('');
-  const previousOpen = useRef(open);
-  const notesRef = useRef(notes);
-  notesRef.current = notes;
-  const activeNoteOwned =
-    owner !== null && isActiveNoteOwnedBy(notes, activeId, owner);
+  const loadedFor = useNotesDataStore((state) => state.owner);
+  const loaded = useNotesDataStore((state) => state.loaded);
 
   useEffect(() => {
-    if (owner === null) return;
-    let active = true;
-    void loadNotes(owner)
-      .then((local) => {
-        if (!active) return;
-        const storedId = localStorage.getItem(`mt-notes-active-${owner}`);
-        setNotes(local);
-        if (local.length > 0) {
-          setActiveId(
-            local.some((note) => note.id === storedId)
-              ? storedId!
-              : local[0].id,
-          );
-        }
-        reconcileNotes(
-          owner,
-          new Date().toISOString(),
-          crypto.randomUUID(),
-        )
-          .then(async (reconciled) => {
-            if (!active) return;
-            const beforeIds = notesRef.current.map((note) => note.id);
-            const next = await padFromReconcile(
-              owner,
-              reconciled,
-              notesRef.current,
-              beforeIds,
-            );
-            setNotes(next);
-            setActiveId((current) =>
-              next.some((note) => note.id === current)
-                ? current
-                : next[0].id,
-            );
-          })
-          .catch(console.error);
-      })
-      .catch(console.error);
-    return () => {
-      active = false;
-    };
-  }, [owner]);
+    if (owner === null || loadedFor === owner) return;
+    void useNotesDataStore.getState().load(owner);
+  }, [owner, loadedFor]);
+
+  /* First run after folders arrived: everything you already had becomes a
+     file, and every one of them starts open, so the pad looks untouched.
+     After that the tab strip is yours to empty. */
+  useEffect(() => {
+    if (!loaded || loadedFor === null) return;
+    const ui = useNotesUiStore.getState();
+    if (ui.seeded) return;
+    ui.seedTabs(seedOpenIds(useNotesDataStore.getState().notes));
+  }, [loaded, loadedFor]);
 
   useEffect(() => {
-    const becameOpen = open && !previousOpen.current;
-    previousOpen.current = open;
-    if (owner === null || !becameOpen) return;
-    let active = true;
-    void reconcileNotes(
-      owner,
-      new Date().toISOString(),
-      crypto.randomUUID(),
-    ).then(async (reconciled) => {
-      if (!active) return;
-      const beforeIds = notesRef.current.map((note) => note.id);
-      const next = await padFromReconcile(
-        owner,
-        reconciled,
-        notesRef.current,
-        beforeIds,
-      );
-      setNotes(next);
-      setActiveId((current) =>
-        next.some((note) => note.id === current) ? current : next[0].id,
-      );
-    }).catch(console.error);
-    return () => {
-      active = false;
-    };
-  }, [open, owner]);
-
-  useEffect(() => {
-    if (owner !== null && activeNoteOwned) {
-      localStorage.setItem(`mt-notes-active-${owner}`, activeId);
-    }
-  }, [activeId, activeNoteOwned, owner]);
+    if (open) void useNotesDataStore.getState().refresh();
+  }, [open]);
 
   useEffect(() => {
     if (owner === null) return;
     const onKeyDown = (event: KeyboardEvent) => {
+      /* A dialog inside the pad answers Escape first and says so. Without
+         this, dismissing the save box would take the whole pad with it. */
+      if (event.defaultPrevented) return;
       const target = event.target as {
         tagName?: string;
         isContentEditable?: boolean;
@@ -146,20 +72,12 @@ export function NotesHost() {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [open, owner, setOpen]);
 
-  if (owner === null || !activeNoteOwned) return null;
-
-  const props = {
-    owner,
-    notes,
-    activeId,
-    onNotes: setNotes,
-    onActiveId: setActiveId,
-  };
+  if (owner === null) return null;
 
   return (
     <>
-      <NotesSheet {...props} />
-      <NotesWindow {...props} />
+      <NotesSheet />
+      <NotesWindow />
     </>
   );
 }

@@ -15,6 +15,10 @@ import {
 } from '@/lib/noteLineGap';
 
 interface NotesStripProps {
+  /** Where this note stands: saved in a folder, or not saved at all. It
+   *  rides the end of this row so it is in view whenever you are typing,
+   *  without a line of its own. */
+  status: React.ReactNode;
   inWords: boolean;
   inChecklist: boolean;
   canIndent: boolean;
@@ -68,6 +72,7 @@ function StripButton({
 }
 
 export function NotesStrip({
+  status,
   inWords,
   inChecklist,
   canIndent,
@@ -183,6 +188,7 @@ export function NotesStrip({
       >
         <IndentDecrease aria-hidden="true" />
       </StripButton>
+      <span className="ml-auto shrink-0 pl-2 pr-3">{status}</span>
     </div>
   );
 }

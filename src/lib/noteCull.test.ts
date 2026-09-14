@@ -11,6 +11,10 @@ function note(id: string, title: string): Note {
     sortOrder: 100,
     createdAt: '2026-09-15T00:00:00.000Z',
     updatedAt: '2026-09-15T00:00:00.000Z',
+    folderId: null,
+    saved: true,
+    binGroup: null,
+    deletedAt: null,
   };
 }
 

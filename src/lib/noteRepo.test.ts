@@ -34,6 +34,10 @@ const note: Note = {
   sortOrder: 100,
   createdAt: '2026-09-09T04:00:00.000Z',
   updatedAt: '2026-09-09T05:00:00.000Z',
+  folderId: 'recipes',
+  saved: true,
+  binGroup: null,
+  deletedAt: null,
 };
 
 const row = {
@@ -44,6 +48,9 @@ const row = {
   sort_order: 100,
   created_at: '2026-09-09T04:00:00.000Z',
   updated_at: '2026-09-09T05:00:00.000Z',
+  folder_id: 'recipes',
+  bin_group: null,
+  deleted_at: null,
 };
 
 describe('note cloud repository', () => {
@@ -102,7 +109,7 @@ describe('note cloud repository', () => {
 
     expect(mocks.from).toHaveBeenCalledWith('notes');
     expect(mocks.query.select).toHaveBeenCalledWith(
-      'id, owner, title, body, sort_order, created_at, updated_at',
+      'id, owner, title, body, sort_order, created_at, updated_at, folder_id, bin_group, deleted_at',
     );
     expect(mocks.query.eq).toHaveBeenCalledWith('owner', 'Jeff');
     expect(mocks.query.order).toHaveBeenCalledWith('sort_order');
@@ -173,6 +180,55 @@ describe('note cloud repository', () => {
     mocks.query.maybeSingle.mockResolvedValue({ data: { id: 'a' }, error: null });
 
     await expect(deleteNoteRemote('a', 'Jeff')).resolves.toBe(false);
+  });
+
+  /* Jeff runs the SQL by hand, so there is a window where the code knows
+     about folder_id and the table does not. Notes must keep syncing
+     through it; only the folder of each note waits. */
+  it.each(['42703', 'PGRST204'])(
+    'falls back to the columns that existed before folders for %s',
+    async (code) => {
+      let call = 0;
+      mocks.query.then.mockImplementation((resolve) => {
+        call += 1;
+        if (call === 1) return resolve({ data: null, error: { code } });
+        const { folder_id, bin_group, deleted_at, ...legacy } = row;
+        void folder_id;
+        void bin_group;
+        void deleted_at;
+        return resolve({ data: [legacy], error: null });
+      });
+
+      await expect(fetchNotes('Jeff')).resolves.toEqual({
+        status: 'ok',
+        rows: [{ ...note, folderId: null }],
+      });
+
+      expect(mocks.query.select).toHaveBeenLastCalledWith(
+        'id, owner, title, body, sort_order, created_at, updated_at',
+      );
+    },
+  );
+
+  it('upserts without the folder columns when they are not there yet', async () => {
+    let call = 0;
+    mocks.query.then.mockImplementation((resolve) => {
+      call += 1;
+      if (call === 1) return resolve({ data: null, error: { code: '42703' } });
+      return resolve({ data: null, error: null });
+    });
+
+    await expect(upsertNote(note)).resolves.toBe(true);
+
+    expect(mocks.query.upsert).toHaveBeenLastCalledWith({
+      id: 'a',
+      owner: 'Jeff',
+      title: 'Shopping',
+      body: 'Eggs',
+      sort_order: 100,
+      created_at: '2026-09-09T04:00:00.000Z',
+      updated_at: '2026-09-09T05:00:00.000Z',
+    });
   });
 
   it('reports a failed delete', async () => {

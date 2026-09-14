@@ -1,4 +1,5 @@
 import type { Note } from './note';
+import type { NoteFolder } from './noteFolder';
 
 export function mergeNotes(
   local: Note[],
@@ -19,6 +20,23 @@ export function mergeNotes(
     }
   }
   return [...byId.values()].sort((a, b) => a.sortOrder - b.sortOrder);
+}
+
+/** Same later-wins rule as notes. A folder has no draft state, so a row
+ *  the cloud has never heard of is simply one made while offline. */
+export function mergeFolders(
+  local: NoteFolder[],
+  remote: NoteFolder[],
+): NoteFolder[] {
+  const byId = new Map<string, NoteFolder>();
+  for (const row of local) byId.set(row.id, row);
+  for (const row of remote) {
+    const existing = byId.get(row.id);
+    if (!existing || row.updatedAt > existing.updatedAt) {
+      byId.set(row.id, row);
+    }
+  }
+  return [...byId.values()];
 }
 
 export function mergeNotesAfterReconcile(

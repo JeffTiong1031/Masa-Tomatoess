@@ -2,11 +2,27 @@ import { describe, it, expect } from 'vitest';
 import {
   isChecklistHotkey,
   isEditorCommandBlocked,
+  isSaveShortcut,
   isStyleHotkey,
   isTypingElement,
   isTypingTag,
   notesShortcut,
 } from './noteShortcut';
+
+describe('isSaveShortcut', () => {
+  it('is Ctrl+S or Cmd+S, either case', () => {
+    expect(isSaveShortcut('s', true)).toBe(true);
+    expect(isSaveShortcut('S', true)).toBe(true);
+  });
+
+  it('is not plain s, which is just typing', () => {
+    expect(isSaveShortcut('s', false)).toBe(false);
+  });
+
+  it('is not some other key with the same modifier', () => {
+    expect(isSaveShortcut('n', true)).toBe(false);
+  });
+});
 
 describe('isTypingTag', () => {
   it('treats form fields as typing', () => {
