@@ -3,13 +3,17 @@
 import { useEffect, useState } from 'react';
 import {
   DndContext,
+  DragOverlay,
   PointerSensor,
   TouchSensor,
   pointerWithin,
   useSensor,
   useSensors,
   type DragEndEvent,
+  type DragStartEvent,
+  type Modifier,
 } from '@dnd-kit/core';
+import { getEventCoordinates } from '@dnd-kit/utilities';
 import {
   FilePlus2,
   FolderPlus,
@@ -26,6 +30,8 @@ import { binEntries, deleteAsk, folderBinCost, type BinEntry } from '@/lib/noteB
 import {
   countsByFolder,
   filesFor,
+  dragTagShift,
+  dragTagTitle,
   NOTE_SORT_LABEL,
   NOTE_SORTS,
 } from '@/lib/noteFiles';
@@ -39,7 +45,18 @@ import FolderRail, {
   ROOT_DROP_ID,
   type FilesPane,
 } from './FolderRail';
-import NoteCard from './NoteCard';
+import NoteCard, { NoteDragTag } from './NoteCard';
+
+const tagByFinger: Modifier = ({
+  activatorEvent,
+  draggingNodeRect,
+  transform,
+}) =>
+  dragTagShift(
+    transform,
+    draggingNodeRect,
+    activatorEvent === null ? null : getEventCoordinates(activatorEvent),
+  );
 
 interface Ask {
   title: string;
@@ -79,6 +96,7 @@ export default function FilesBoard() {
   const [folderDraft, setFolderDraft] = useState<FolderDraft | null>(null);
   const [ask, setAsk] = useState<Ask | null>(null);
   const [nowMs, setNowMs] = useState(() => Date.now());
+  const [draggingId, setDraggingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (owner === null || loadedFor === owner) return;
@@ -188,13 +206,20 @@ export default function FilesBoard() {
     });
   };
 
+  const onDragStart = (event: DragStartEvent) => {
+    setDraggingId(String(event.active.id));
+  };
+
   const onDragEnd = (event: DragEndEvent) => {
+    setDraggingId(null);
     const over = event.over;
     if (over === null) return;
     const folderId = dropTargetFolderId(String(over.id));
     if (folderId === undefined) return;
     void useNotesDataStore.getState().moveNote(String(event.active.id), folderId);
   };
+
+  const tagTitle = dragTagTitle(notes, draggingId);
 
   if (owner === null) {
     return (
@@ -208,7 +233,9 @@ export default function FilesBoard() {
     <DndContext
       sensors={sensors}
       collisionDetection={pointerWithin}
+      onDragStart={onDragStart}
       onDragEnd={onDragEnd}
+      onDragCancel={() => setDraggingId(null)}
     >
       <div className="grid gap-4 md:grid-cols-[250px_minmax(0,1fr)]">
         <FolderRail
@@ -506,6 +533,10 @@ export default function FilesBoard() {
         choices={ask?.choices ?? []}
         onDismiss={() => setAsk(null)}
       />
+
+      <DragOverlay dropAnimation={null} modifiers={[tagByFinger]}>
+        {tagTitle !== null ? <NoteDragTag title={tagTitle} /> : null}
+      </DragOverlay>
     </DndContext>
   );
 }

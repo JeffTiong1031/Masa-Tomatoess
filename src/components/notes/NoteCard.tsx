@@ -1,11 +1,23 @@
 'use client';
 
 import { useDraggable } from '@dnd-kit/core';
-import { MoreHorizontal } from 'lucide-react';
+import { FileText, MoreHorizontal } from 'lucide-react';
 import type { Note } from '@/lib/note';
 import { notePreview } from '@/lib/noteFiles';
 import type { NoteFolder } from '@/lib/noteFolder';
 import { whenTouched } from '@/lib/noteWhen';
+
+export function NoteDragTag({ title }: { title: string }) {
+  return (
+    <div
+      aria-hidden
+      className="flex max-w-[14rem] items-center gap-2 rounded-full border border-[var(--mt-border)] bg-[var(--mt-surface)] py-2 pl-3 pr-3.5 text-sm font-semibold text-[var(--mt-text)] shadow-[0_8px_24px_color-mix(in_srgb,var(--mt-text)_16%,transparent)]"
+    >
+      <FileText size={15} strokeWidth={1.8} />
+      <span className="truncate">{title}</span>
+    </div>
+  );
+}
 
 export default function NoteCard({
   note,
@@ -31,10 +43,14 @@ export default function NoteCard({
     <div
       ref={setNodeRef}
       className={`flex flex-col rounded-[18px] border border-[var(--mt-border)] bg-[var(--mt-surface)] ${
-        isDragging ? 'opacity-40' : ''
+        isDragging ? 'opacity-35' : ''
       }`}
     >
-      <div className="flex items-start gap-1 pl-4 pr-1 pt-3">
+      <div
+        className={`flex items-start gap-1 pl-4 pr-1 pt-3 ${
+          isDragging ? 'invisible' : ''
+        }`}
+      >
         <button
           type="button"
           onClick={onOpen}
@@ -60,7 +76,9 @@ export default function NoteCard({
         onClick={onOpen}
         {...attributes}
         {...listeners}
-        className="flex flex-1 cursor-pointer touch-manipulation flex-col gap-1.5 px-4 pb-3 pt-1 text-left"
+        className={`flex flex-1 cursor-pointer touch-manipulation flex-col gap-1.5 px-4 pb-3 pt-1 text-left ${
+          isDragging ? 'invisible' : ''
+        }`}
       >
         {lines.length === 0 ? (
           <span className="text-xs text-[var(--mt-text-subtle)]">Empty</span>
