@@ -165,6 +165,20 @@ describe('notes pad pictures', () => {
     expect(placeholder).toBeLessThan(shrink);
     expect(EDITOR).toContain('completePendingPicture(');
   });
+
+  it('draws pictures, pastes images first, and resizes from a corner', () => {
+    expect(EDITOR).toContain("block.kind === 'picture'");
+    expect(EDITOR).toContain('Sit in front of text');
+    expect(EDITOR).toContain('Sit in line with words');
+    expect(EDITOR).toContain('isPictureMime(');
+    expect(EDITOR).toContain('shrinkNotePicture(');
+    expect(EDITOR).toContain('sizePictureAt(');
+    expect(EDITOR).toContain('placePictureAt(');
+    expect(EDITOR).toContain('switchPictureSitAt(');
+    expect(EDITOR.indexOf('isPictureMime(')).toBeLessThan(
+      EDITOR.indexOf('NOTE_CLIPBOARD_TYPE'),
+    );
+  });
 });
 
 describe('notes window host', () => {
