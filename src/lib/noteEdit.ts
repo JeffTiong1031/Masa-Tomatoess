@@ -418,7 +418,7 @@ export function pasteExternal(
         blocks: next,
         caret: {
           index: deleted.caret.index + paragraphs.length - 1,
-          offset: blockLength(paragraphs[paragraphs.length - 1]),
+          offset: blockLength(incoming[incoming.length - 1]),
         },
       };
     }
@@ -858,6 +858,12 @@ export function backspaceAtStart(
       if (next.length === 0) {
         return {
           blocks: [{ kind: 'paragraph', text: '' }],
+          caret: { index: 0, offset: 0 },
+        };
+      }
+      if (caret.index === 0) {
+        return {
+          blocks: next,
           caret: { index: 0, offset: 0 },
         };
       }

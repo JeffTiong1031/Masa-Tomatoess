@@ -254,6 +254,17 @@ describe('backspaceAtStart', () => {
     expect(result?.blocks).toEqual(blocks);
     expect(result?.caret).toEqual({ index: 0, offset: 0 });
   });
+
+  it('deletes the first picture and starts the next row at zero', () => {
+    const result = backspaceAtStart(
+      [pic, { kind: 'paragraph', text: 'there' }],
+      { index: 0, offset: 0 },
+    );
+    expect(result).toEqual({
+      blocks: [{ kind: 'paragraph', text: 'there' }],
+      caret: { index: 0, offset: 0 },
+    });
+  });
 });
 
 describe('deleteSelection', () => {
@@ -479,6 +490,22 @@ describe('pasteExternal', () => {
     expect(result.blocks[0]).toMatchObject({
       kind: 'paragraph',
       text: 'hello',
+    });
+  });
+
+  it('leaves the caret before the original suffix after a multi-line paste', () => {
+    const result = pasteExternal(
+      [{ kind: 'paragraph', text: 'AB' }],
+      { index: 0, offset: 1 },
+      { index: 0, offset: 1 },
+      'x\ny',
+    );
+    expect(result).toEqual({
+      blocks: [
+        { kind: 'paragraph', text: 'Ax' },
+        { kind: 'paragraph', text: 'yB' },
+      ],
+      caret: { index: 1, offset: 1 },
     });
   });
 });
