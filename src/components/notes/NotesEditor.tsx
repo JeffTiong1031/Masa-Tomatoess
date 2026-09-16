@@ -367,6 +367,13 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
         anchorRef.current = caret;
         setPaint(null);
       }
+      const range = rangeRef.current;
+      setPickedPicture(
+        collapsedRange(range.start, range.end) &&
+          nextBlocks[range.focus.index].kind === 'picture'
+          ? range.focus.index
+          : null,
+      );
       setBlocks(nextBlocks);
       onChange(encodeBody(nextBlocks));
       reportCaret(nextBlocks, caret);
@@ -748,6 +755,7 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
       dropSpan();
       historyRef.current = EMPTY_HISTORY;
       typingRunRef.current = false;
+      setPickedPicture(next[caret.index].kind === 'picture' ? caret.index : null);
       setBlocks(next);
       const encoded = encodeBody(next);
       if (encoded !== body) onChange(encoded);
@@ -1024,7 +1032,11 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
                         top: `${block.y * 100}%`,
                         width: `${block.width * 100}%`,
                       }
-                    : { width: `${block.width * 100}%`, flex: 'none' }
+                    : {
+                        position: 'relative',
+                        width: `${block.width * 100}%`,
+                        flex: 'none',
+                      }
                   : undefined
               }
               contentEditable={block.kind !== 'picture' && !disabled}

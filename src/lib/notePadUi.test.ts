@@ -179,6 +179,23 @@ describe('notes pad pictures', () => {
       EDITOR.indexOf('NOTE_CLIPBOARD_TYPE'),
     );
   });
+
+  it('keeps in-line handles on the picture after it is narrowed', () => {
+    expect(EDITOR).toContain("position: 'relative'");
+    expect(EDITOR).toContain("flex: 'none'");
+    expect(EDITOR).toContain("width: `${block.width * 100}%`");
+  });
+
+  it('picks a picture when the caret lands on it, not only after a tap', () => {
+    const commit = EDITOR.indexOf('const commit =');
+    const applyRange = EDITOR.indexOf('const applyRange =');
+    expect(commit).toBeGreaterThan(-1);
+    expect(applyRange).toBeGreaterThan(commit);
+    expect(EDITOR.slice(commit, applyRange)).toContain('setPickedPicture(');
+    expect(
+      EDITOR.slice(applyRange, EDITOR.indexOf('const dropSpan =')),
+    ).toContain('setPickedPicture(');
+  });
 });
 
 describe('notes window host', () => {
