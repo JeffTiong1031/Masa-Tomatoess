@@ -24,6 +24,13 @@ describe('note picture shrink rule', () => {
       height: 480,
     });
   });
+
+  it('shrinks an oversized photo to the 800 long edge', () => {
+    expect(fitWithin(1600, 1200, NOTE_PIC_MAX_EDGE)).toEqual({
+      width: 800,
+      height: 600,
+    });
+  });
 });
 
 describe('isPictureMime', () => {
