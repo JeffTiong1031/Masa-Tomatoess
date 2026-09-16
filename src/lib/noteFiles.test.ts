@@ -171,6 +171,22 @@ describe('notePreview', () => {
 
     expect(notePreview(body)[0].text).toBe('Eggs');
   });
+
+  it('skips picture rows and uses the words around them', () => {
+    const body = encodeBody([
+      {
+        kind: 'picture',
+        sit: 'inline',
+        width: 1,
+        x: 0.5,
+        y: 0.15,
+        src: 'data:image/webp;base64,AAA',
+      },
+      { kind: 'paragraph', text: 'Eggs' },
+    ]);
+    expect(notePreview(body)).toEqual([{ text: 'Eggs', checked: null }]);
+    expect(suggestedTitle(body)).toBe('Eggs');
+  });
 });
 
 describe('suggestedTitle', () => {

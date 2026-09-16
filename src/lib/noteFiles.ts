@@ -70,11 +70,18 @@ export interface PreviewLine {
  *  a list of ticks is how you recognise a shopping list at a glance. */
 export function notePreview(body: string, limit = 4): PreviewLine[] {
   return decodeBody(body)
-    .map((block) => ({
-      text: block.text.trim(),
-      checked: block.kind === 'item' ? block.checked : null,
-    }))
-    .filter((line) => line.text !== '' || line.checked !== null)
+    .flatMap((block): PreviewLine[] => {
+      switch (block.kind) {
+        case 'picture':
+          return [];
+        case 'item':
+          return [{ text: block.text.trim(), checked: block.checked }];
+        case 'paragraph': {
+          const text = block.text.trim();
+          return text === '' ? [] : [{ text, checked: null }];
+        }
+      }
+    })
     .slice(0, limit);
 }
 
