@@ -12,6 +12,7 @@ import {
 import { CheckSquare2, Square } from 'lucide-react';
 import {
   backspaceAtStart,
+  blockLength,
   canIndent as canIndentBlock,
   canOutdent as canOutdentBlock,
   deleteSelection,
@@ -124,6 +125,7 @@ function rangeHasItem(blocks: Block[], from: number, to: number): boolean {
       case 'item':
         return true;
       case 'paragraph':
+      case 'picture':
         break;
     }
   }
@@ -156,8 +158,25 @@ function caretOnLastVisualLine(
 }
 
 function slicedBlock(block: Block, start: number, end: number): Block {
-  const sliced = sliceVisible(block.text, block.spans, start, end);
-  return withVisible(block, sliced.text, sliced.spans);
+  switch (block.kind) {
+    case 'picture':
+      return block;
+    case 'paragraph':
+    case 'item': {
+      const sliced = sliceVisible(block.text, block.spans, start, end);
+      return withVisible(block, sliced.text, sliced.spans);
+    }
+  }
+}
+
+function inheritedStyleFor(block: Block, offset: number): NoteStyle {
+  switch (block.kind) {
+    case 'picture':
+      return { bold: false, underline: false };
+    case 'paragraph':
+    case 'item':
+      return inheritStyle(block.text, block.spans, offset);
+  }
 }
 
 function textPoint(
@@ -263,7 +282,7 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
       const collapsed = collapsedRange(from, to);
       const pending = pendingRef.current;
       const block = nextBlocks[caret.index];
-      const inherited = inheritStyle(block.text, block.spans, caret.offset);
+      const inherited = inheritedStyleFor(block, caret.offset);
       onCaret({
         inWords,
         inChecklist,
@@ -389,7 +408,10 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
           nearestDist = dy;
           nearest = {
             index,
-            offset: x < rect.left + rect.width / 2 ? 0 : blocksRef.current[index].text.length,
+            offset:
+              x < rect.left + rect.width / 2
+                ? 0
+                : blockLength(blocksRef.current[index]),
           };
         }
       }
@@ -411,7 +433,8 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
           index,
           offset: Math.min(
             range.toString().length,
-            element.textContent?.length ?? blocksRef.current[index].text.length,
+            element.textContent?.length ??
+              blockLength(blocksRef.current[index]),
           ),
         };
       }
@@ -452,7 +475,7 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
           slicedBlock(
             block,
             index === start.index ? start.offset : 0,
-            index === end.index ? end.offset : block.text.length,
+            index === end.index ? end.offset : blockLength(block),
           ),
         );
       }
@@ -475,7 +498,14 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
       const current = blocksRef.current;
       const parsed = spansFromLeaves(leavesFrom(element));
       const next = [...current];
-      next[index] = withVisible(current[index], parsed.text, parsed.spans);
+      const block = current[index];
+      switch (block.kind) {
+        case 'picture':
+          return;
+        case 'paragraph':
+        case 'item':
+          next[index] = withVisible(block, parsed.text, parsed.spans);
+      }
       commit(
         next,
         caret,
@@ -490,9 +520,8 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
       const collapsed = collapsedRange(range.start, range.end);
       if (collapsed) {
         const pending = pendingRef.current;
-        const inherited = inheritStyle(
-          current[range.focus.index].text,
-          current[range.focus.index].spans,
+        const inherited = inheritedStyleFor(
+          current[range.focus.index],
           range.focus.offset,
         );
         const base = pending ?? inherited;
@@ -576,7 +605,7 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
           paint.start,
           paint.end,
           index,
-          blocks[index].text.length,
+          blockLength(blocks[index]),
         );
         if (!slice) continue;
         const element = blockNodesRef.current[index];
@@ -916,7 +945,7 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
                     { index: 0, offset: 0 },
                     {
                       index: last,
-                      offset: blocksRef.current[last].text.length,
+                      offset: blockLength(blocksRef.current[last]),
                     },
                   );
                   return;
@@ -966,7 +995,7 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
                       : !caretOnLastVisualLine(
                           element,
                           range.focus.offset,
-                          block.text.length,
+                          blockLength(block),
                         ))
                   ) {
                     return;
@@ -991,7 +1020,7 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
                     event.key === 'ArrowLeft'
                       ? range.focus.offset === 0
                       : range.focus.offset ===
-                        blocksRef.current[range.focus.index].text.length;
+                        blockLength(blocksRef.current[range.focus.index]);
                   if (atEdge) {
                     const focus = extendCaret(
                       blocksRef.current,
@@ -1200,7 +1229,9 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
               onKeyUp={() => updateCaret(index)}
               onPointerUp={() => updateCaret(index)}
             >
-              {noteRunNodes(block.text, block.spans)}
+              {block.kind === 'picture'
+                ? null
+                : noteRunNodes(block.text, block.spans)}
             </span>
           </div>
         ))}

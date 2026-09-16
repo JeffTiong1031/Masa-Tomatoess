@@ -1,6 +1,12 @@
 import { joinIntoLine, stripIncoming } from './noteCopy';
 import { decodeBody, encodeBody, withVisible, type Block } from './noteDoc';
 import {
+  defaultPicture,
+  placePicture,
+  sizePicture,
+  switchPictureSit,
+} from './notePicture';
+import {
   applyMark,
   concatVisible,
   deleteVisible,
@@ -23,6 +29,16 @@ export interface EditResult {
   caret: DocCaret;
 }
 
+export function blockLength(block: Block): number {
+  switch (block.kind) {
+    case 'picture':
+      return 0;
+    case 'paragraph':
+    case 'item':
+      return block.text.length;
+  }
+}
+
 export function ordered(a: DocCaret, b: DocCaret): [DocCaret, DocCaret] {
   if (a.index < b.index || (a.index === b.index && a.offset <= b.offset)) {
     return [a, b];
@@ -41,26 +57,73 @@ export function deleteSelection(
   const next = [...blocks];
 
   if (from.index === to.index) {
-    const visible = deleteVisible(first.text, first.spans, from.offset, to.offset);
-    next[from.index] = withVisible(first, visible.text, visible.spans);
-    return { blocks: next, caret: from };
+    switch (first.kind) {
+      case 'picture':
+        next.splice(from.index, 1);
+        if (next.length === 0) {
+          return {
+            blocks: [{ kind: 'paragraph', text: '' }],
+            caret: { index: 0, offset: 0 },
+          };
+        }
+        return {
+          blocks: next,
+          caret: {
+            index: Math.min(from.index, next.length - 1),
+            offset: 0,
+          },
+        };
+      case 'paragraph':
+      case 'item': {
+        const visible = deleteVisible(
+          first.text,
+          first.spans,
+          from.offset,
+          to.offset,
+        );
+        next[from.index] = withVisible(first, visible.text, visible.spans);
+        return { blocks: next, caret: from };
+      }
+    }
   }
 
-  const headVisible = sliceVisible(first.text, first.spans, 0, from.offset);
-  const tailVisible = sliceVisible(
-    last.text,
-    last.spans,
-    to.offset,
-    last.text.length,
-  );
-  const head = withVisible(first, headVisible.text, headVisible.spans);
-  const tail = withVisible(last, tailVisible.text, tailVisible.spans);
-  next.splice(
-    from.index,
-    to.index - from.index + 1,
-    ...(tail.text === '' ? [head] : [head, tail]),
-  );
-  return { blocks: next, caret: from };
+  const replacement: Block[] = [];
+  switch (first.kind) {
+    case 'picture':
+      break;
+    case 'paragraph':
+    case 'item': {
+      const visible = sliceVisible(first.text, first.spans, 0, from.offset);
+      replacement.push(withVisible(first, visible.text, visible.spans));
+      break;
+    }
+  }
+  switch (last.kind) {
+    case 'picture':
+      break;
+    case 'paragraph':
+    case 'item': {
+      const visible = sliceVisible(
+        last.text,
+        last.spans,
+        to.offset,
+        last.text.length,
+      );
+      if (visible.text !== '') {
+        replacement.push(withVisible(last, visible.text, visible.spans));
+      }
+      break;
+    }
+  }
+  if (replacement.length === 0 && blocks.length === to.index - from.index + 1) {
+    replacement.push({ kind: 'paragraph', text: '' });
+  }
+  next.splice(from.index, to.index - from.index + 1, ...replacement);
+  const caretIndex = Math.min(from.index, next.length - 1);
+  return {
+    blocks: next,
+    caret: { index: caretIndex, offset: replacement.length === 0 ? 0 : from.offset },
+  };
 }
 
 export function insertText(
@@ -70,20 +133,148 @@ export function insertText(
   style?: NoteStyle,
 ): EditResult {
   const block = blocks[caret.index];
-  const next = [...blocks];
-  const inserted = insertVisible(
-    block.text,
-    block.spans,
-    caret.offset,
-    text,
-    style,
-  );
-  next[caret.index] = withVisible(block, inserted.text, inserted.spans);
+  switch (block.kind) {
+    case 'picture': {
+      const next = [...blocks];
+      next.splice(caret.index + 1, 0, { kind: 'paragraph', text });
+      return {
+        blocks: next,
+        caret: { index: caret.index + 1, offset: text.length },
+      };
+    }
+    case 'paragraph':
+    case 'item': {
+      const next = [...blocks];
+      const inserted = insertVisible(
+        block.text,
+        block.spans,
+        caret.offset,
+        text,
+        style,
+      );
+      next[caret.index] = withVisible(block, inserted.text, inserted.spans);
+      return {
+        blocks: next,
+        caret: { index: caret.index, offset: caret.offset + text.length },
+      };
+    }
+  }
+}
 
-  return {
-    blocks: next,
-    caret: { index: caret.index, offset: caret.offset + text.length },
-  };
+export function insertPicture(
+  blocks: Block[],
+  caret: DocCaret,
+  src: string,
+): EditResult {
+  const block = blocks[caret.index];
+  const picture = defaultPicture(src);
+  switch (block.kind) {
+    case 'picture': {
+      const next = [...blocks];
+      next.splice(caret.index + 1, 0, picture);
+      return {
+        blocks: next,
+        caret: { index: caret.index + 1, offset: 0 },
+      };
+    }
+    case 'paragraph': {
+      const head = sliceVisible(block.text, block.spans, 0, caret.offset);
+      const tail = sliceVisible(
+        block.text,
+        block.spans,
+        caret.offset,
+        block.text.length,
+      );
+      const next = [...blocks];
+      next.splice(
+        caret.index,
+        1,
+        withVisible(block, head.text, head.spans),
+        picture,
+        withVisible(block, tail.text, tail.spans),
+      );
+      return {
+        blocks: next,
+        caret: { index: caret.index + 1, offset: 0 },
+      };
+    }
+    case 'item': {
+      const head = sliceVisible(block.text, block.spans, 0, caret.offset);
+      const tail = sliceVisible(
+        block.text,
+        block.spans,
+        caret.offset,
+        block.text.length,
+      );
+      const next = [...blocks];
+      next.splice(
+        caret.index,
+        1,
+        withVisible(block, head.text, head.spans),
+        picture,
+        withVisible(
+          { ...block, checked: false },
+          tail.text,
+          tail.spans,
+        ),
+      );
+      return {
+        blocks: next,
+        caret: { index: caret.index + 1, offset: 0 },
+      };
+    }
+  }
+}
+
+export function switchPictureSitAt(blocks: Block[], index: number): Block[] {
+  const block = blocks[index];
+  switch (block.kind) {
+    case 'picture': {
+      const next = [...blocks];
+      next[index] = switchPictureSit(block);
+      return next;
+    }
+    case 'paragraph':
+    case 'item':
+      return blocks;
+  }
+}
+
+export function sizePictureAt(
+  blocks: Block[],
+  index: number,
+  width: number,
+): Block[] {
+  const block = blocks[index];
+  switch (block.kind) {
+    case 'picture': {
+      const next = [...blocks];
+      next[index] = sizePicture(block, width);
+      return next;
+    }
+    case 'paragraph':
+    case 'item':
+      return blocks;
+  }
+}
+
+export function placePictureAt(
+  blocks: Block[],
+  index: number,
+  x: number,
+  y: number,
+): Block[] {
+  const block = blocks[index];
+  switch (block.kind) {
+    case 'picture': {
+      const next = [...blocks];
+      next[index] = placePicture(block, x, y);
+      return next;
+    }
+    case 'paragraph':
+    case 'item':
+      return blocks;
+  }
 }
 
 export function typeOverRange(
@@ -121,10 +312,10 @@ export function extendCaret(
       }
       return {
         index: caret.index - 1,
-        offset: blocks[caret.index - 1].text.length,
+        offset: blockLength(blocks[caret.index - 1]),
       };
     case 'ArrowRight':
-      if (caret.offset < block.text.length) {
+      if (caret.offset < blockLength(block)) {
         return { index: caret.index, offset: caret.offset + 1 };
       }
       if (caret.index === blocks.length - 1) {
@@ -137,20 +328,20 @@ export function extendCaret(
       }
       return {
         index: caret.index - 1,
-        offset: Math.min(caret.offset, blocks[caret.index - 1].text.length),
+        offset: Math.min(caret.offset, blockLength(blocks[caret.index - 1])),
       };
     case 'ArrowDown':
       if (caret.index === blocks.length - 1) {
-        return { index: caret.index, offset: block.text.length };
+        return { index: caret.index, offset: blockLength(block) };
       }
       return {
         index: caret.index + 1,
-        offset: Math.min(caret.offset, blocks[caret.index + 1].text.length),
+        offset: Math.min(caret.offset, blockLength(blocks[caret.index + 1])),
       };
     case 'Home':
       return { index: caret.index, offset: 0 };
     case 'End':
-      return { index: caret.index, offset: block.text.length };
+      return { index: caret.index, offset: blockLength(block) };
   }
 }
 
@@ -167,12 +358,22 @@ export function pasteExternal(
   const block = deleted.blocks[deleted.caret.index];
 
   switch (block.kind) {
+    case 'picture':
+      return insertText(
+        deleted.blocks,
+        deleted.caret,
+        joinIntoLine(raw),
+      );
     case 'item':
       return insertText(deleted.blocks, deleted.caret, joinIntoLine(raw));
     case 'paragraph': {
       const incoming = decodeBody(stripIncoming(raw).replaceAll('\r\n', '\n'));
       if (incoming.length === 1) {
-        return insertText(deleted.blocks, deleted.caret, incoming[0].text);
+        return insertText(
+          deleted.blocks,
+          deleted.caret,
+          incoming[0].kind === 'picture' ? '' : incoming[0].text,
+        );
       }
 
       const prefix = sliceVisible(
@@ -188,21 +389,28 @@ export function pasteExternal(
         block.text.length,
       );
       const paragraphs = incoming.map((line, index): Block => {
-        let visible: { text: string; spans?: NoteSpan[] } = {
-          text: line.text,
-          spans: line.spans,
-        };
-        if (index === 0) {
-          visible = concatVisible(prefix, visible);
+        switch (line.kind) {
+          case 'picture':
+            return { kind: 'paragraph', text: '' };
+          case 'paragraph':
+          case 'item': {
+            let visible: { text: string; spans?: NoteSpan[] } = {
+              text: line.text,
+              spans: line.spans,
+            };
+            if (index === 0) {
+              visible = concatVisible(prefix, visible);
+            }
+            if (index === incoming.length - 1) {
+              visible = concatVisible(visible, suffix);
+            }
+            return withVisible(
+              { kind: 'paragraph', text: '' },
+              visible.text,
+              visible.spans,
+            );
+          }
         }
-        if (index === incoming.length - 1) {
-          visible = concatVisible(visible, suffix);
-        }
-        return withVisible(
-          { kind: 'paragraph', text: '' },
-          visible.text,
-          visible.spans,
-        );
       });
       const next = [...deleted.blocks];
       next.splice(deleted.caret.index, 1, ...paragraphs);
@@ -210,7 +418,7 @@ export function pasteExternal(
         blocks: next,
         caret: {
           index: deleted.caret.index + paragraphs.length - 1,
-          offset: incoming[incoming.length - 1].text.length,
+          offset: blockLength(paragraphs[paragraphs.length - 1]),
         },
       };
     }
@@ -229,23 +437,34 @@ export function pasteInternal(
     : deleteSelection(blocks, from, to);
   const block = deleted.blocks[deleted.caret.index];
   const inserted = decodeBody(encodeBody(fragment));
-  const prefixVisible = sliceVisible(
-    block.text,
-    block.spans,
-    0,
-    deleted.caret.offset,
-  );
-  const suffixVisible = sliceVisible(
-    block.text,
-    block.spans,
-    deleted.caret.offset,
-    block.text.length,
-  );
   const prefix: Block[] = [];
   const suffix: Block[] = [];
 
   switch (block.kind) {
-    case 'paragraph':
+    case 'picture': {
+      const next = [...deleted.blocks];
+      next.splice(deleted.caret.index + 1, 0, ...inserted);
+      return {
+        blocks: next,
+        caret: {
+          index: deleted.caret.index + inserted.length,
+          offset: blockLength(inserted[inserted.length - 1]),
+        },
+      };
+    }
+    case 'paragraph': {
+      const prefixVisible = sliceVisible(
+        block.text,
+        block.spans,
+        0,
+        deleted.caret.offset,
+      );
+      const suffixVisible = sliceVisible(
+        block.text,
+        block.spans,
+        deleted.caret.offset,
+        block.text.length,
+      );
       if (prefixVisible.text !== '') {
         prefix.push(
           withVisible(
@@ -265,7 +484,20 @@ export function pasteInternal(
         );
       }
       break;
-    case 'item':
+    }
+    case 'item': {
+      const prefixVisible = sliceVisible(
+        block.text,
+        block.spans,
+        0,
+        deleted.caret.offset,
+      );
+      const suffixVisible = sliceVisible(
+        block.text,
+        block.spans,
+        deleted.caret.offset,
+        block.text.length,
+      );
       if (prefixVisible.text !== '') {
         prefix.push(
           withVisible(block, prefixVisible.text, prefixVisible.spans),
@@ -280,6 +512,8 @@ export function pasteInternal(
           ),
         );
       }
+      break;
+    }
   }
 
   const next = [...deleted.blocks];
@@ -289,7 +523,7 @@ export function pasteInternal(
     blocks: next,
     caret: {
       index: caretIndex,
-      offset: inserted[inserted.length - 1].text.length,
+      offset: blockLength(inserted[inserted.length - 1]),
     },
   };
 }
@@ -297,6 +531,7 @@ export function pasteInternal(
 export function familyEnd(blocks: Block[], index: number): number {
   const root = blocks[index];
   switch (root.kind) {
+    case 'picture':
     case 'paragraph':
       return index;
     case 'item': {
@@ -304,6 +539,7 @@ export function familyEnd(blocks: Block[], index: number): number {
       for (let candidate = index + 1; candidate < blocks.length; candidate += 1) {
         const block = blocks[candidate];
         switch (block.kind) {
+          case 'picture':
           case 'paragraph':
             return end;
           case 'item':
@@ -321,6 +557,7 @@ export function familyEnd(blocks: Block[], index: number): number {
 export function canIndent(blocks: Block[], index: number): boolean {
   const block = blocks[index];
   switch (block.kind) {
+    case 'picture':
     case 'paragraph':
       return false;
     case 'item': {
@@ -329,6 +566,7 @@ export function canIndent(blocks: Block[], index: number): boolean {
       }
       const above = blocks[index - 1];
       switch (above.kind) {
+        case 'picture':
         case 'paragraph':
           return false;
         case 'item':
@@ -341,6 +579,7 @@ export function canIndent(blocks: Block[], index: number): boolean {
 export function canOutdent(blocks: Block[], index: number): boolean {
   const block = blocks[index];
   switch (block.kind) {
+    case 'picture':
     case 'paragraph':
       return false;
     case 'item':
@@ -358,6 +597,7 @@ export function selectedRoots(
   for (let index = from; index <= to; index += 1) {
     const block = blocks[index];
     switch (block.kind) {
+      case 'picture':
       case 'paragraph':
         break;
       case 'item': {
@@ -365,6 +605,7 @@ export function selectedRoots(
         for (let candidate = index - 1; candidate >= from; candidate -= 1) {
           const previous = blocks[candidate];
           switch (previous.kind) {
+            case 'picture':
             case 'paragraph':
               candidate = from - 1;
               break;
@@ -388,6 +629,7 @@ export function selectedRoots(
 export function toggleChecked(blocks: Block[], index: number): Block[] {
   const block = blocks[index];
   switch (block.kind) {
+    case 'picture':
     case 'paragraph':
       return blocks;
     case 'item': {
@@ -406,6 +648,8 @@ export function toggleChecklist(
 ): EditResult {
   const hasParagraph = blocks.slice(from, to + 1).some((block) => {
     switch (block.kind) {
+      case 'picture':
+        return false;
       case 'paragraph':
         return true;
       case 'item':
@@ -418,6 +662,8 @@ export function toggleChecklist(
     for (let index = from; index <= to; index += 1) {
       const block = next[index];
       switch (block.kind) {
+        case 'picture':
+          break;
         case 'paragraph':
           next[index] = withVisible(
             { kind: 'item', text: '', checked: false, indent: 0 },
@@ -435,6 +681,8 @@ export function toggleChecklist(
   for (let index = from; index <= to; index += 1) {
     const block = next[index];
     switch (block.kind) {
+      case 'picture':
+        break;
       case 'paragraph':
         break;
       case 'item': {
@@ -447,6 +695,7 @@ export function toggleChecklist(
         for (let descendant = index + 1; descendant <= end; descendant += 1) {
           const child = next[descendant];
           switch (child.kind) {
+            case 'picture':
             case 'paragraph':
               break;
             case 'item':
@@ -484,6 +733,7 @@ function moveSelection(
     for (let index = family.root; index <= family.end; index += 1) {
       const block = next[index];
       switch (block.kind) {
+        case 'picture':
         case 'paragraph':
           break;
         case 'item':
@@ -515,15 +765,23 @@ export function outdentSelection(
 
 export function enterAt(blocks: Block[], caret: DocCaret): EditResult {
   const block = blocks[caret.index];
-  const head = sliceVisible(block.text, block.spans, 0, caret.offset);
-  const tail = sliceVisible(
-    block.text,
-    block.spans,
-    caret.offset,
-    block.text.length,
-  );
   switch (block.kind) {
+    case 'picture': {
+      const next = [...blocks];
+      next.splice(caret.index + 1, 0, { kind: 'paragraph', text: '' });
+      return {
+        blocks: next,
+        caret: { index: caret.index + 1, offset: 0 },
+      };
+    }
     case 'paragraph': {
+      const head = sliceVisible(block.text, block.spans, 0, caret.offset);
+      const tail = sliceVisible(
+        block.text,
+        block.spans,
+        caret.offset,
+        block.text.length,
+      );
       const next = [...blocks];
       next.splice(
         caret.index,
@@ -544,6 +802,13 @@ export function enterAt(blocks: Block[], caret: DocCaret): EditResult {
         return toggleChecklist(blocks, caret.index, caret.index, caret);
       }
 
+      const head = sliceVisible(block.text, block.spans, 0, caret.offset);
+      const tail = sliceVisible(
+        block.text,
+        block.spans,
+        caret.offset,
+        block.text.length,
+      );
       const next = [...blocks];
       next.splice(
         caret.index,
@@ -577,7 +842,34 @@ export function backspaceAtStart(
   }
 
   const block = blocks[caret.index];
+  if (block.kind !== 'picture' && caret.index > 0) {
+    const previousIndex = caret.index - 1;
+    if (blocks[previousIndex].kind === 'picture') {
+      return {
+        blocks,
+        caret: { index: previousIndex, offset: 0 },
+      };
+    }
+  }
   switch (block.kind) {
+    case 'picture': {
+      const next = [...blocks];
+      next.splice(caret.index, 1);
+      if (next.length === 0) {
+        return {
+          blocks: [{ kind: 'paragraph', text: '' }],
+          caret: { index: 0, offset: 0 },
+        };
+      }
+      const previousIndex = Math.max(0, caret.index - 1);
+      return {
+        blocks: next,
+        caret: {
+          index: previousIndex,
+          offset: blockLength(next[previousIndex]),
+        },
+      };
+    }
     case 'item':
       if (block.indent > 0) {
         return outdentSelection(blocks, caret.index, caret.index, caret);
@@ -590,19 +882,29 @@ export function backspaceAtStart(
 
       const previousIndex = caret.index - 1;
       const previous = blocks[previousIndex];
-      const joinOffset = previous.text.length;
-      const next = [...blocks];
-      const joined = concatVisible(previous, block);
-      next[previousIndex] = withVisible(
-        previous,
-        joined.text,
-        joined.spans,
-      );
-      next.splice(caret.index, 1);
-      return {
-        blocks: next,
-        caret: { index: previousIndex, offset: joinOffset },
-      };
+      switch (previous.kind) {
+        case 'picture':
+          return {
+            blocks,
+            caret: { index: previousIndex, offset: 0 },
+          };
+        case 'paragraph':
+        case 'item': {
+          const joinOffset = blockLength(previous);
+          const next = [...blocks];
+          const joined = concatVisible(previous, block);
+          next[previousIndex] = withVisible(
+            previous,
+            joined.text,
+            joined.spans,
+          );
+          next.splice(caret.index, 1);
+          return {
+            blocks: next,
+            caret: { index: previousIndex, offset: joinOffset },
+          };
+        }
+      }
     }
   }
 }
@@ -619,16 +921,20 @@ export function selectionHasMark(
   }
   let any = false;
   for (let index = from.index; index <= to.index; index += 1) {
+    const block = blocks[index];
+    if (block.kind === 'picture') {
+      continue;
+    }
     const fromOff = index === from.index ? from.offset : 0;
-    const toOff = index === to.index ? to.offset : blocks[index].text.length;
+    const toOff = index === to.index ? to.offset : block.text.length;
     if (fromOff >= toOff) {
       continue;
     }
     any = true;
     if (
       !rangeHasMark(
-        blocks[index].text,
-        blocks[index].spans,
+        block.text,
+        block.spans,
         fromOff,
         toOff,
         mark,
@@ -654,17 +960,21 @@ export function toggleMarkInRange(
   const value = !selectionHasMark(blocks, from, to, mark);
   const next = [...blocks];
   for (let index = from.index; index <= to.index; index += 1) {
+    const block = next[index];
+    if (block.kind === 'picture') {
+      continue;
+    }
     const fromOff = index === from.index ? from.offset : 0;
-    const toOff = index === to.index ? to.offset : next[index].text.length;
+    const toOff = index === to.index ? to.offset : block.text.length;
     const updated = applyMark(
-      next[index].text,
-      next[index].spans,
+      block.text,
+      block.spans,
       fromOff,
       toOff,
       mark,
       value,
     );
-    next[index] = withVisible(next[index], updated.text, updated.spans);
+    next[index] = withVisible(block, updated.text, updated.spans);
   }
   return { blocks: next, caret };
 }
