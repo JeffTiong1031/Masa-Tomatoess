@@ -13,6 +13,7 @@ export const folderDropId = (id: string) => `folder:${id}`;
 
 const ROW_CLASS =
   'flex min-h-11 w-full items-center gap-2.5 rounded-xl pr-3 text-left text-sm';
+const ACTIVE_ROW = 'bg-[var(--mt-accent)] font-semibold text-[var(--mt-text)]';
 
 export default function FolderRail({
   folders,
@@ -70,9 +71,7 @@ export default function FolderRail({
         onClick={() => onPane({ kind: 'bin' })}
         aria-current={pane.kind === 'bin' ? 'true' : undefined}
         className={`${ROW_CLASS} pl-3 ${
-          pane.kind === 'bin'
-            ? 'bg-[color-mix(in_srgb,var(--mt-accent)_30%,transparent)] font-semibold text-[var(--mt-text)]'
-            : 'text-[var(--mt-text-muted)]'
+          pane.kind === 'bin' ? ACTIVE_ROW : 'text-[var(--mt-text-muted)]'
         }`}
       >
         <Trash2 size={15} strokeWidth={1.8} aria-hidden />
@@ -101,9 +100,7 @@ function LooseRow({
       onClick={() => onPane({ kind: 'folder', id: null })}
       aria-current={active ? 'true' : undefined}
       className={`${ROW_CLASS} pl-3 ${
-        active
-          ? 'bg-[color-mix(in_srgb,var(--mt-accent)_30%,transparent)] font-semibold text-[var(--mt-text)]'
-          : 'text-[var(--mt-text-muted)]'
+        active ? ACTIVE_ROW : 'text-[var(--mt-text-muted)]'
       } ${isOver ? 'ring-2 ring-[var(--mt-accent)]' : ''}`}
     >
       <FileText size={15} strokeWidth={1.8} aria-hidden />
@@ -138,9 +135,7 @@ function FolderRow({
       <div
         ref={setNodeRef}
         className={`flex items-center rounded-xl ${
-          active
-            ? 'bg-[color-mix(in_srgb,var(--mt-accent)_30%,transparent)]'
-            : ''
+          active ? ACTIVE_ROW : ''
         } ${isOver ? 'ring-2 ring-[var(--mt-accent)]' : ''}`}
         style={{ paddingLeft: `${depth * 1.125}rem` }}
       >

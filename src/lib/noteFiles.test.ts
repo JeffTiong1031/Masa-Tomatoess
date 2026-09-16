@@ -4,6 +4,8 @@ import { encodeBody } from './noteDoc';
 import {
   countsByFolder,
   draftNotes,
+  dragTagShift,
+  dragTagTitle,
   filesFor,
   isNoteSort,
   notePreview,
@@ -169,6 +171,22 @@ describe('notePreview', () => {
 
     expect(notePreview(body)[0].text).toBe('Eggs');
   });
+
+  it('skips picture rows and uses the words around them', () => {
+    const body = encodeBody([
+      {
+        kind: 'picture',
+        sit: 'inline',
+        width: 1,
+        x: 0.5,
+        y: 0.15,
+        src: 'data:image/webp;base64,AAA',
+      },
+      { kind: 'paragraph', text: 'Eggs' },
+    ]);
+    expect(notePreview(body)).toEqual([{ text: 'Eggs', checked: null }]);
+    expect(suggestedTitle(body)).toBe('Eggs');
+  });
 });
 
 describe('suggestedTitle', () => {
@@ -189,6 +207,45 @@ describe('suggestedTitle', () => {
     const long = 'a'.repeat(200);
     expect(suggestedTitle(encodeBody([{ kind: 'paragraph', text: long }])))
       .toHaveLength(60);
+  });
+});
+
+describe('dragTagTitle', () => {
+  it('is null when nothing is being dragged', () => {
+    expect(dragTagTitle([note('a', { title: '1st present' })], null)).toBe(
+      null,
+    );
+  });
+
+  it('is the note name while that note is dragged', () => {
+    const rows = [
+      note('a', { title: '1st present' }),
+      note('b', { title: 'Week 2' }),
+    ];
+
+    expect(dragTagTitle(rows, 'a')).toBe('1st present');
+  });
+
+  it('is null when the dragged id is not a note', () => {
+    expect(
+      dragTagTitle([note('a', { title: '1st present' })], 'folder:x'),
+    ).toBe(null);
+  });
+});
+
+describe('dragTagShift', () => {
+  const transform = { x: 40, y: 80, scaleX: 1, scaleY: 1 };
+
+  it('leaves the move alone when there is no pointer yet', () => {
+    expect(
+      dragTagShift(transform, { left: 10, top: 20 }, null),
+    ).toEqual(transform);
+  });
+
+  it('puts the tag by the finger, a little past it', () => {
+    expect(
+      dragTagShift(transform, { left: 10, top: 20 }, { x: 30, y: 50 }),
+    ).toEqual({ x: 72, y: 122, scaleX: 1, scaleY: 1 });
   });
 });
 

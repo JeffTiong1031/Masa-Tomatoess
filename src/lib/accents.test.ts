@@ -26,6 +26,11 @@ function readAccents(): Record<string, string> {
  *  fail the thresholds below. */
 const NEW_ACCENTS = ['calendar', 'timetable', 'todo', 'notes'];
 
+/** Notes mint sits in countdown's hue, because that band is already
+ *  taken. Hue cannot separate them; delta E does. Calendar, timetable
+ *  and to-do still have a hue gap, so they keep both checks. */
+const NEW_HUE_ACCENTS = ['calendar', 'timetable', 'todo'];
+
 /** The real guard. Below roughly this, two accent chips read as the same
  *  colour at icon size — which is what Timetable and Countdown did at
  *  36px in the drawer's Life group, sitting delta E 12.4 apart.
@@ -80,7 +85,7 @@ describe('accent palette', () => {
     },
   );
 
-  it.each(NEW_ACCENTS)('keeps %s clear of every other accent by hue', (name) => {
+  it.each(NEW_HUE_ACCENTS)('keeps %s clear of every other accent by hue', (name) => {
     const accents = readAccents();
     const subject = accents[name];
 
@@ -98,8 +103,8 @@ describe('accent palette', () => {
     expect(readAccents().todo).toBe('#64B880');
   });
 
-  it('pins the notes accent to the value the palette search found', () => {
-    expect(readAccents().notes).toBe('#A8B257');
+  it('pins the notes accent to mint', () => {
+    expect(readAccents().notes).toBe('#6AE6D4');
   });
 
   it('keeps cocoa readable on the notes accent', () => {

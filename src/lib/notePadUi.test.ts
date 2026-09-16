@@ -138,6 +138,94 @@ describe('notes line gap', () => {
   });
 });
 
+describe('notes pad pictures', () => {
+  it('puts a picture button after underline, before spacing', () => {
+    expect(STRIP).toContain('aria-label="Add a picture"');
+    expect(STRIP.indexOf('aria-label="Underline"')).toBeLessThan(
+      STRIP.indexOf('aria-label="Add a picture"'),
+    );
+    expect(STRIP.indexOf('aria-label="Add a picture"')).toBeLessThan(
+      STRIP.indexOf('Line and paragraph spacing'),
+    );
+    expect(PAD).toContain('editorRef.current?.insertPicture()');
+    expect(EDITOR).toContain('accept="image/*"');
+    expect(EDITOR).toContain('insertPicture(');
+  });
+
+  it('anchors the picture before asynchronous shrinking can move its place', () => {
+    const capture = EDITOR.indexOf(
+      'pictureCaretRef.current = caretRef.current;',
+    );
+    const picker = EDITOR.indexOf('fileInputRef.current?.click()');
+    const placeholder = EDITOR.indexOf('const pending = insertPicture(');
+    const shrink = EDITOR.indexOf('await shrinkNotePicture(file)');
+    expect(capture).toBeGreaterThan(-1);
+    expect(capture).toBeLessThan(picker);
+    expect(placeholder).toBeGreaterThan(-1);
+    expect(placeholder).toBeLessThan(shrink);
+    expect(EDITOR).toContain('completePendingPicture(');
+  });
+
+  it('draws pictures, pastes images first, and resizes from a corner', () => {
+    expect(EDITOR).toContain("block.kind === 'picture'");
+    expect(EDITOR).toContain('Sit in front of text');
+    expect(EDITOR).toContain('Sit in line with words');
+    expect(EDITOR).toContain('isPictureMime(');
+    expect(EDITOR).toContain('shrinkNotePicture(');
+    expect(EDITOR).toContain('sizePictureAt(');
+    expect(EDITOR).toContain('placePictureAt(');
+    expect(EDITOR).toContain('switchPictureSitAt(');
+    expect(EDITOR.indexOf('isPictureMime(')).toBeLessThan(
+      EDITOR.indexOf('NOTE_CLIPBOARD_TYPE'),
+    );
+  });
+
+  it('keeps in-line handles on the picture after it is narrowed', () => {
+    expect(EDITOR).toContain("position: 'relative'");
+    expect(EDITOR).toContain("flex: 'none'");
+    expect(EDITOR).toContain("width: `${block.width * 100}%`");
+  });
+
+  it('picks a picture when the caret lands on it, not only after a tap', () => {
+    const commit = EDITOR.indexOf('const commit =');
+    const applyRange = EDITOR.indexOf('const applyRange =');
+    expect(commit).toBeGreaterThan(-1);
+    expect(applyRange).toBeGreaterThan(commit);
+    expect(EDITOR.slice(commit, applyRange)).toContain('setPickedPicture(');
+    expect(
+      EDITOR.slice(applyRange, EDITOR.indexOf('const dropSpan =')),
+    ).toContain('setPickedPicture(');
+  });
+
+  it('lets a finger on an in-line picture scroll the pad', () => {
+    const begin = EDITOR.indexOf('const beginMove =');
+    const move = EDITOR.indexOf('const movePicture =');
+    const slice = EDITOR.slice(begin, move);
+    const sitCheck = slice.indexOf("block.sit !== 'front'");
+    const prevent = slice.indexOf('event.preventDefault()');
+    expect(sitCheck).toBeGreaterThan(-1);
+    expect(prevent).toBeGreaterThan(-1);
+    expect(sitCheck).toBeLessThan(prevent);
+  });
+
+  it('replaces the current selection when pasting a picture', () => {
+    const add = EDITOR.indexOf('const addPictureFile = async');
+    const pick = EDITOR.indexOf('const pickPicture');
+    const addSlice = EDITOR.slice(add, pick);
+    expect(addSlice).toContain('dropSpan()');
+    expect(addSlice.indexOf('deleteSelection(')).toBeGreaterThan(-1);
+    expect(addSlice.indexOf('deleteSelection(')).toBeLessThan(
+      addSlice.indexOf('insertPicture('),
+    );
+    const paste = EDITOR.indexOf('if (picture) {');
+    const pasteEnd = EDITOR.indexOf('return;', paste);
+    const pasteSlice = EDITOR.slice(paste, pasteEnd);
+    expect(pasteSlice).toContain('range.start');
+    expect(pasteSlice).toContain('range.end');
+    expect(pasteSlice).not.toContain('range.focus');
+  });
+});
+
 describe('notes window host', () => {
   it('keeps Notes outside the page clip so the pad can hang off the edge', () => {
     const clip = SHELL.slice(SHELL.indexOf('overflow-x-hidden'));

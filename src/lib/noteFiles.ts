@@ -70,12 +70,51 @@ export interface PreviewLine {
  *  a list of ticks is how you recognise a shopping list at a glance. */
 export function notePreview(body: string, limit = 4): PreviewLine[] {
   return decodeBody(body)
-    .map((block) => ({
-      text: block.text.trim(),
-      checked: block.kind === 'item' ? block.checked : null,
-    }))
-    .filter((line) => line.text !== '' || line.checked !== null)
+    .flatMap((block): PreviewLine[] => {
+      switch (block.kind) {
+        case 'picture':
+          return [];
+        case 'item':
+          return [{ text: block.text.trim(), checked: block.checked }];
+        case 'paragraph': {
+          const text = block.text.trim();
+          return text === '' ? [] : [{ text, checked: null }];
+        }
+      }
+    })
     .slice(0, limit);
+}
+
+export function dragTagTitle(
+  notes: Note[],
+  activeId: string | number | null,
+): string | null {
+  if (activeId === null) return null;
+  const id = String(activeId);
+  const match = notes.find((row) => row.id === id);
+  return match === undefined ? null : match.title;
+}
+
+export interface DragTagShift {
+  x: number;
+  y: number;
+  scaleX: number;
+  scaleY: number;
+}
+
+const TAG_PAST_FINGER = 12;
+
+export function dragTagShift(
+  transform: DragTagShift,
+  origin: { left: number; top: number } | null,
+  pointer: { x: number; y: number } | null,
+): DragTagShift {
+  if (origin === null || pointer === null) return transform;
+  return {
+    ...transform,
+    x: transform.x + pointer.x - origin.left + TAG_PAST_FINGER,
+    y: transform.y + pointer.y - origin.top + TAG_PAST_FINGER,
+  };
 }
 
 /** The save box pre-fills from the first words you actually typed. */

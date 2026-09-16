@@ -10,9 +10,13 @@ import {
   extendCaret,
   familyEnd,
   indentSelection,
+  insertPicture,
   insertText,
   ordered,
   outdentSelection,
+  placePictureAt,
+  sizePictureAt,
+  switchPictureSitAt,
   typeOverRange,
   pasteExternal,
   pasteInternal,
@@ -23,6 +27,7 @@ import {
   toggleMarkInRange,
 } from './noteEdit';
 import type { Block } from './noteDoc';
+import { defaultPicture } from './notePicture';
 
 const EDITOR = readFileSync(
   path.resolve(process.cwd(), 'src/components/notes/NotesEditor.tsx'),
@@ -30,6 +35,7 @@ const EDITOR = readFileSync(
 );
 
 const caret = { index: 0, offset: 0 };
+const pic = defaultPicture('data:image/webp;base64,AAA');
 
 const sample: Block[] = [
   { kind: 'paragraph', text: 'Above' },
@@ -224,6 +230,41 @@ describe('backspaceAtStart', () => {
     expect(next?.blocks[0]).toEqual({ kind: 'paragraph', text: 'A' });
     expect(next?.blocks[1]).toMatchObject({ kind: 'item', indent: 0 });
   });
+
+  it('removes a picked picture', () => {
+    const blocks: Block[] = [
+      { kind: 'paragraph', text: 'Hi' },
+      pic,
+      { kind: 'paragraph', text: 'there' },
+    ];
+    const result = backspaceAtStart(blocks, { index: 1, offset: 0 });
+    expect(result?.blocks).toEqual([
+      { kind: 'paragraph', text: 'Hi' },
+      { kind: 'paragraph', text: 'there' },
+    ]);
+    expect(result?.caret).toEqual({ index: 0, offset: 2 });
+  });
+
+  it('first Backspace on the next line moves onto the picture', () => {
+    const blocks: Block[] = [
+      pic,
+      { kind: 'paragraph', text: 'there' },
+    ];
+    const result = backspaceAtStart(blocks, { index: 1, offset: 0 });
+    expect(result?.blocks).toEqual(blocks);
+    expect(result?.caret).toEqual({ index: 0, offset: 0 });
+  });
+
+  it('deletes the first picture and starts the next row at zero', () => {
+    const result = backspaceAtStart(
+      [pic, { kind: 'paragraph', text: 'there' }],
+      { index: 0, offset: 0 },
+    );
+    expect(result).toEqual({
+      blocks: [{ kind: 'paragraph', text: 'there' }],
+      caret: { index: 0, offset: 0 },
+    });
+  });
 });
 
 describe('deleteSelection', () => {
@@ -256,6 +297,13 @@ describe('deleteSelection', () => {
     );
     expect(next.blocks).toEqual([{ kind: 'paragraph', text: '' }]);
     expect(next.caret).toEqual({ index: 0, offset: 0 });
+  });
+
+  it('leaves an empty paragraph after deleting the lone picture', () => {
+    expect(deleteSelection([pic], caret, caret)).toEqual({
+      blocks: [{ kind: 'paragraph', text: '' }],
+      caret,
+    });
   });
 });
 
@@ -368,6 +416,69 @@ describe('insertText', () => {
   });
 });
 
+describe('insertPicture', () => {
+  it('drops a new picture on its own row at the caret', () => {
+    const result = insertPicture(
+      [{ kind: 'paragraph', text: 'Hi there' }],
+      { index: 0, offset: 2 },
+      pic.src,
+    );
+    expect(result.blocks).toEqual([
+      { kind: 'paragraph', text: 'Hi' },
+      pic,
+      { kind: 'paragraph', text: ' there' },
+    ]);
+    expect(result.caret).toEqual({ index: 1, offset: 0 });
+  });
+
+  it('splits an item without copying its tick to the tail', () => {
+    const result = insertPicture(
+      [{ kind: 'item', text: 'Hello', checked: true, indent: 2 }],
+      { index: 0, offset: 2 },
+      pic.src,
+    );
+    expect(result.blocks).toEqual([
+      { kind: 'item', text: 'He', checked: true, indent: 2 },
+      pic,
+      { kind: 'item', text: 'llo', checked: false, indent: 2 },
+    ]);
+  });
+
+  it('replaces a selected range then lands on the new picture', () => {
+    const deleted = deleteSelection(
+      [{ kind: 'paragraph', text: 'Hello there' }],
+      { index: 0, offset: 6 },
+      { index: 0, offset: 11 },
+    );
+    const result = insertPicture(deleted.blocks, deleted.caret, pic.src);
+    expect(result.blocks).toEqual([
+      { kind: 'paragraph', text: 'Hello ' },
+      pic,
+      { kind: 'paragraph', text: '' },
+    ]);
+    expect(result.caret).toEqual({ index: 1, offset: 0 });
+  });
+});
+
+describe('picture layout', () => {
+  it('flips in line to on top and restores the last place', () => {
+    const placed = { ...pic, width: 0.4, x: 0.2, y: 0.7 };
+    const blocks: Block[] = [placed];
+    const front = switchPictureSitAt(blocks, 0);
+    expect(front[0]).toMatchObject({ sit: 'front', x: 0.2, y: 0.7 });
+    expect(switchPictureSitAt(front, 0)[0]).toEqual(placed);
+  });
+
+  it('sizes and places a picture', () => {
+    const sized = sizePictureAt([pic], 0, 0.4);
+    expect(sized[0]).toMatchObject({ width: 0.4 });
+    expect(placePictureAt(sized, 0, 0.2, 0.7)[0]).toMatchObject({
+      x: 0.2,
+      y: 0.7,
+    });
+  });
+});
+
 describe('pasteExternal', () => {
   it('joins into an item and does not create new items', () => {
     const blocks: Block[] = [
@@ -382,6 +493,36 @@ describe('pasteExternal', () => {
     expect(next.blocks).toEqual([
       { kind: 'item', text: 'Ax yB', checked: true, indent: 1 },
     ]);
+  });
+
+  it('keeps pasted words as words', () => {
+    const result = pasteExternal(
+      [{ kind: 'paragraph', text: '' }],
+      caret,
+      caret,
+      'hello',
+    );
+    expect(result.blocks.some((block) => block.kind === 'picture')).toBe(false);
+    expect(result.blocks[0]).toMatchObject({
+      kind: 'paragraph',
+      text: 'hello',
+    });
+  });
+
+  it('leaves the caret before the original suffix after a multi-line paste', () => {
+    const result = pasteExternal(
+      [{ kind: 'paragraph', text: 'AB' }],
+      { index: 0, offset: 1 },
+      { index: 0, offset: 1 },
+      'x\ny',
+    );
+    expect(result).toEqual({
+      blocks: [
+        { kind: 'paragraph', text: 'Ax' },
+        { kind: 'paragraph', text: 'yB' },
+      ],
+      caret: { index: 1, offset: 1 },
+    });
   });
 });
 

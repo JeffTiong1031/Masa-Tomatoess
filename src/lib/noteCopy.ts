@@ -14,8 +14,11 @@ export function copyOut(blocks: Block[]): string {
             (block.checked ? '[x] ' : '[ ] ') +
             stripMarks(block.text)
           );
+        case 'picture':
+          return null;
       }
     })
+    .filter((line): line is string => line !== null)
     .join('\n');
 }
 

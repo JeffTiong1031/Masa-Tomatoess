@@ -7,24 +7,30 @@ import {
   useLayoutEffect,
   useRef,
   useState,
+  type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from 'react';
-import { CheckSquare2, Square } from 'lucide-react';
+import { CheckSquare2, Layers2, Square } from 'lucide-react';
 import {
   backspaceAtStart,
+  blockLength,
   canIndent as canIndentBlock,
   canOutdent as canOutdentBlock,
   deleteSelection,
   enterAt,
   extendCaret,
   indentSelection,
+  insertPicture,
   insertText,
   ordered,
   outdentSelection,
   pasteExternal,
   pasteInternal,
+  placePictureAt,
   selectedRoots,
   selectionHasMark,
+  sizePictureAt,
+  switchPictureSitAt,
   toggleChecked,
   toggleChecklist,
   toggleMarkInRange,
@@ -34,7 +40,7 @@ import {
   type NoteMark,
   type NoteStyle,
 } from '@/lib/noteEdit';
-import { copyOut, NOTE_CLIPBOARD_TYPE } from '@/lib/noteCopy';
+import * as noteCopy from '@/lib/noteCopy';
 import { decodeBody, encodeBody, withVisible, type Block } from '@/lib/noteDoc';
 import {
   beforeInputAction,
@@ -44,6 +50,7 @@ import {
   shouldRestoreCaretAfterTextCommit,
 } from '@/lib/noteEditorPolicy';
 import {
+  completePendingPicture,
   EMPTY_HISTORY,
   redoTo,
   remember,
@@ -59,6 +66,8 @@ import {
   NOTE_SELECTION_FILL,
   noteSelectionSlice,
 } from '@/lib/noteSelectionPaint';
+import { isPictureMime } from '@/lib/notePicture';
+import { shrinkNotePicture } from '@/lib/notePictureFile';
 import {
   isChecklistHotkey,
   isEditorCommandBlocked,
@@ -73,6 +82,18 @@ import {
 } from '@/lib/noteStyle';
 
 const ITEM_INDENT_PX = 24;
+
+function pastedPicture(data: DataTransfer): File | null {
+  for (const file of data.files) {
+    if (isPictureMime(file.type)) return file;
+  }
+  for (const item of data.items) {
+    if (item.kind === 'file' && isPictureMime(item.type)) {
+      return item.getAsFile();
+    }
+  }
+  return null;
+}
 
 export interface NotesCaretInfo {
   inWords: boolean;
@@ -89,6 +110,7 @@ export interface NotesEditorHandle {
   outdent: () => void;
   bold: () => void;
   underline: () => void;
+  insertPicture: () => void;
 }
 
 interface NotesEditorProps {
@@ -124,6 +146,7 @@ function rangeHasItem(blocks: Block[], from: number, to: number): boolean {
       case 'item':
         return true;
       case 'paragraph':
+      case 'picture':
         break;
     }
   }
@@ -156,8 +179,25 @@ function caretOnLastVisualLine(
 }
 
 function slicedBlock(block: Block, start: number, end: number): Block {
-  const sliced = sliceVisible(block.text, block.spans, start, end);
-  return withVisible(block, sliced.text, sliced.spans);
+  switch (block.kind) {
+    case 'picture':
+      return block;
+    case 'paragraph':
+    case 'item': {
+      const sliced = sliceVisible(block.text, block.spans, start, end);
+      return withVisible(block, sliced.text, sliced.spans);
+    }
+  }
+}
+
+function inheritedStyleFor(block: Block, offset: number): NoteStyle {
+  switch (block.kind) {
+    case 'picture':
+      return { bold: false, underline: false };
+    case 'paragraph':
+    case 'item':
+      return inheritStyle(block.text, block.spans, offset);
+  }
 }
 
 function textPoint(
@@ -247,6 +287,27 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
       null,
     );
     const editorRef = useRef<HTMLDivElement>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const pictureCaretRef = useRef<DocCaret | null>(null);
+    const resizeRef = useRef<{
+      index: number;
+      pointerId: number;
+      startX: number;
+      startWidth: number;
+      direction: -1 | 1;
+      wrapWidth: number;
+    } | null>(null);
+    const moveRef = useRef<{
+      index: number;
+      pointerId: number;
+      startX: number;
+      startY: number;
+      pictureX: number;
+      pictureY: number;
+      wrapWidth: number;
+      wrapHeight: number;
+    } | null>(null);
+    const [pickedPicture, setPickedPicture] = useState<number | null>(null);
     const [marks, setMarks] = useState<
       { top: number; left: number; width: number; height: number }[]
     >([]);
@@ -263,24 +324,27 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
       const collapsed = collapsedRange(from, to);
       const pending = pendingRef.current;
       const block = nextBlocks[caret.index];
-      const inherited = inheritStyle(block.text, block.spans, caret.offset);
+      const words = inWords && block.kind !== 'picture';
+      const inherited = inheritedStyleFor(block, caret.offset);
       onCaret({
-        inWords,
-        inChecklist,
+        inWords: words,
+        inChecklist: words && inChecklist,
         canIndent:
+          words &&
           inChecklist &&
           roots.some((index) => canIndentBlock(nextBlocks, index)),
         canOutdent:
+          words &&
           inChecklist &&
           roots.some((index) => canOutdentBlock(nextBlocks, index)),
-        bold: inWords
+        bold: words
           ? pending
             ? pending.bold
             : collapsed
               ? inherited.bold
               : selectionHasMark(nextBlocks, from, to, 'bold')
           : false,
-        underline: inWords
+        underline: words
           ? pending
             ? pending.underline
             : collapsed
@@ -303,6 +367,13 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
         anchorRef.current = caret;
         setPaint(null);
       }
+      const range = rangeRef.current;
+      setPickedPicture(
+        collapsedRange(range.start, range.end) &&
+          nextBlocks[range.focus.index].kind === 'picture'
+          ? range.focus.index
+          : null,
+      );
       setBlocks(nextBlocks);
       onChange(encodeBody(nextBlocks));
       reportCaret(nextBlocks, caret);
@@ -326,6 +397,12 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
       caretRef.current = focus;
       spanningRef.current = !collapsedRange(start, end);
       setPaint(start.index !== end.index ? { start, end } : null);
+      setPickedPicture(
+        collapsedRange(start, end) &&
+          blocksRef.current[focus.index].kind === 'picture'
+          ? focus.index
+          : null,
+      );
       reportCaret(blocksRef.current, focus, true);
     };
 
@@ -389,7 +466,10 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
           nearestDist = dy;
           nearest = {
             index,
-            offset: x < rect.left + rect.width / 2 ? 0 : blocksRef.current[index].text.length,
+            offset:
+              x < rect.left + rect.width / 2
+                ? 0
+                : blockLength(blocksRef.current[index]),
           };
         }
       }
@@ -411,7 +491,8 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
           index,
           offset: Math.min(
             range.toString().length,
-            element.textContent?.length ?? blocksRef.current[index].text.length,
+            element.textContent?.length ??
+              blockLength(blocksRef.current[index]),
           ),
         };
       }
@@ -452,7 +533,7 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
           slicedBlock(
             block,
             index === start.index ? start.offset : 0,
-            index === end.index ? end.offset : block.text.length,
+            index === end.index ? end.offset : blockLength(block),
           ),
         );
       }
@@ -464,9 +545,9 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
       range: EditorSelection,
     ) => {
       const fragment = selectedFragment(range);
-      event.clipboardData.setData('text/plain', copyOut(fragment));
+      event.clipboardData.setData('text/plain', noteCopy.copyOut(fragment));
       event.clipboardData.setData(
-        NOTE_CLIPBOARD_TYPE,
+        noteCopy.NOTE_CLIPBOARD_TYPE,
         encodeBody(fragment),
       );
     };
@@ -475,7 +556,14 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
       const current = blocksRef.current;
       const parsed = spansFromLeaves(leavesFrom(element));
       const next = [...current];
-      next[index] = withVisible(current[index], parsed.text, parsed.spans);
+      const block = current[index];
+      switch (block.kind) {
+        case 'picture':
+          return;
+        case 'paragraph':
+        case 'item':
+          next[index] = withVisible(block, parsed.text, parsed.spans);
+      }
       commit(
         next,
         caret,
@@ -490,9 +578,8 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
       const collapsed = collapsedRange(range.start, range.end);
       if (collapsed) {
         const pending = pendingRef.current;
-        const inherited = inheritStyle(
-          current[range.focus.index].text,
-          current[range.focus.index].spans,
+        const inherited = inheritedStyleFor(
+          current[range.focus.index],
           range.focus.offset,
         );
         const base = pending ?? inherited;
@@ -540,6 +627,129 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
       reportCaret(blocksRef.current, caret, true);
     };
 
+    const addPictureFile = async (
+      file: File,
+      start: DocCaret,
+      end: DocCaret,
+    ) => {
+      dropSpan();
+      const base = collapsedRange(start, end)
+        ? { blocks: blocksRef.current, caret: start }
+        : deleteSelection(blocksRef.current, start, end);
+      const pending = insertPicture(base.blocks, base.caret, '');
+      const pendingPicture = pending.blocks[pending.caret.index];
+      if (pendingPicture.kind !== 'picture') return;
+      rememberCurrent();
+      commit(pending.blocks, pending.caret);
+      let src: string;
+      try {
+        src = await shrinkNotePicture(file);
+      } catch {
+        return;
+      }
+      const current = blocksRef.current;
+      const completed = completePendingPicture(
+        historyRef.current,
+        current,
+        pending.caret.index,
+        src,
+      );
+      historyRef.current = completed.history;
+      if (completed.blocks === current) return;
+      commit(completed.blocks, caretRef.current);
+    };
+
+    const pickPicture = (index: number) => {
+      const caret = { index, offset: 0 };
+      applyRange(caret, caret);
+      blockNodesRef.current[index]?.focus();
+      window.getSelection()?.removeAllRanges();
+    };
+
+    const beginResize = (
+      index: number,
+      direction: -1 | 1,
+      event: ReactPointerEvent<HTMLButtonElement>,
+    ) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const wrap = editorRef.current;
+      const block = blocksRef.current[index];
+      if (!wrap || block.kind !== 'picture') return;
+      rememberCurrent();
+      pickPicture(index);
+      resizeRef.current = {
+        index,
+        pointerId: event.pointerId,
+        startX: event.clientX,
+        startWidth: block.width,
+        direction,
+        wrapWidth: wrap.getBoundingClientRect().width,
+      };
+      event.currentTarget.setPointerCapture(event.pointerId);
+    };
+
+    const resizePicture = (event: ReactPointerEvent<HTMLButtonElement>) => {
+      const resize = resizeRef.current;
+      if (!resize || resize.pointerId !== event.pointerId) return;
+      event.preventDefault();
+      const width =
+        resize.startWidth +
+        (resize.direction * (event.clientX - resize.startX)) / resize.wrapWidth;
+      const next = sizePictureAt(blocksRef.current, resize.index, width);
+      commit(next, { index: resize.index, offset: 0 }, false);
+    };
+
+    const endResize = (event: ReactPointerEvent<HTMLButtonElement>) => {
+      if (resizeRef.current?.pointerId !== event.pointerId) return;
+      resizeRef.current = null;
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    };
+
+    const beginMove = (
+      index: number,
+      event: ReactPointerEvent<HTMLElement>,
+    ) => {
+      pickPicture(index);
+      const wrap = editorRef.current;
+      const block = blocksRef.current[index];
+      if (!wrap || block.kind !== 'picture' || block.sit !== 'front') return;
+      event.preventDefault();
+      event.stopPropagation();
+      const bounds = wrap.getBoundingClientRect();
+      rememberCurrent();
+      moveRef.current = {
+        index,
+        pointerId: event.pointerId,
+        startX: event.clientX,
+        startY: event.clientY,
+        pictureX: block.x,
+        pictureY: block.y,
+        wrapWidth: bounds.width,
+        wrapHeight: bounds.height,
+      };
+      event.currentTarget.setPointerCapture(event.pointerId);
+    };
+
+    const movePicture = (event: ReactPointerEvent<HTMLElement>) => {
+      const move = moveRef.current;
+      if (!move || move.pointerId !== event.pointerId) return;
+      event.preventDefault();
+      const next = placePictureAt(
+        blocksRef.current,
+        move.index,
+        move.pictureX + (event.clientX - move.startX) / move.wrapWidth,
+        move.pictureY + (event.clientY - move.startY) / move.wrapHeight,
+      );
+      commit(next, { index: move.index, offset: 0 }, false);
+    };
+
+    const endMove = (event: ReactPointerEvent<HTMLElement>) => {
+      if (moveRef.current?.pointerId !== event.pointerId) return;
+      moveRef.current = null;
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    };
+
     useEffect(() => {
       if (!shouldReplaceEditorBody(body, encodeBody(blocksRef.current))) {
         return;
@@ -553,6 +763,7 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
       dropSpan();
       historyRef.current = EMPTY_HISTORY;
       typingRunRef.current = false;
+      setPickedPicture(next[caret.index].kind === 'picture' ? caret.index : null);
       setBlocks(next);
       const encoded = encodeBody(next);
       if (encoded !== body) onChange(encoded);
@@ -576,7 +787,7 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
           paint.start,
           paint.end,
           index,
-          blocks[index].text.length,
+          blockLength(blocks[index]),
         );
         if (!slice) continue;
         const element = blockNodesRef.current[index];
@@ -660,6 +871,10 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
       underline() {
         applyMark('underline');
       },
+      insertPicture() {
+        pictureCaretRef.current = caretRef.current;
+        fileInputRef.current?.click();
+      },
     }));
 
     const gap = noteLineGapStyle(lineGap);
@@ -713,6 +928,20 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
           reportCaret(blocksRef.current, caretRef.current, false);
         }}
       >
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={async (event) => {
+            const file = event.currentTarget.files?.[0];
+            const insertionCaret = pictureCaretRef.current;
+            pictureCaretRef.current = null;
+            event.currentTarget.value = '';
+            if (!file || !isPictureMime(file.type) || !insertionCaret) return;
+            await addPictureFile(file, insertionCaret, insertionCaret);
+          }}
+        />
         <div ref={editorRef} className="relative">
         {marks.map((mark, markIndex) => (
           <span
@@ -728,15 +957,30 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
             }}
           />
         ))}
-        {blocks.map((block, index) => (
+        {blocks.map((block, index) => {
+          switch (block.kind) {
+            case 'picture':
+            case 'paragraph':
+            case 'item':
+              return (
           <div
             key={index}
-            className="relative z-[1] flex items-start"
+            className={`flex items-start ${
+              block.kind === 'picture'
+                ? block.sit === 'front'
+                  ? 'h-0'
+                  : 'relative min-h-11'
+                : 'relative z-[1]'
+            }`}
             style={{
               paddingLeft:
                 block.kind === 'item' ? block.indent * ITEM_INDENT_PX : 0,
-              lineHeight: gap.lineHeight,
-              paddingBlock: gap.paddingBlock,
+              ...(block.kind === 'picture'
+                ? {}
+                : {
+                    lineHeight: gap.lineHeight,
+                    paddingBlock: gap.paddingBlock,
+                  }),
             }}
           >
             {block.kind === 'item' && (
@@ -778,8 +1022,33 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
                 block.kind === 'item' && block.checked
                   ? 'text-[var(--mt-text-muted)] line-through'
                   : 'text-[var(--mt-text)]'
+              } ${
+                block.kind === 'picture'
+                  ? `z-[2] block shrink-0 ${
+                      pickedPicture === index
+                        ? 'outline outline-2 outline-[var(--mt-accent)]'
+                        : ''
+                    }`
+                  : ''
               }`}
-              contentEditable={!disabled}
+              style={
+                block.kind === 'picture'
+                  ? block.sit === 'front'
+                    ? {
+                        position: 'absolute',
+                        left: `${block.x * 100}%`,
+                        top: `${block.y * 100}%`,
+                        width: `${block.width * 100}%`,
+                      }
+                    : {
+                        position: 'relative',
+                        width: `${block.width * 100}%`,
+                        flex: 'none',
+                      }
+                  : undefined
+              }
+              contentEditable={block.kind !== 'picture' && !disabled}
+              tabIndex={block.kind === 'picture' && !disabled ? 0 : undefined}
               suppressContentEditableWarning
               onFocus={() => {
                 focusedRef.current = true;
@@ -916,7 +1185,7 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
                     { index: 0, offset: 0 },
                     {
                       index: last,
-                      offset: blocksRef.current[last].text.length,
+                      offset: blockLength(blocksRef.current[last]),
                     },
                   );
                   return;
@@ -966,7 +1235,7 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
                       : !caretOnLastVisualLine(
                           element,
                           range.focus.offset,
-                          block.text.length,
+                          blockLength(block),
                         ))
                   ) {
                     return;
@@ -991,7 +1260,7 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
                     event.key === 'ArrowLeft'
                       ? range.focus.offset === 0
                       : range.focus.offset ===
-                        blocksRef.current[range.focus.index].text.length;
+                        blockLength(blocksRef.current[range.focus.index]);
                   if (atEdge) {
                     const focus = extendCaret(
                       blocksRef.current,
@@ -1173,12 +1442,17 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
                 dropSpan();
                 commit(result.blocks, result.caret);
               }}
-              onPaste={(event) => {
+              onPaste={async (event) => {
+                const picture = pastedPicture(event.clipboardData);
                 event.preventDefault();
                 if (disabled || composingRef.current) return;
                 const range = editorSelection();
+                if (picture) {
+                  await addPictureFile(picture, range.start, range.end);
+                  return;
+                }
                 const internal = event.clipboardData.getData(
-                  NOTE_CLIPBOARD_TYPE,
+                  noteCopy.NOTE_CLIPBOARD_TYPE,
                 );
                 rememberCurrent();
                 const result =
@@ -1198,12 +1472,126 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
                 commit(result.blocks, result.caret);
               }}
               onKeyUp={() => updateCaret(index)}
-              onPointerUp={() => updateCaret(index)}
+              onPointerDown={
+                block.kind === 'picture'
+                  ? (event) => beginMove(index, event)
+                  : undefined
+              }
+              onPointerMove={
+                block.kind === 'picture' ? movePicture : undefined
+              }
+              onPointerUp={(event) => {
+                if (block.kind === 'picture') endMove(event);
+                updateCaret(index);
+              }}
+              onPointerCancel={
+                block.kind === 'picture' ? endMove : undefined
+              }
             >
-              {noteRunNodes(block.text, block.spans)}
+              {block.kind === 'picture' ? (
+                <>
+                  {block.src === '' ? (
+                    <span
+                      aria-hidden
+                      className="block min-h-11 w-full border border-[var(--mt-border)]"
+                    />
+                  ) : (
+                    <img
+                      src={block.src}
+                      alt=""
+                      draggable={false}
+                      className="block h-auto w-full"
+                    />
+                  )}
+                  {pickedPicture === index && (
+                    <>
+                      <button
+                        type="button"
+                        aria-label={
+                          block.sit === 'inline'
+                            ? 'Sit in front of text'
+                            : 'Sit in line with words'
+                        }
+                        className="absolute left-1/2 top-1 z-[3] flex min-h-11 min-w-11 -translate-x-1/2 items-center justify-center border border-[var(--mt-border)] bg-[var(--mt-surface)] text-[var(--mt-text)]"
+                        disabled={disabled}
+                        onPointerDown={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                        }}
+                        onClick={() => {
+                          rememberCurrent();
+                          const next = switchPictureSitAt(
+                            blocksRef.current,
+                            index,
+                          );
+                          commit(next, { index, offset: 0 });
+                        }}
+                      >
+                        <Layers2 aria-hidden className="size-5" />
+                      </button>
+                      <button
+                        type="button"
+                        aria-label="Resize picture from top left"
+                        className="absolute -left-[22px] -top-[22px] z-[4] min-h-11 min-w-11 touch-none"
+                        onPointerDown={(event) =>
+                          beginResize(index, -1, event)
+                        }
+                        onPointerMove={resizePicture}
+                        onPointerUp={endResize}
+                        onPointerCancel={endResize}
+                      >
+                        <span className="pointer-events-none absolute bottom-1 right-1 size-3 border border-[var(--mt-accent)] bg-[var(--mt-surface)]" />
+                      </button>
+                      <button
+                        type="button"
+                        aria-label="Resize picture from top right"
+                        className="absolute -right-[22px] -top-[22px] z-[4] min-h-11 min-w-11 touch-none"
+                        onPointerDown={(event) =>
+                          beginResize(index, 1, event)
+                        }
+                        onPointerMove={resizePicture}
+                        onPointerUp={endResize}
+                        onPointerCancel={endResize}
+                      >
+                        <span className="pointer-events-none absolute bottom-1 left-1 size-3 border border-[var(--mt-accent)] bg-[var(--mt-surface)]" />
+                      </button>
+                      <button
+                        type="button"
+                        aria-label="Resize picture from bottom left"
+                        className="absolute -bottom-[22px] -left-[22px] z-[4] min-h-11 min-w-11 touch-none"
+                        onPointerDown={(event) =>
+                          beginResize(index, -1, event)
+                        }
+                        onPointerMove={resizePicture}
+                        onPointerUp={endResize}
+                        onPointerCancel={endResize}
+                      >
+                        <span className="pointer-events-none absolute right-1 top-1 size-3 border border-[var(--mt-accent)] bg-[var(--mt-surface)]" />
+                      </button>
+                      <button
+                        type="button"
+                        aria-label="Resize picture from bottom right"
+                        className="absolute -bottom-[22px] -right-[22px] z-[4] min-h-11 min-w-11 touch-none"
+                        onPointerDown={(event) =>
+                          beginResize(index, 1, event)
+                        }
+                        onPointerMove={resizePicture}
+                        onPointerUp={endResize}
+                        onPointerCancel={endResize}
+                      >
+                        <span className="pointer-events-none absolute left-1 top-1 size-3 border border-[var(--mt-accent)] bg-[var(--mt-surface)]" />
+                      </button>
+                    </>
+                  )}
+                </>
+              ) : (
+                noteRunNodes(block.text, block.spans)
+              )}
             </span>
           </div>
-        ))}
+              );
+          }
+        })}
         </div>
       </div>
     );

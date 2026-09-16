@@ -42,11 +42,13 @@
   --mac-accent-calendar: #FFB5F4;  /* min delta E 21.5 (dashboard) */
   --mac-accent-timetable: #72E2FF; /* min delta E 24.0 (finance) */
   --mac-accent-todo: #64B880;     /* min delta E 21.5 (fitness), hue 27.3 (countdown) */
-  /* Notes, the twelfth. A search over every pastel with L* 68-90 found the
-     only gap left in the palette is yellow-green: a paler or softer one
-     collides with flexible's butter or fitness's mint. This sits min
-     delta E 24.6 (flexible), hue 26.0, and cocoa on it is 5.70:1. */
-  --mac-accent-notes: #A8B257;
+  /* Notes, the twelfth. Mint, the colour picked for the files page.
+     Countdown already owns this hue (#A8DCD1, 167 deg), and timetable
+     owns the cyan next door, so a new mint cannot clear a 20 deg hue
+     floor. Separation is chroma: this sits min delta E 20.0 (countdown),
+     L* 84.2 matching countdown so the fill stays pale, and cocoa on it
+     is 8.62:1. */
+  --mac-accent-notes: #6AE6D4;
   --mac-cycle-menstrual: #F2A7BE;
   --mac-cycle-follicular: #A8DCD1;
   --mac-cycle-fertile: #F0CE87;

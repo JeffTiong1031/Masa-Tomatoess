@@ -3,13 +3,17 @@
 import { useEffect, useState } from 'react';
 import {
   DndContext,
+  DragOverlay,
   PointerSensor,
   TouchSensor,
   pointerWithin,
   useSensor,
   useSensors,
   type DragEndEvent,
+  type DragStartEvent,
+  type Modifier,
 } from '@dnd-kit/core';
+import { getEventCoordinates } from '@dnd-kit/utilities';
 import {
   FilePlus2,
   FolderPlus,
@@ -26,6 +30,8 @@ import { binEntries, deleteAsk, folderBinCost, type BinEntry } from '@/lib/noteB
 import {
   countsByFolder,
   filesFor,
+  dragTagShift,
+  dragTagTitle,
   NOTE_SORT_LABEL,
   NOTE_SORTS,
 } from '@/lib/noteFiles';
@@ -39,7 +45,18 @@ import FolderRail, {
   ROOT_DROP_ID,
   type FilesPane,
 } from './FolderRail';
-import NoteCard from './NoteCard';
+import NoteCard, { NoteDragTag } from './NoteCard';
+
+const tagByFinger: Modifier = ({
+  activatorEvent,
+  draggingNodeRect,
+  transform,
+}) =>
+  dragTagShift(
+    transform,
+    draggingNodeRect,
+    activatorEvent === null ? null : getEventCoordinates(activatorEvent),
+  );
 
 interface Ask {
   title: string;
@@ -79,6 +96,7 @@ export default function FilesBoard() {
   const [folderDraft, setFolderDraft] = useState<FolderDraft | null>(null);
   const [ask, setAsk] = useState<Ask | null>(null);
   const [nowMs, setNowMs] = useState(() => Date.now());
+  const [draggingId, setDraggingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (owner === null || loadedFor === owner) return;
@@ -188,13 +206,20 @@ export default function FilesBoard() {
     });
   };
 
+  const onDragStart = (event: DragStartEvent) => {
+    setDraggingId(String(event.active.id));
+  };
+
   const onDragEnd = (event: DragEndEvent) => {
+    setDraggingId(null);
     const over = event.over;
     if (over === null) return;
     const folderId = dropTargetFolderId(String(over.id));
     if (folderId === undefined) return;
     void useNotesDataStore.getState().moveNote(String(event.active.id), folderId);
   };
+
+  const tagTitle = dragTagTitle(notes, draggingId);
 
   if (owner === null) {
     return (
@@ -208,9 +233,11 @@ export default function FilesBoard() {
     <DndContext
       sensors={sensors}
       collisionDetection={pointerWithin}
+      onDragStart={onDragStart}
       onDragEnd={onDragEnd}
+      onDragCancel={() => setDraggingId(null)}
     >
-      <div className="grid gap-4 md:grid-cols-[250px_minmax(0,1fr)]">
+      <div className="grid gap-6 md:grid-cols-[250px_minmax(0,1fr)]">
         <FolderRail
           folders={folders}
           counts={counts}
@@ -221,8 +248,8 @@ export default function FilesBoard() {
           onToggleCollapsed={toggleCollapsed}
         />
 
-        <div className="flex min-w-0 flex-col gap-4">
-          <div className="flex flex-wrap items-center gap-2">
+        <div className="flex min-w-0 flex-col gap-6">
+          <div className="mt-soft p-2 flex flex-wrap items-center gap-3">
             <label className="relative min-w-0 flex-1">
               <span className="sr-only">Search notes by name</span>
               <Search
@@ -234,12 +261,12 @@ export default function FilesBoard() {
                 value={query}
                 placeholder="Search notes"
                 onChange={(event) => setQuery(event.target.value)}
-                className="min-h-11 w-full rounded-xl border border-[var(--mt-border)] bg-[var(--mt-surface)] pl-9 pr-3 text-sm text-[var(--mt-text)] focus:outline-none focus:ring-2 focus:ring-[var(--mt-accent)]"
+                className="min-h-11 w-full rounded-xl border border-[var(--mt-border)] bg-[var(--mt-bg)] pl-9 pr-3 text-sm text-[var(--mt-text)] focus:bg-[var(--mt-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--mt-accent)]"
               />
             </label>
 
             <div
-              className="flex shrink-0 items-center rounded-xl border border-[var(--mt-border)] p-0.5"
+              className="flex shrink-0 items-center rounded-xl border border-[var(--mt-border)] bg-[var(--mt-bg)] p-1"
               role="group"
               aria-label="Sort notes"
             >
@@ -249,9 +276,9 @@ export default function FilesBoard() {
                   type="button"
                   aria-pressed={sort === option}
                   onClick={() => setSort(option)}
-                  className={`min-h-10 rounded-[10px] px-3 text-sm ${
+                  className={`min-h-11 rounded-[10px] px-3 text-sm ${
                     sort === option
-                      ? 'bg-[color-mix(in_srgb,var(--mt-accent)_35%,transparent)] font-semibold text-[var(--mt-text)]'
+                      ? 'bg-[var(--mt-surface)] font-semibold text-[var(--mt-text)] shadow-sm'
                       : 'text-[var(--mt-text-muted)]'
                   }`}
                 >
@@ -305,7 +332,7 @@ export default function FilesBoard() {
                       : (paneFolder?.name ?? 'Not in a folder')}
                   </span>
                 </h2>
-                <span className="text-sm text-[var(--mt-text-muted)]">
+                <span className="inline-flex items-center justify-center rounded-full bg-[var(--mt-border)] px-2 py-0.5 text-[10px] font-bold text-[var(--mt-text-muted)]">
                   {files.length}
                 </span>
                 {paneFolder !== null && !searching && (
@@ -357,7 +384,7 @@ export default function FilesBoard() {
                   )}
                 </div>
               ) : (
-                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                   {files.map((note) => (
                     <NoteCard
                       key={note.id}
@@ -506,6 +533,10 @@ export default function FilesBoard() {
         choices={ask?.choices ?? []}
         onDismiss={() => setAsk(null)}
       />
+
+      <DragOverlay dropAnimation={null} modifiers={[tagByFinger]}>
+        {tagTitle !== null ? <NoteDragTag title={tagTitle} /> : null}
+      </DragOverlay>
     </DndContext>
   );
 }
