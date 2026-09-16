@@ -443,11 +443,26 @@ describe('insertPicture', () => {
       { kind: 'item', text: 'llo', checked: false, indent: 2 },
     ]);
   });
+
+  it('replaces a selected range then lands on the new picture', () => {
+    const deleted = deleteSelection(
+      [{ kind: 'paragraph', text: 'Hello there' }],
+      { index: 0, offset: 6 },
+      { index: 0, offset: 11 },
+    );
+    const result = insertPicture(deleted.blocks, deleted.caret, pic.src);
+    expect(result.blocks).toEqual([
+      { kind: 'paragraph', text: 'Hello ' },
+      pic,
+      { kind: 'paragraph', text: '' },
+    ]);
+    expect(result.caret).toEqual({ index: 1, offset: 0 });
+  });
 });
 
 describe('picture layout', () => {
   it('flips in line to on top and restores the last place', () => {
-    const placed = { ...pic, x: 0.2, y: 0.7 };
+    const placed = { ...pic, width: 0.4, x: 0.2, y: 0.7 };
     const blocks: Block[] = [placed];
     const front = switchPictureSitAt(blocks, 0);
     expect(front[0]).toMatchObject({ sit: 'front', x: 0.2, y: 0.7 });
@@ -455,8 +470,9 @@ describe('picture layout', () => {
   });
 
   it('sizes and places a picture', () => {
-    expect(sizePictureAt([pic], 0, 0.4)[0]).toMatchObject({ width: 0.4 });
-    expect(placePictureAt([pic], 0, 0.2, 0.7)[0]).toMatchObject({
+    const sized = sizePictureAt([pic], 0, 0.4);
+    expect(sized[0]).toMatchObject({ width: 0.4 });
+    expect(placePictureAt(sized, 0, 0.2, 0.7)[0]).toMatchObject({
       x: 0.2,
       y: 0.7,
     });

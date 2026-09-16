@@ -48,19 +48,29 @@ describe('sit and size', () => {
       kind: 'picture',
       sit: 'inline',
       width: 1,
-      x: 0.5,
+      x: 0,
       y: 0.15,
       src: 'data:image/webp;base64,AAA',
     });
   });
 
   it('switches in line to on top and back without losing place', () => {
-    const placed = placePicture(defaultPicture('x'), 0.2, 0.7);
+    const placed = placePicture(sizePicture(defaultPicture('x'), 0.4), 0.2, 0.7);
     const front = switchPictureSit(placed);
     expect(front.sit).toBe('front');
     expect(front.x).toBe(0.2);
     expect(front.y).toBe(0.7);
     expect(switchPictureSit(front)).toEqual(placed);
+  });
+
+  it('keeps a full-width on-top picture inside the pad', () => {
+    const hanging = { ...defaultPicture('x'), x: 0.5, width: 1 };
+    expect(switchPictureSit(hanging)).toMatchObject({
+      sit: 'front',
+      x: 0,
+      width: 1,
+    });
+    expect(placePicture(hanging, 0.5, 0.15).x).toBe(0);
   });
 
   it('clamps width and place', () => {
@@ -69,5 +79,8 @@ describe('sit and size', () => {
     expect(clampPlace(-1)).toBe(0);
     expect(clampPlace(2)).toBe(1);
     expect(sizePicture(emptyPicture(), 0.4).width).toBe(0.4);
+    expect(placePicture(sizePicture(emptyPicture(), 0.4), 0.9, 0.15).x).toBe(
+      0.6,
+    );
   });
 });

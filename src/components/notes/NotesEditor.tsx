@@ -627,8 +627,16 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
       reportCaret(blocksRef.current, caret, true);
     };
 
-    const addPictureFile = async (file: File, insertionCaret: DocCaret) => {
-      const pending = insertPicture(blocksRef.current, insertionCaret, '');
+    const addPictureFile = async (
+      file: File,
+      start: DocCaret,
+      end: DocCaret,
+    ) => {
+      dropSpan();
+      const base = collapsedRange(start, end)
+        ? { blocks: blocksRef.current, caret: start }
+        : deleteSelection(blocksRef.current, start, end);
+      const pending = insertPicture(base.blocks, base.caret, '');
       const pendingPicture = pending.blocks[pending.caret.index];
       if (pendingPicture.kind !== 'picture') return;
       rememberCurrent();
@@ -643,7 +651,7 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
       const completed = completePendingPicture(
         historyRef.current,
         current,
-        pendingPicture,
+        pending.caret.index,
         src,
       );
       historyRef.current = completed.history;
@@ -702,12 +710,12 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
       index: number,
       event: ReactPointerEvent<HTMLElement>,
     ) => {
-      event.preventDefault();
-      event.stopPropagation();
       pickPicture(index);
       const wrap = editorRef.current;
       const block = blocksRef.current[index];
       if (!wrap || block.kind !== 'picture' || block.sit !== 'front') return;
+      event.preventDefault();
+      event.stopPropagation();
       const bounds = wrap.getBoundingClientRect();
       rememberCurrent();
       moveRef.current = {
@@ -931,7 +939,7 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
             pictureCaretRef.current = null;
             event.currentTarget.value = '';
             if (!file || !isPictureMime(file.type) || !insertionCaret) return;
-            await addPictureFile(file, insertionCaret);
+            await addPictureFile(file, insertionCaret, insertionCaret);
           }}
         />
         <div ref={editorRef} className="relative">
@@ -1440,7 +1448,7 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
                 if (disabled || composingRef.current) return;
                 const range = editorSelection();
                 if (picture) {
-                  await addPictureFile(picture, range.focus);
+                  await addPictureFile(picture, range.start, range.end);
                   return;
                 }
                 const internal = event.clipboardData.getData(

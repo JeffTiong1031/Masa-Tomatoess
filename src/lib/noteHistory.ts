@@ -1,5 +1,5 @@
 import type { DocCaret } from './noteEdit';
-import type { Block, PictureBlock } from './noteDoc';
+import type { Block } from './noteDoc';
 
 export interface NoteSnapshot {
   blocks: Block[];
@@ -15,24 +15,40 @@ export const EMPTY_HISTORY: NoteHistory = { past: [], future: [] };
 
 function completePictureInBlocks(
   blocks: Block[],
-  pending: PictureBlock,
+  pendingIndex: number,
   src: string,
 ): Block[] {
-  const index = blocks.indexOf(pending);
-  if (index === -1) return blocks;
-  const next = [...blocks];
-  next[index] = { ...pending, src };
-  return next;
+  if (pendingIndex < 0 || pendingIndex >= blocks.length) {
+    return blocks;
+  }
+  const block = blocks[pendingIndex];
+  switch (block.kind) {
+    case 'picture': {
+      if (block.src !== '') {
+        return blocks;
+      }
+      const next = [...blocks];
+      next[pendingIndex] = { ...block, src };
+      return next;
+    }
+    case 'paragraph':
+    case 'item':
+      return blocks;
+  }
 }
 
 export function completePendingPicture(
   history: NoteHistory,
   blocks: Block[],
-  pending: PictureBlock,
+  pendingIndex: number,
   src: string,
 ): { history: NoteHistory; blocks: Block[] } {
   const completeSnapshot = (snapshot: NoteSnapshot): NoteSnapshot => {
-    const completed = completePictureInBlocks(snapshot.blocks, pending, src);
+    const completed = completePictureInBlocks(
+      snapshot.blocks,
+      pendingIndex,
+      src,
+    );
     return completed === snapshot.blocks
       ? snapshot
       : { ...snapshot, blocks: completed };
@@ -42,7 +58,7 @@ export function completePendingPicture(
       past: history.past.map(completeSnapshot),
       future: history.future.map(completeSnapshot),
     },
-    blocks: completePictureInBlocks(blocks, pending, src),
+    blocks: completePictureInBlocks(blocks, pendingIndex, src),
   };
 }
 

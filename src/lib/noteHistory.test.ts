@@ -6,6 +6,7 @@ import {
   undoTo,
   redoTo,
 } from './noteHistory';
+import { sizePictureAt, switchPictureSitAt } from './noteEdit';
 import { defaultPicture } from './notePicture';
 import type { NoteSnapshot } from './noteHistory';
 
@@ -41,7 +42,7 @@ describe('remember / undo / redo', () => {
     const completed = completePendingPicture(
       { past: [withPending], future: [withPending] },
       current,
-      pending,
+      1,
       'data:image/webp;base64,picture',
     );
     expect(completed.blocks).toBe(current);
@@ -51,6 +52,25 @@ describe('remember / undo / redo', () => {
     });
     expect(completed.history.future[0].blocks[1]).toMatchObject({
       kind: 'picture',
+      src: 'data:image/webp;base64,picture',
+    });
+  });
+
+  it('completes the pending slot after sit or size replaces the object', () => {
+    const pending = defaultPicture('');
+    const current = [{ kind: 'paragraph' as const, text: 'A' }, pending];
+    const replaced = switchPictureSitAt(sizePictureAt(current, 1, 0.4), 1);
+    expect(replaced[1]).not.toBe(pending);
+    const completed = completePendingPicture(
+      EMPTY_HISTORY,
+      replaced,
+      1,
+      'data:image/webp;base64,picture',
+    );
+    expect(completed.blocks[1]).toMatchObject({
+      kind: 'picture',
+      sit: 'front',
+      width: 0.4,
       src: 'data:image/webp;base64,picture',
     });
   });

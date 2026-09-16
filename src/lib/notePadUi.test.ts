@@ -196,6 +196,34 @@ describe('notes pad pictures', () => {
       EDITOR.slice(applyRange, EDITOR.indexOf('const dropSpan =')),
     ).toContain('setPickedPicture(');
   });
+
+  it('lets a finger on an in-line picture scroll the pad', () => {
+    const begin = EDITOR.indexOf('const beginMove =');
+    const move = EDITOR.indexOf('const movePicture =');
+    const slice = EDITOR.slice(begin, move);
+    const sitCheck = slice.indexOf("block.sit !== 'front'");
+    const prevent = slice.indexOf('event.preventDefault()');
+    expect(sitCheck).toBeGreaterThan(-1);
+    expect(prevent).toBeGreaterThan(-1);
+    expect(sitCheck).toBeLessThan(prevent);
+  });
+
+  it('replaces the current selection when pasting a picture', () => {
+    const add = EDITOR.indexOf('const addPictureFile = async');
+    const pick = EDITOR.indexOf('const pickPicture');
+    const addSlice = EDITOR.slice(add, pick);
+    expect(addSlice).toContain('dropSpan()');
+    expect(addSlice.indexOf('deleteSelection(')).toBeGreaterThan(-1);
+    expect(addSlice.indexOf('deleteSelection(')).toBeLessThan(
+      addSlice.indexOf('insertPicture('),
+    );
+    const paste = EDITOR.indexOf('if (picture) {');
+    const pasteEnd = EDITOR.indexOf('return;', paste);
+    const pasteSlice = EDITOR.slice(paste, pasteEnd);
+    expect(pasteSlice).toContain('range.start');
+    expect(pasteSlice).toContain('range.end');
+    expect(pasteSlice).not.toContain('range.focus');
+  });
 });
 
 describe('notes window host', () => {

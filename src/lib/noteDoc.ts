@@ -55,7 +55,7 @@ export function emptyPicture(): PictureBlock {
     kind: 'picture',
     sit: 'inline',
     width: 1,
-    x: 0.5,
+    x: 0,
     y: 0.15,
     src: '',
   };

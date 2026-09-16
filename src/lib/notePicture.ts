@@ -13,7 +13,7 @@ export function defaultPicture(src: string): PictureBlock {
     kind: 'picture',
     sit: 'inline',
     width: 1,
-    x: 0.5,
+    x: 0,
     y: 0.15,
     src,
   };
@@ -27,17 +27,30 @@ export function clampPlace(n: number): number {
   return Math.min(1, Math.max(0, n));
 }
 
+function clampPictureX(x: number, width: number): number {
+  return Math.min(1 - clampPictureWidth(width), Math.max(0, x));
+}
+
 export function switchPictureSit(block: PictureBlock): PictureBlock {
   switch (block.sit) {
     case 'inline':
-      return { ...block, sit: 'front' };
+      return {
+        ...block,
+        sit: 'front',
+        x: clampPictureX(block.x, block.width),
+      };
     case 'front':
       return { ...block, sit: 'inline' };
   }
 }
 
 export function sizePicture(block: PictureBlock, width: number): PictureBlock {
-  return { ...block, width: clampPictureWidth(width) };
+  const nextWidth = clampPictureWidth(width);
+  return {
+    ...block,
+    width: nextWidth,
+    x: clampPictureX(block.x, nextWidth),
+  };
 }
 
 export function placePicture(
@@ -45,5 +58,9 @@ export function placePicture(
   x: number,
   y: number,
 ): PictureBlock {
-  return { ...block, x: clampPlace(x), y: clampPlace(y) };
+  return {
+    ...block,
+    x: clampPictureX(x, block.width),
+    y: clampPlace(y),
+  };
 }
