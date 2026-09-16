@@ -27,10 +27,39 @@ export type ItemBlock = {
   indent: number;
   spans?: NoteSpan[];
 };
-export type Block = ParagraphBlock | ItemBlock;
+export type PictureSit = 'inline' | 'front';
+
+export type PictureBlock = {
+  kind: 'picture';
+  sit: PictureSit;
+  width: number;
+  x: number;
+  y: number;
+  src: string;
+};
+
+export type WordBlock = ParagraphBlock | ItemBlock;
+export type Block = WordBlock | PictureBlock;
+
+const PIC_LINE = new RegExp(
+  `^${NOTE_MARK_START}pic/(inline|front)/(\\d+(?:\\.\\d+)?)/(\\d+(?:\\.\\d+)?)/(\\d+(?:\\.\\d+)?)${NOTE_MARK_SEP}(.*)$`,
+);
+
+const PIC_PREFIX = `${NOTE_MARK_START}pic/`;
 
 const ITEM_LINE =
   new RegExp(`^${NOTE_MARK_START}([01])/(\\d+)${NOTE_MARK_SEP}(.*)$`);
+
+export function emptyPicture(): PictureBlock {
+  return {
+    kind: 'picture',
+    sit: 'inline',
+    width: 1,
+    x: 0.5,
+    y: 0.15,
+    src: '',
+  };
+}
 
 export function stripMarks(raw: string): string {
   return raw
@@ -111,10 +140,10 @@ export function encodeVisible(
 }
 
 export function withVisible(
-  block: Block,
+  block: WordBlock,
   text: string,
   spans?: NoteSpan[],
-): Block {
+): WordBlock {
   const fields = visibleFields(text, compactSpans(stylesFor(text, spans)));
   switch (block.kind) {
     case 'paragraph':
@@ -130,6 +159,20 @@ export function withVisible(
 }
 
 export function decodeLine(raw: string): Block {
+  if (raw.startsWith(PIC_PREFIX)) {
+    const pic = raw.match(PIC_LINE);
+    if (!pic) {
+      return emptyPicture();
+    }
+    return {
+      kind: 'picture',
+      sit: pic[1] as PictureSit,
+      width: Number(pic[2]),
+      x: Number(pic[3]),
+      y: Number(pic[4]),
+      src: pic[5],
+    };
+  }
   const match = raw.match(ITEM_LINE);
   if (match) {
     const visible = decodeVisible(match[3]);
@@ -158,6 +201,8 @@ export function encodeLine(block: Block): string {
       return `${NOTE_MARK_START}${block.checked ? '1' : '0'}/${block.indent}${NOTE_MARK_SEP}${encodeVisible(block.text, block.spans)}`;
     case 'paragraph':
       return encodeVisible(block.text, block.spans);
+    case 'picture':
+      return `${NOTE_MARK_START}pic/${block.sit}/${block.width}/${block.x}/${block.y}${NOTE_MARK_SEP}${block.src}`;
   }
 }
 

@@ -7,10 +7,14 @@ import {
   NOTE_RUN_START,
   NOTE_RUN_UNDERLINE,
   decodeBody,
-  encodeBody,
   decodeLine,
+  emptyPicture,
+  encodeBody,
+  encodeLine,
   stripMarks,
 } from './noteDoc';
+
+const SRC = 'data:image/webp;base64,AAA';
 
 describe('stripMarks', () => {
   it('removes only the private start and sep characters', () => {
@@ -85,6 +89,42 @@ describe('decodeBody / encodeBody', () => {
     expect(decodeLine(`${NOTE_RUN_START}nope`)).toEqual({
       kind: 'paragraph',
       text: 'nope',
+    });
+  });
+});
+
+describe('picture lines', () => {
+  it('round-trips sit, size, place, and the picture bytes', () => {
+    const block = {
+      kind: 'picture' as const,
+      sit: 'front' as const,
+      width: 0.4,
+      x: 0.2,
+      y: 0.7,
+      src: SRC,
+    };
+    expect(decodeBody(encodeBody([block]))).toEqual([block]);
+  });
+
+  it('keeps an old note with no pictures the same', () => {
+    expect(encodeBody(decodeBody('hello\nthere'))).toBe('hello\nthere');
+  });
+
+  it('opens a broken picture line as the empty frame', () => {
+    expect(decodeLine(`${NOTE_MARK_START}pic/nope${NOTE_MARK_SEP}x`)).toEqual(
+      emptyPicture(),
+    );
+  });
+
+  it('opens a missing src as the empty frame with the sit kept', () => {
+    const raw = `${NOTE_MARK_START}pic/inline/1/0.5/0.15${NOTE_MARK_SEP}`;
+    expect(decodeLine(raw)).toEqual({
+      kind: 'picture',
+      sit: 'inline',
+      width: 1,
+      x: 0.5,
+      y: 0.15,
+      src: '',
     });
   });
 });
