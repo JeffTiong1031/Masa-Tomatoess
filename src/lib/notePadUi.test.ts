@@ -151,6 +151,20 @@ describe('notes pad pictures', () => {
     expect(EDITOR).toContain('accept="image/*"');
     expect(EDITOR).toContain('insertPicture(');
   });
+
+  it('anchors the picture before asynchronous shrinking can move its place', () => {
+    const capture = EDITOR.indexOf(
+      'pictureCaretRef.current = caretRef.current;',
+    );
+    const picker = EDITOR.indexOf('fileInputRef.current?.click()');
+    const placeholder = EDITOR.indexOf('const pending = insertPicture(');
+    const shrink = EDITOR.indexOf('await shrinkNotePicture(file)');
+    expect(capture).toBeGreaterThan(-1);
+    expect(capture).toBeLessThan(picker);
+    expect(placeholder).toBeGreaterThan(-1);
+    expect(placeholder).toBeLessThan(shrink);
+    expect(EDITOR).toContain('current.indexOf(pendingPicture)');
+  });
 });
 
 describe('notes window host', () => {

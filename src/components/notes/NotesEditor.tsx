@@ -61,7 +61,7 @@ import {
   NOTE_SELECTION_FILL,
   noteSelectionSlice,
 } from '@/lib/noteSelectionPaint';
-import { defaultPicture, isPictureMime } from '@/lib/notePicture';
+import { isPictureMime } from '@/lib/notePicture';
 import { shrinkNotePicture } from '@/lib/notePictureFile';
 import {
   isChecklistHotkey,
@@ -271,6 +271,7 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
     );
     const editorRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const pictureCaretRef = useRef<DocCaret | null>(null);
     const [marks, setMarks] = useState<
       { top: number; left: number; width: number; height: number }[]
     >([]);
@@ -695,6 +696,7 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
         applyMark('underline');
       },
       insertPicture() {
+        pictureCaretRef.current = caretRef.current;
         fileInputRef.current?.click();
       },
     }));
@@ -757,21 +759,37 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
           className="hidden"
           onChange={async (event) => {
             const file = event.currentTarget.files?.[0];
+            const insertionCaret = pictureCaretRef.current;
+            pictureCaretRef.current = null;
             event.currentTarget.value = '';
-            if (!file || !isPictureMime(file.type)) return;
+            if (!file || !isPictureMime(file.type) || !insertionCaret) return;
+            const pending = insertPicture(
+              blocksRef.current,
+              insertionCaret,
+              '',
+            );
+            const pendingPicture = pending.blocks[pending.caret.index];
+            rememberCurrent();
+            commit(pending.blocks, pending.caret);
             let src: string;
             try {
               src = await shrinkNotePicture(file);
             } catch {
-              src = defaultPicture('').src;
+              return;
             }
-            const result = insertPicture(
-              blocksRef.current,
-              caretRef.current,
-              src,
-            );
-            rememberCurrent();
-            commit(result.blocks, result.caret);
+            const current = blocksRef.current;
+            const pendingIndex = current.indexOf(pendingPicture);
+            if (pendingIndex === -1) return;
+            const next = [...current];
+            switch (pendingPicture.kind) {
+              case 'picture':
+                next[pendingIndex] = { ...pendingPicture, src };
+                break;
+              case 'paragraph':
+              case 'item':
+                return;
+            }
+            commit(next, caretRef.current);
           }}
         />
         <div ref={editorRef} className="relative">
