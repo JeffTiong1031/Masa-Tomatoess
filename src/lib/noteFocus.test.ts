@@ -30,7 +30,7 @@ describe('the note typing area', () => {
 
   it('quiets the cocoa ring on the line you type in', () => {
     const match = EDITOR.match(
-      /className=\{`([^`]+)`\}[\s\S]{0,250}contentEditable=\{!disabled\}/,
+      /className=\{`(mt-quiet-focus[^`]*)`[\s\S]*?contentEditable=\{block\.kind !== 'picture' && !disabled\}/,
     );
     expect(match?.[1]).toContain('mt-quiet-focus');
   });
