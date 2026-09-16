@@ -38,6 +38,23 @@ describe('copyOut', () => {
       ]),
     ).toBe('hello world');
   });
+
+  it('skips picture rows so the clipboard stays words', () => {
+    expect(
+      copyOut([
+        { kind: 'paragraph', text: 'Above' },
+        {
+          kind: 'picture',
+          sit: 'inline',
+          width: 1,
+          x: 0.5,
+          y: 0.15,
+          src: 'data:image/webp;base64,AAA',
+        },
+        { kind: 'paragraph', text: 'Below' },
+      ]),
+    ).toBe('Above\nBelow');
+  });
 });
 
 describe('stripIncoming', () => {
