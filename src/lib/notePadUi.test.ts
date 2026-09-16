@@ -138,6 +138,21 @@ describe('notes line gap', () => {
   });
 });
 
+describe('notes pad pictures', () => {
+  it('puts a picture button after underline, before spacing', () => {
+    expect(STRIP).toContain('aria-label="Add a picture"');
+    expect(STRIP.indexOf('aria-label="Underline"')).toBeLessThan(
+      STRIP.indexOf('aria-label="Add a picture"'),
+    );
+    expect(STRIP.indexOf('aria-label="Add a picture"')).toBeLessThan(
+      STRIP.indexOf('Line and paragraph spacing'),
+    );
+    expect(PAD).toContain('editorRef.current?.insertPicture()');
+    expect(EDITOR).toContain('accept="image/*"');
+    expect(EDITOR).toContain('insertPicture(');
+  });
+});
+
 describe('notes window host', () => {
   it('keeps Notes outside the page clip so the pad can hang off the edge', () => {
     const clip = SHELL.slice(SHELL.indexOf('overflow-x-hidden'));

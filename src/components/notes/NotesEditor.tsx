@@ -19,6 +19,7 @@ import {
   enterAt,
   extendCaret,
   indentSelection,
+  insertPicture,
   insertText,
   ordered,
   outdentSelection,
@@ -60,6 +61,8 @@ import {
   NOTE_SELECTION_FILL,
   noteSelectionSlice,
 } from '@/lib/noteSelectionPaint';
+import { defaultPicture, isPictureMime } from '@/lib/notePicture';
+import { shrinkNotePicture } from '@/lib/notePictureFile';
 import {
   isChecklistHotkey,
   isEditorCommandBlocked,
@@ -90,6 +93,7 @@ export interface NotesEditorHandle {
   outdent: () => void;
   bold: () => void;
   underline: () => void;
+  insertPicture: () => void;
 }
 
 interface NotesEditorProps {
@@ -266,6 +270,7 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
       null,
     );
     const editorRef = useRef<HTMLDivElement>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
     const [marks, setMarks] = useState<
       { top: number; left: number; width: number; height: number }[]
     >([]);
@@ -689,6 +694,9 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
       underline() {
         applyMark('underline');
       },
+      insertPicture() {
+        fileInputRef.current?.click();
+      },
     }));
 
     const gap = noteLineGapStyle(lineGap);
@@ -742,6 +750,30 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
           reportCaret(blocksRef.current, caretRef.current, false);
         }}
       >
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={async (event) => {
+            const file = event.currentTarget.files?.[0];
+            event.currentTarget.value = '';
+            if (!file || !isPictureMime(file.type)) return;
+            let src: string;
+            try {
+              src = await shrinkNotePicture(file);
+            } catch {
+              src = defaultPicture('').src;
+            }
+            const result = insertPicture(
+              blocksRef.current,
+              caretRef.current,
+              src,
+            );
+            rememberCurrent();
+            commit(result.blocks, result.caret);
+          }}
+        />
         <div ref={editorRef} className="relative">
         {marks.map((mark, markIndex) => (
           <span
@@ -760,7 +792,9 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
         {blocks.map((block, index) => (
           <div
             key={index}
-            className="relative z-[1] flex items-start"
+            className={`relative z-[1] flex items-start ${
+              block.kind === 'picture' ? 'min-h-11' : ''
+            }`}
             style={{
               paddingLeft:
                 block.kind === 'item' ? block.indent * ITEM_INDENT_PX : 0,

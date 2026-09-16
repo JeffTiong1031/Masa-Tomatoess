@@ -2,6 +2,7 @@
 
 import {
   Bold,
+  Image,
   IndentDecrease,
   IndentIncrease,
   ListChecks,
@@ -31,6 +32,7 @@ interface NotesStripProps {
   onToggle: () => void;
   onBold: () => void;
   onUnderline: () => void;
+  onInsertPicture: () => void;
   onIndent: () => void;
   onOutdent: () => void;
   onLineGap: (gap: NoteLineGap) => void;
@@ -85,6 +87,7 @@ export function NotesStrip({
   onToggle,
   onBold,
   onUnderline,
+  onInsertPicture,
   onIndent,
   onOutdent,
   onLineGap,
@@ -133,6 +136,15 @@ export function NotesStrip({
         onPointerDown={(event) => event.preventDefault()}
       >
         <Underline aria-hidden="true" />
+      </button>
+      <button
+        type="button"
+        aria-label="Add a picture"
+        className="min-h-11 min-w-11 text-[var(--mt-text)]"
+        onClick={onInsertPicture}
+        onPointerDown={(event) => event.preventDefault()}
+      >
+        <Image aria-hidden="true" />
       </button>
       <label className="flex min-h-11 items-center">
         <span className="sr-only">Line and paragraph spacing</span>

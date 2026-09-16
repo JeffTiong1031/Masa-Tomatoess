@@ -382,6 +382,7 @@ export const NotesPad = forwardRef<NotesPadHandle, { onLeave?: () => void }>(
               onToggle={() => editorRef.current?.toggle()}
               onBold={() => editorRef.current?.bold()}
               onUnderline={() => editorRef.current?.underline()}
+              onInsertPicture={() => editorRef.current?.insertPicture()}
               onIndent={() => editorRef.current?.indent()}
               onOutdent={() => editorRef.current?.outdent()}
               onLineGap={(gap) => setLineGap(active.id, gap)}
