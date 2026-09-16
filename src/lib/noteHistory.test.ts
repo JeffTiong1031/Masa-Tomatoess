@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { EMPTY_HISTORY, remember, undoTo, redoTo } from './noteHistory';
+import {
+  completePendingPicture,
+  EMPTY_HISTORY,
+  remember,
+  undoTo,
+  redoTo,
+} from './noteHistory';
+import { defaultPicture } from './notePicture';
 import type { NoteSnapshot } from './noteHistory';
 
 const a: NoteSnapshot = {
@@ -22,5 +29,29 @@ describe('remember / undo / redo', () => {
 
   it('returns null when there is nothing to undo', () => {
     expect(undoTo(EMPTY_HISTORY, a)).toBe(null);
+  });
+
+  it('completes a pending picture in history without restoring a deleted one', () => {
+    const pending = defaultPicture('');
+    const withPending: NoteSnapshot = {
+      blocks: [{ kind: 'paragraph', text: 'A' }, pending],
+      caret: { index: 1, offset: 0 },
+    };
+    const current = [{ kind: 'paragraph' as const, text: 'A' }];
+    const completed = completePendingPicture(
+      { past: [withPending], future: [withPending] },
+      current,
+      pending,
+      'data:image/webp;base64,picture',
+    );
+    expect(completed.blocks).toBe(current);
+    expect(completed.history.past[0].blocks[1]).toMatchObject({
+      kind: 'picture',
+      src: 'data:image/webp;base64,picture',
+    });
+    expect(completed.history.future[0].blocks[1]).toMatchObject({
+      kind: 'picture',
+      src: 'data:image/webp;base64,picture',
+    });
   });
 });

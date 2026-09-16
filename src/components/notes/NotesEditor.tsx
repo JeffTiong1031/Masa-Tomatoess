@@ -46,6 +46,7 @@ import {
   shouldRestoreCaretAfterTextCommit,
 } from '@/lib/noteEditorPolicy';
 import {
+  completePendingPicture,
   EMPTY_HISTORY,
   redoTo,
   remember,
@@ -769,6 +770,7 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
               '',
             );
             const pendingPicture = pending.blocks[pending.caret.index];
+            if (pendingPicture.kind !== 'picture') return;
             rememberCurrent();
             commit(pending.blocks, pending.caret);
             let src: string;
@@ -778,18 +780,15 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
               return;
             }
             const current = blocksRef.current;
-            const pendingIndex = current.indexOf(pendingPicture);
-            if (pendingIndex === -1) return;
-            const next = [...current];
-            switch (pendingPicture.kind) {
-              case 'picture':
-                next[pendingIndex] = { ...pendingPicture, src };
-                break;
-              case 'paragraph':
-              case 'item':
-                return;
-            }
-            commit(next, caretRef.current);
+            const completed = completePendingPicture(
+              historyRef.current,
+              current,
+              pendingPicture,
+              src,
+            );
+            historyRef.current = completed.history;
+            if (completed.blocks === current) return;
+            commit(completed.blocks, caretRef.current);
           }}
         />
         <div ref={editorRef} className="relative">

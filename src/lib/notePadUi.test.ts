@@ -163,7 +163,7 @@ describe('notes pad pictures', () => {
     expect(capture).toBeLessThan(picker);
     expect(placeholder).toBeGreaterThan(-1);
     expect(placeholder).toBeLessThan(shrink);
-    expect(EDITOR).toContain('current.indexOf(pendingPicture)');
+    expect(EDITOR).toContain('completePendingPicture(');
   });
 });
 
