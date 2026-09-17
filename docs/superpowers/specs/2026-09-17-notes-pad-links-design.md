@@ -9,9 +9,10 @@
 
 ## 1. What it is
 
-You can turn a web address in the notepad into a link. Type it or paste it as
-the only thing on a line, then press Enter. The line becomes a link, and you
-land on a new empty line under it.
+You can turn a web address in the notepad into a link. Type it or paste it,
+then press Space or Enter. The address becomes a link. Space keeps you on
+that line, so you can write words before and after it. Enter on a line that
+is only the address also starts a new empty line under it.
 
 Press the link and a small card pops up, showing where that address goes. Press
 the card and the site opens in a new browser tab. The notepad stays put. Tap
@@ -22,19 +23,21 @@ there.
 
 ## 2. Decisions
 
-**Enter makes the link, and a new line.** Paste or type — either way. Enter on
-that line is what stamps it. A URL already sitting in an old note stays plain
-words until you put the caret on that line and press Enter.
+**Space or Enter makes the link.** Paste leaves the address as ordinary
+words. Space stamps it and leaves you on that line. Enter on a line that is
+only the address stamps it and starts a new empty line. An old note stays
+plain until you press Space or Enter on that line.
 
-**The line must be only the address.** Extra words, and Enter is ordinary — no
-link. Spaces at the ends of the line do not count as extra words.
+**The address is the link, not the whole line.** Words before or after it
+stay ordinary. `see https://… ltr` keeps the address as a link. Spaces at
+the ends of the line do not count as extra words.
 
 **Only http:// and https://.** A `javascript:` address, a file path, or
 `www.example.com` with no scheme is never a link.
 
-**The address stays the words you typed.** Enter quietly marks that line as a
-link, the same idea as bold: the letters are still there. The card is a
-pop-up. It is not saved in the note.
+**The address stays the words you typed.** Space or Enter quietly marks that
+address as a link, the same idea as bold: the letters are still there. The
+card is a pop-up. It is not saved in the note.
 
 **Computer: cream card. Phone: small peek.** Same facts, different size.
 
@@ -56,13 +59,14 @@ already learned. If the page will not talk to us, or there is no internet, the
 card stays on the address version. You can still press the card to open the
 site.
 
-**Edit like ordinary words.** Add extra words on that line and it is no longer
-a link. Change the address but the line is still only `http://` or `https://…`
-and it stays a link; the next press looks up the new page. Backspace deletes
-letters as usual. Empty the line and the link is gone. No unlink button.
+**Edit like ordinary words.** Add words before or after the address and it
+stays a link. Change the address itself and the next press looks up the new
+page. Backspace deletes letters as usual. Empty the line and the link is
+gone. No unlink button.
 
-**Tick-list lines follow the same rule.** If the words on an item are only that
-address, Enter makes a link and a new line. Pictures are unchanged.
+**Tick-list lines follow the same rule.** Space stamps the address on the
+item. If the words on an item are only that address, Enter also adds an
+empty item under it. Pictures are unchanged.
 
 **Cards on the files page stay words.** The address can appear in the preview
 because it is still text. The pop-up card does not.
@@ -71,15 +75,17 @@ because it is still text. The pop-up card does not.
 
 ### In the pad
 
-A linked line looks like a web address: underlined, using the pad’s cocoa
-words and a mint underline, not a loud internet blue.
+A linked address looks like a web address: underlined, using the pad’s cocoa
+words and a mint underline, not a loud internet blue. Words on the same line
+stay plain.
 
-Press it: the pop-up sits near the line on a computer, and as the small peek
-near the line on a phone. One card at a time. Opening another link replaces
-the one that was up.
+Press the address: the pop-up sits just under that line, on a computer and
+as the small peek on a phone — including when the notepad fills the
+website. One card at a time. Opening another link replaces the one that
+was up.
 
-The formatting row does not gain a link button. Enter on a URL-only line is
-the door.
+The formatting row does not gain a link button. Space after an address, or
+Enter on a URL-only line, is the door.
 
 Phone sheet and computer window both get this.
 

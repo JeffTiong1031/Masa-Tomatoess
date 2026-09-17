@@ -22,6 +22,9 @@ import {
   pasteInternal,
   selectedRoots,
   selectionHasMark,
+  insertNeedsModelTyping,
+  lineNeedsModelTyping,
+  linksAfterEdit,
   toggleChecked,
   toggleChecklist,
   toggleMarkInRange,
@@ -642,21 +645,97 @@ describe('enterAt url line', () => {
   });
 });
 
+const LINK = {
+  bold: false,
+  underline: false,
+  link: true,
+} as const;
+
+describe('insertNeedsModelTyping', () => {
+  it('takes over Space after a pasted URL, so React does not wrap a dirty line', () => {
+    expect(insertNeedsModelTyping(HREF, undefined, HREF.length, ' ')).toBe(true);
+    expect(lineNeedsModelTyping(HREF, undefined)).toBe(true);
+  });
+
+  it('leaves ordinary words to the browser', () => {
+    expect(insertNeedsModelTyping('hello', undefined, 5, ' ')).toBe(false);
+    expect(lineNeedsModelTyping('hello', undefined)).toBe(false);
+  });
+});
+
+describe('linksAfterEdit', () => {
+  it('stamps when a space is added after a pasted URL, not when the URL is pasted', () => {
+    const pasted: Block = { kind: 'paragraph', text: HREF };
+    expect(linksAfterEdit({ kind: 'paragraph', text: '' }, pasted)).toEqual(
+      pasted,
+    );
+    expect(linksAfterEdit(pasted, { kind: 'paragraph', text: `${HREF} ` })).toEqual({
+      kind: 'paragraph',
+      text: `${HREF} `,
+      spans: [{ start: 0, end: HREF.length, ...LINK }],
+    });
+  });
+});
+
+describe('paste does not stamp a URL', () => {
+  it('leaves a pasted address as ordinary words until Space', () => {
+    const next = pasteExternal(
+      [{ kind: 'paragraph', text: '' }],
+      { index: 0, offset: 0 },
+      { index: 0, offset: 0 },
+      HREF,
+    );
+    expect(next.blocks[0]).toEqual({ kind: 'paragraph', text: HREF });
+    const typed = insertText(next.blocks, { index: 0, offset: HREF.length }, 'x');
+    expect(typed.blocks[0]).toEqual({
+      kind: 'paragraph',
+      text: `${HREF}x`,
+    });
+  });
+});
+
+describe('selectionHasMark', () => {
+  it('does not throw when a drag offset sits past an empty line', () => {
+    const blocks: Block[] = [{ kind: 'paragraph', text: '' }];
+    expect(() =>
+      selectionHasMark(
+        blocks,
+        { index: 0, offset: 0 },
+        { index: 0, offset: 8 },
+        'bold',
+      ),
+    ).not.toThrow();
+    expect(
+      selectionHasMark(
+        blocks,
+        { index: 0, offset: 0 },
+        { index: 0, offset: 8 },
+        'bold',
+      ),
+    ).toBe(false);
+  });
+});
+
 describe('reconcileWordLinks', () => {
-  it('drops the mark when extra words appear, and keeps it when the address changes', () => {
+  it('stamps the URL on Space and stays on the same line', () => {
+    const blocks: Block[] = [{ kind: 'paragraph', text: HREF }];
+    const next = insertText(blocks, { index: 0, offset: HREF.length }, ' ');
+    expect(next.blocks).toEqual([
+      {
+        kind: 'paragraph',
+        text: `${HREF} `,
+        spans: [{ start: 0, end: HREF.length, ...LINK }],
+      },
+    ]);
+    expect(next.caret).toEqual({ index: 0, offset: HREF.length + 1 });
+  });
+
+  it('keeps the URL linked when words sit before and after it', () => {
     const linked: Block[] = [
       {
         kind: 'paragraph',
         text: HREF,
-        spans: [
-          {
-            start: 0,
-            end: HREF.length,
-            bold: false,
-            underline: false,
-            link: true,
-          },
-        ],
+        spans: [{ start: 0, end: HREF.length, ...LINK }],
       },
     ];
     const longer = insertText(linked, { index: 0, offset: HREF.length }, '/x');
@@ -671,33 +750,31 @@ describe('reconcileWordLinks', () => {
         longer.blocks[0].spans?.every((span) => span.link),
     ).toBe(true);
 
-    const broken = insertText(linked, { index: 0, offset: HREF.length }, ' later');
-    expect(broken.blocks[0]).toEqual({
+    const after = insertText(linked, { index: 0, offset: HREF.length }, ' ltr');
+    const around = insertText(after.blocks, { index: 0, offset: 0 }, 'see ');
+    expect(around.blocks[0]).toEqual({
       kind: 'paragraph',
-      text: `${HREF} later`,
+      text: `see ${HREF} ltr`,
+      spans: [{ start: 4, end: 4 + HREF.length, ...LINK }],
     });
   });
 
-  it('drops the mark when a linked URL line is joined with extra words', () => {
+  it('keeps the URL linked when a linked line is joined with extra words', () => {
     const linked: Block[] = [
       {
         kind: 'paragraph',
         text: HREF,
-        spans: [
-          {
-            start: 0,
-            end: HREF.length,
-            bold: false,
-            underline: false,
-            link: true,
-          },
-        ],
+        spans: [{ start: 0, end: HREF.length, ...LINK }],
       },
       { kind: 'paragraph', text: ' extra words' },
     ];
     const joined = backspaceAtStart(linked, { index: 1, offset: 0 });
     expect(joined?.blocks).toEqual([
-      { kind: 'paragraph', text: `${HREF} extra words` },
+      {
+        kind: 'paragraph',
+        text: `${HREF} extra words`,
+        spans: [{ start: 0, end: HREF.length, ...LINK }],
+      },
     ]);
   });
 
@@ -758,6 +835,7 @@ describe('reconcileWordLinks', () => {
     expect(next.blocks[0]).toEqual({
       kind: 'paragraph',
       text: `${HREF} extra`,
+      spans: [{ start: 0, end: HREF.length, ...LINK }],
     });
     expect(next.blocks[1]).toEqual({
       kind: 'paragraph',

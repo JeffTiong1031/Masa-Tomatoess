@@ -231,7 +231,12 @@ export function rangeHasMark(
     return false;
   }
   const styles = stylesFor(text, spans);
-  for (let index = start; index < end; index += 1) {
+  const from = Math.max(0, start);
+  const to = Math.min(end, styles.length);
+  if (from >= to) {
+    return false;
+  }
+  for (let index = from; index < to; index += 1) {
     switch (mark) {
       case 'bold':
         if (!styles[index].bold) {

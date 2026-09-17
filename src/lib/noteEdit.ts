@@ -6,7 +6,7 @@ import {
   type Block,
   type WordBlock,
 } from './noteDoc';
-import { isUrlLine } from './noteLink';
+import { isUrlLine, urlRanges } from './noteLink';
 import {
   defaultPicture,
   placePicture,
@@ -15,11 +15,13 @@ import {
 } from './notePicture';
 import {
   applyMark,
+  compactSpans,
   concatVisible,
   deleteVisible,
   insertVisible,
   rangeHasMark,
   sliceVisible,
+  stylesFor,
   type NoteMark,
   type NoteSpan,
   type NoteStyle,
@@ -58,29 +60,66 @@ export function lineHasLink(spans: NoteSpan[] | undefined): boolean {
 }
 
 export function reconcileWordLinks(block: WordBlock): WordBlock {
+  return applyUrlLinkMarks(block, false);
+}
+
+export function stampWordLinks(block: WordBlock): WordBlock {
+  return applyUrlLinkMarks(block, true);
+}
+
+function applyUrlLinkMarks(block: WordBlock, stamp: boolean): WordBlock {
+  const ranges = urlRanges(block.text);
   const had = lineHasLink(block.spans);
-  if (!isUrlLine(block.text)) {
-    if (!had) return block;
-    const cleared = applyMark(
-      block.text,
-      block.spans,
-      0,
-      block.text.length,
-      'link',
-      false,
-    );
-    return withVisible(block, cleared.text, cleared.spans);
+  if (!had && !stamp) {
+    return block;
   }
-  if (!had) return block;
-  const stamped = applyMark(
-    block.text,
-    block.spans,
-    0,
-    block.text.length,
-    'link',
-    true,
+  if (ranges.length === 0 && !had) {
+    return block;
+  }
+  const styles = stylesFor(block.text, block.spans);
+  const inUrl: boolean[] = [];
+  for (let index = 0; index < styles.length; index += 1) {
+    inUrl.push(false);
+  }
+  for (const range of ranges) {
+    for (let index = range.start; index < range.end; index += 1) {
+      inUrl[index] = true;
+    }
+  }
+  for (let index = 0; index < styles.length; index += 1) {
+    const linked = stamp ? inUrl[index] : inUrl[index] && styles[index].link;
+    styles[index] = { ...styles[index], link: linked };
+  }
+  return withVisible(block, block.text, compactSpans(styles));
+}
+
+export function linksAfterEdit(previous: WordBlock, next: WordBlock): WordBlock {
+  const spaces = (text: string) => (text.match(/[ \u00a0]/g) ?? []).length;
+  if (spaces(next.text) > spaces(previous.text)) {
+    return stampWordLinks(next);
+  }
+  return reconcileWordLinks(next);
+}
+
+export function lineNeedsModelTyping(
+  text: string,
+  spans: NoteSpan[] | undefined,
+): boolean {
+  return lineHasLink(spans) || urlRanges(text).length > 0;
+}
+
+export function insertNeedsModelTyping(
+  text: string,
+  spans: NoteSpan[] | undefined,
+  offset: number,
+  inserted: string,
+): boolean {
+  if (lineNeedsModelTyping(text, spans)) {
+    return true;
+  }
+  return (
+    urlRanges(text.slice(0, offset) + inserted + text.slice(offset)).length > 0
   );
-  return withVisible(block, stamped.text, stamped.spans);
 }
 
 function reconcileProduced(block: Block): Block {
@@ -205,7 +244,8 @@ export function insertText(
         text,
         style,
       );
-      next[caret.index] = reconcileWordLinks(
+      next[caret.index] = linksAfterEdit(
+        block,
         withVisible(block, inserted.text, inserted.spans),
       );
       return {
@@ -841,19 +881,11 @@ export function enterAt(blocks: Block[], caret: DocCaret): EditResult {
     }
     case 'paragraph': {
       if (isUrlLine(block.text)) {
-        const stamped = applyMark(
-          block.text,
-          block.spans,
-          0,
-          block.text.length,
-          'link',
-          true,
-        );
         const next = [...blocks];
         next.splice(
           caret.index,
           1,
-          withVisible(block, stamped.text, stamped.spans),
+          stampWordLinks(block),
           { kind: 'paragraph', text: '' },
         );
         return {
@@ -872,8 +904,12 @@ export function enterAt(blocks: Block[], caret: DocCaret): EditResult {
       next.splice(
         caret.index,
         1,
-        withVisible({ kind: 'paragraph', text: '' }, head.text, head.spans),
-        withVisible({ kind: 'paragraph', text: '' }, tail.text, tail.spans),
+        reconcileWordLinks(
+          withVisible({ kind: 'paragraph', text: '' }, head.text, head.spans),
+        ),
+        reconcileWordLinks(
+          withVisible({ kind: 'paragraph', text: '' }, tail.text, tail.spans),
+        ),
       );
       return {
         blocks: next,
@@ -888,19 +924,11 @@ export function enterAt(blocks: Block[], caret: DocCaret): EditResult {
         return toggleChecklist(blocks, caret.index, caret.index, caret);
       }
       if (isUrlLine(block.text)) {
-        const stamped = applyMark(
-          block.text,
-          block.spans,
-          0,
-          block.text.length,
-          'link',
-          true,
-        );
         const next = [...blocks];
         next.splice(
           caret.index,
           1,
-          withVisible(block, stamped.text, stamped.spans),
+          stampWordLinks(block),
           {
             kind: 'item',
             text: '',
@@ -925,16 +953,18 @@ export function enterAt(blocks: Block[], caret: DocCaret): EditResult {
       next.splice(
         caret.index,
         1,
-        withVisible(block, head.text, head.spans),
-        withVisible(
-          {
-            kind: 'item',
-            text: '',
-            checked: false,
-            indent: block.indent,
-          },
-          tail.text,
-          tail.spans,
+        reconcileWordLinks(withVisible(block, head.text, head.spans)),
+        reconcileWordLinks(
+          withVisible(
+            {
+              kind: 'item',
+              text: '',
+              checked: false,
+              indent: block.indent,
+            },
+            tail.text,
+            tail.spans,
+          ),
         ),
       );
       return {

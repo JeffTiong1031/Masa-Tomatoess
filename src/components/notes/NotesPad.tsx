@@ -5,6 +5,7 @@ import {
   useCallback,
   useEffect,
   useImperativeHandle,
+  useLayoutEffect,
   useRef,
   useState,
 } from 'react';
@@ -18,6 +19,11 @@ import { suggestedTitle } from '@/lib/noteFiles';
 import { folderById } from '@/lib/noteFolder';
 import { DEFAULT_NOTE_LINE_GAP } from '@/lib/noteLineGap';
 import { fallbackPreview, isUrlLine, type LinkPreview } from '@/lib/noteLink';
+import {
+  LINK_CARD_GAP,
+  linkCardPlacement,
+  type LinkCardBox,
+} from '@/lib/noteLinkCard';
 import { isSaveShortcut } from '@/lib/noteShortcut';
 import { openTabs } from '@/lib/noteTabs';
 import { useLinkPreviewStore } from '@/store/useLinkPreviewStore';
@@ -71,8 +77,14 @@ export const NotesPad = forwardRef<NotesPadHandle, { onLeave?: () => void }>(
       underline: false,
     });
     const [preview, setPreview] = useState<LinkPreview | null>(null);
+    const [cardPlace, setCardPlace] = useState<{ top: number; left: number } | null>(
+      null,
+    );
 
     const editorRef = useRef<NotesEditorHandle>(null);
+    const padBodyRef = useRef<HTMLDivElement>(null);
+    const cardWrapRef = useRef<HTMLDivElement>(null);
+    const linkBoxRef = useRef<LinkCardBox | null>(null);
     const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
     const pendingSave = useRef<Note | null>(null);
     const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -156,17 +168,37 @@ export const NotesPad = forwardRef<NotesPadHandle, { onLeave?: () => void }>(
       });
     };
 
-    const onLinkPress = (href: string) => {
+    const placeCard = (link: LinkCardBox) => {
+      const padEl = padBodyRef.current;
+      if (!padEl) return;
+      const pad = padEl.getBoundingClientRect();
+      const cardEl = cardWrapRef.current;
+      const card = cardEl
+        ? { width: cardEl.offsetWidth, height: cardEl.offsetHeight }
+        : { width: 320, height: 72 };
+      setCardPlace(linkCardPlacement(pad, link, card, LINK_CARD_GAP));
+    };
+
+    const onLinkPress = (href: string, from: LinkCardBox) => {
       if (!isUrlLine(href)) {
         return;
       }
       if (previewRef.current?.href === href) {
         previewRef.current = null;
+        linkBoxRef.current = null;
         setPreview(null);
+        setCardPlace(null);
         return;
       }
+      linkBoxRef.current = from;
       showLinkCard(href);
+      placeCard(from);
     };
+
+    useLayoutEffect(() => {
+      if (preview === null || linkBoxRef.current === null) return;
+      placeCard(linkBoxRef.current);
+    }, [preview]);
 
     useEffect(() => {
       if (preview === null) return;
@@ -176,6 +208,8 @@ export const NotesPad = forwardRef<NotesPadHandle, { onLeave?: () => void }>(
         if (target.closest('[data-note-link]')) return;
         previewRef.current = null;
         setPreview(null);
+        setCardPlace(null);
+        linkBoxRef.current = null;
       };
       const timer = window.setTimeout(() => {
         document.addEventListener('pointerdown', onPointerDown);
@@ -450,7 +484,7 @@ export const NotesPad = forwardRef<NotesPadHandle, { onLeave?: () => void }>(
               }}
               onDeletePicked={deletePicked}
             />
-            <div className="flex min-h-0 flex-1 flex-col">
+            <div ref={padBodyRef} className="relative flex min-h-0 flex-1 flex-col">
               <NotesEditor
                 key={active.id}
                 ref={editorRef}
@@ -461,7 +495,15 @@ export const NotesPad = forwardRef<NotesPadHandle, { onLeave?: () => void }>(
                 onLinkPress={onLinkPress}
               />
               {preview !== null && (
-                <div className="mt-2 shrink-0 px-3 pb-3">
+                <div
+                  ref={cardWrapRef}
+                  data-note-card=""
+                  className="absolute z-20"
+                  style={{
+                    top: cardPlace?.top ?? 0,
+                    left: cardPlace?.left ?? 0,
+                  }}
+                >
                   <NotesLinkCard
                     preview={preview}
                     onOpen={() => {

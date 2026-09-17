@@ -260,8 +260,10 @@ describe('notes pad links', () => {
   it('draws a link run and reads it back from the line', () => {
     expect(EDITOR).toContain('data-note-link');
     expect(EDITOR).toContain('closest(\'[data-note-link]\')');
-    expect(EDITOR).toContain('reconcileWordLinks(');
+    expect(EDITOR).toContain("getAttribute('data-note-link')");
+    expect(EDITOR).toContain('linksAfterEdit(');
     expect(EDITOR).toContain('onLinkPress');
+    expect(EDITOR).not.toContain('block.text.trim()');
     expect(EDITOR).not.toContain('<a ');
   });
 
@@ -279,13 +281,11 @@ describe('notes pad links', () => {
     expect(CARD).not.toContain('Replace URL');
   });
 
-  it('sits the card after the editor, not over the address', () => {
-    const editor = PAD.lastIndexOf('<NotesEditor');
-    const card = PAD.indexOf('<NotesLinkCard');
-    expect(editor).toBeGreaterThan(-1);
-    expect(card).toBeGreaterThan(editor);
-    expect(PAD.slice(editor, card)).not.toContain('absolute');
-    expect(PAD.slice(editor, card)).not.toContain('top-3');
-    expect(PAD.slice(editor, card)).toContain('mt-2');
+  it('sits the card under the address, even in a tall maximised pad', () => {
+    expect(PAD).toContain('linkCardPlacement(');
+    expect(PAD).toContain('getBoundingClientRect()');
+    expect(EDITOR).toContain('getBoundingClientRect()');
+    expect(PAD).toContain('absolute z-20');
+    expect(PAD).not.toContain('top-3');
   });
 });

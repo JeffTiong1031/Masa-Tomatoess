@@ -42,3 +42,7 @@ export function shouldReplaceEditorBody(
 ): boolean {
   return incoming !== encodedCurrent;
 }
+
+export function liveCaretOffset(domCount: number): number {
+  return Math.max(0, domCount);
+}

@@ -21,14 +21,16 @@ import {
   enterAt,
   extendCaret,
   indentSelection,
+  insertNeedsModelTyping,
   insertPicture,
   insertText,
+  lineNeedsModelTyping,
+  linksAfterEdit,
   ordered,
   outdentSelection,
   pasteExternal,
   pasteInternal,
   placePictureAt,
-  reconcileWordLinks,
   selectedRoots,
   selectionHasMark,
   sizePictureAt,
@@ -47,6 +49,7 @@ import { decodeBody, encodeBody, withVisible, type Block } from '@/lib/noteDoc';
 import {
   beforeInputAction,
   clipboardAction,
+  liveCaretOffset,
   shouldCommitFromInput,
   shouldReplaceEditorBody,
   shouldRestoreCaretAfterTextCommit,
@@ -121,7 +124,10 @@ interface NotesEditorProps {
   disabled?: boolean;
   onChange: (body: string) => void;
   onCaret: (info: NotesCaretInfo) => void;
-  onLinkPress?: (href: string) => void;
+  onLinkPress?: (
+    href: string,
+    from: { top: number; left: number; width: number; height: number },
+  ) => void;
 }
 
 interface EditorSelection {
@@ -274,7 +280,7 @@ function noteRunNodes(text: string, spans?: NoteSpan[]): ReactNode {
       return (
         <span
           key={index}
-          data-note-link=""
+          data-note-link={run.text}
           className="underline decoration-[var(--mt-accent)] underline-offset-2 text-[var(--mt-text)]"
         >
           {node}
@@ -514,11 +520,7 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
         range.setEnd(node, offset);
         return {
           index,
-          offset: Math.min(
-            range.toString().length,
-            element.textContent?.length ??
-              blockLength(blocksRef.current[index]),
-          ),
+          offset: liveCaretOffset(range.toString().length),
         };
       }
       return null;
@@ -587,7 +589,8 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
           return;
         case 'paragraph':
         case 'item':
-          next[index] = reconcileWordLinks(
+          next[index] = linksAfterEdit(
+            block,
             withVisible(block, parsed.text, parsed.spans),
           );
       }
@@ -1080,9 +1083,10 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
               onClick={(event) => {
                 if (block.kind === 'picture') return;
                 const target = event.target as HTMLElement;
-                if (!target.closest('[data-note-link]')) return;
-                event.preventDefault();
-                onLinkPress?.(block.text.trim());
+                const link = target.closest('[data-note-link]');
+                const href = link?.getAttribute('data-note-link');
+                if (!href || !link) return;
+                onLinkPress?.(href, link.getBoundingClientRect());
               }}
               onFocus={() => {
                 focusedRef.current = true;
@@ -1125,6 +1129,77 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
                     range.focus,
                     native.data,
                     pendingRef.current,
+                  );
+                  commit(result.blocks, result.caret);
+                  return;
+                }
+                const focusBlock = blocksRef.current[range.focus.index];
+                if (
+                  collapsed &&
+                  focusBlock.kind !== 'picture' &&
+                  native.inputType === 'insertText' &&
+                  native.data &&
+                  insertNeedsModelTyping(
+                    focusBlock.text,
+                    focusBlock.spans,
+                    range.focus.offset,
+                    native.data,
+                  )
+                ) {
+                  event.preventDefault();
+                  if (!typingRunRef.current) {
+                    historyRef.current = remember(historyRef.current, snapshot());
+                    typingRunRef.current = true;
+                  }
+                  const result = insertText(
+                    blocksRef.current,
+                    range.focus,
+                    native.data,
+                  );
+                  commit(result.blocks, result.caret);
+                  return;
+                }
+                if (
+                  collapsed &&
+                  focusBlock.kind !== 'picture' &&
+                  lineNeedsModelTyping(focusBlock.text, focusBlock.spans) &&
+                  (native.inputType === 'deleteContentBackward' ||
+                    native.inputType === 'deleteContentForward')
+                ) {
+                  event.preventDefault();
+                  rememberCurrent();
+                  if (native.inputType === 'deleteContentBackward') {
+                    if (range.focus.offset === 0) {
+                      const joined = backspaceAtStart(
+                        blocksRef.current,
+                        range.focus,
+                      );
+                      if (joined) {
+                        commit(joined.blocks, joined.caret);
+                      }
+                      return;
+                    }
+                    const result = deleteSelection(
+                      blocksRef.current,
+                      {
+                        index: range.focus.index,
+                        offset: range.focus.offset - 1,
+                      },
+                      range.focus,
+                    );
+                    commit(result.blocks, result.caret);
+                    return;
+                  }
+                  if (range.focus.offset === blockLength(focusBlock)) {
+                    return;
+                  }
+                  const result = deleteSelection(
+                    blocksRef.current,
+                    range.focus,
+                    {
+                      index: range.focus.index,
+                      offset: range.focus.offset + 1,
+                    },
                   );
                   commit(result.blocks, result.caret);
                   return;

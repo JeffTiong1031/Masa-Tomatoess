@@ -1,7 +1,12 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { fallbackPreview, isBlockedHost, isUrlLine } from './noteLink';
+import {
+  fallbackPreview,
+  isBlockedHost,
+  isUrlLine,
+  urlRanges,
+} from './noteLink';
 
 const ACTION = readFileSync(
   path.resolve(process.cwd(), 'src/app/actions/linkPreview.ts'),
@@ -33,6 +38,23 @@ describe('isUrlLine', () => {
     expect(isUrlLine('http://127.0.0.2/secret')).toBe(false);
     expect(isUrlLine('http://[::ffff:127.0.0.1]/')).toBe(false);
     expect(isUrlLine('http://localhost./')).toBe(false);
+  });
+});
+
+describe('urlRanges', () => {
+  it('finds a URL among other words', () => {
+    const href =
+      'https://www.udemy.com/course/git-and-github-bootcamp/learn/lecture/24619666#overview';
+    expect(urlRanges(`see ${href} ltr`)).toEqual([
+      { start: 4, end: 4 + href.length, href },
+    ]);
+  });
+
+  it('does not include the space after a lone URL', () => {
+    const href = 'https://github.com/JeffTiong1031';
+    expect(urlRanges(`${href} `)).toEqual([
+      { start: 0, end: href.length, href },
+    ]);
   });
 });
 

@@ -90,6 +90,24 @@ export function isBlockedHost(host: string): boolean {
   return isPrivateIpv4(ipv4);
 }
 
+export function urlRanges(
+  text: string,
+): { start: number; end: number; href: string }[] {
+  const ranges: { start: number; end: number; href: string }[] = [];
+  const pattern = /https?:\/\/[^\s]+/gi;
+  let match: RegExpExecArray | null;
+  while ((match = pattern.exec(text)) !== null) {
+    const href = match[0];
+    if (!isUrlLine(href)) continue;
+    ranges.push({
+      start: match.index,
+      end: match.index + href.length,
+      href,
+    });
+  }
+  return ranges;
+}
+
 export function isUrlLine(text: string): boolean {
   const trimmed = text.trim();
   if (/\s/.test(trimmed)) {
