@@ -1,5 +1,16 @@
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { fallbackPreview, isBlockedHost, isUrlLine } from './noteLink';
+
+const ACTION = readFileSync(
+  path.resolve(process.cwd(), 'src/app/actions/linkPreview.ts'),
+  'utf8',
+);
+const STORE = readFileSync(
+  path.resolve(process.cwd(), 'src/store/useLinkPreviewStore.ts'),
+  'utf8',
+);
 
 describe('isUrlLine', () => {
   it('accepts http and https with a host, and ignores end spaces', () => {
@@ -39,5 +50,16 @@ describe('fallbackPreview', () => {
       text: '',
       icon: null,
     });
+  });
+});
+
+describe('lookup wiring', () => {
+  it('asks the server, blocks private hosts, and remembers on this device', () => {
+    expect(ACTION).toContain("'use server'");
+    expect(ACTION).toContain('isUrlLine(');
+    expect(ACTION).toContain('isBlockedHost(');
+    expect(ACTION).toContain('previewFromHtml(');
+    expect(STORE).toContain('mt-link-preview');
+    expect(STORE).toContain('remember');
   });
 });
