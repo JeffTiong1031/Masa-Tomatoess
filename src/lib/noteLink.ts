@@ -60,6 +60,9 @@ export function isBlockedHost(host: string): boolean {
 
 export function isUrlLine(text: string): boolean {
   const trimmed = text.trim();
+  if (/\s/.test(trimmed)) {
+    return false;
+  }
   if (!URL_LINE.test(trimmed)) {
     return false;
   }

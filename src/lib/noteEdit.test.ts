@@ -27,6 +27,7 @@ import {
   toggleMarkInRange,
 } from './noteEdit';
 import type { Block } from './noteDoc';
+import { isUrlLine } from './noteLink';
 import { defaultPicture } from './notePicture';
 
 const EDITOR = readFileSync(
@@ -589,6 +590,91 @@ describe('toggleMarkInRange', () => {
       spans: [
         { start: 0, end: 5, bold: true, underline: false, link: false },
       ],
+    });
+  });
+});
+
+const HREF = 'https://github.com/JeffTiong1031';
+
+describe('enterAt url line', () => {
+  it('stamps the whole line and starts a new empty line, even from the middle', () => {
+    const blocks: Block[] = [{ kind: 'paragraph', text: HREF }];
+    const next = enterAt(blocks, { index: 0, offset: 8 });
+    expect(next.blocks[0]).toMatchObject({
+      kind: 'paragraph',
+      text: HREF,
+    });
+    expect(
+      next.blocks[0].kind === 'paragraph' ? next.blocks[0].spans : undefined,
+    ).toEqual([
+      {
+        start: 0,
+        end: HREF.length,
+        bold: false,
+        underline: false,
+        link: true,
+      },
+    ]);
+    expect(next.blocks[1]).toEqual({ kind: 'paragraph', text: '' });
+    expect(next.caret).toEqual({ index: 1, offset: 0 });
+  });
+
+  it('stamps a tick-list URL and adds an empty item under it', () => {
+    const blocks: Block[] = [
+      { kind: 'item', text: HREF, checked: false, indent: 1 },
+    ];
+    const next = enterAt(blocks, { index: 0, offset: HREF.length });
+    expect(next.blocks[0]).toMatchObject({ text: HREF, indent: 1 });
+    expect(next.blocks[1]).toEqual({
+      kind: 'item',
+      text: '',
+      checked: false,
+      indent: 1,
+    });
+  });
+
+  it('still splits a line that is not only a URL', () => {
+    const blocks: Block[] = [{ kind: 'paragraph', text: 'Hello' }];
+    const next = enterAt(blocks, { index: 0, offset: 2 });
+    expect(next.blocks.map((block) => block.kind === 'paragraph' && block.text)).toEqual(
+      ['He', 'llo'],
+    );
+  });
+});
+
+describe('reconcileWordLinks', () => {
+  it('drops the mark when extra words appear, and keeps it when the address changes', () => {
+    const linked: Block[] = [
+      {
+        kind: 'paragraph',
+        text: HREF,
+        spans: [
+          {
+            start: 0,
+            end: HREF.length,
+            bold: false,
+            underline: false,
+            link: true,
+          },
+        ],
+      },
+    ];
+    const longer = insertText(linked, { index: 0, offset: HREF.length }, '/x');
+    expect(isUrlLine(longer.blocks[0].kind === 'paragraph' ? longer.blocks[0].text : '')).toBe(
+      true,
+    );
+    expect(longer.blocks[0]).toMatchObject({
+      text: `${HREF}/x`,
+    });
+    expect(
+      longer.blocks[0].kind === 'paragraph' &&
+        longer.blocks[0].spans?.every((span) => span.link),
+    ).toBe(true);
+
+    const broken = insertText(linked, { index: 0, offset: HREF.length }, ' later');
+    expect(broken.blocks[0]).toEqual({
+      kind: 'paragraph',
+      text: `${HREF} later`,
     });
   });
 });

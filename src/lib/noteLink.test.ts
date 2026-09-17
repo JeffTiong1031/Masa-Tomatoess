@@ -12,6 +12,7 @@ describe('isUrlLine', () => {
     expect(
       isUrlLine('see https://github.com/JeffTiong1031 later'),
     ).toBe(false);
+    expect(isUrlLine('https://github.com/JeffTiong1031 later')).toBe(false);
     expect(isUrlLine('www.github.com/JeffTiong1031')).toBe(false);
     expect(isUrlLine('javascript:alert(1)')).toBe(false);
     expect(isUrlLine('https://localhost/secret')).toBe(false);

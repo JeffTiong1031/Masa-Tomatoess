@@ -1,5 +1,12 @@
 import { joinIntoLine, stripIncoming } from './noteCopy';
-import { decodeBody, encodeBody, withVisible, type Block } from './noteDoc';
+import {
+  decodeBody,
+  encodeBody,
+  withVisible,
+  type Block,
+  type WordBlock,
+} from './noteDoc';
+import { isUrlLine } from './noteLink';
 import {
   defaultPicture,
   placePicture,
@@ -46,6 +53,36 @@ export function ordered(a: DocCaret, b: DocCaret): [DocCaret, DocCaret] {
   return [b, a];
 }
 
+export function lineHasLink(spans: NoteSpan[] | undefined): boolean {
+  return (spans ?? []).some((span) => span.link);
+}
+
+export function reconcileWordLinks(block: WordBlock): WordBlock {
+  const had = lineHasLink(block.spans);
+  if (!isUrlLine(block.text)) {
+    if (!had) return block;
+    const cleared = applyMark(
+      block.text,
+      block.spans,
+      0,
+      block.text.length,
+      'link',
+      false,
+    );
+    return withVisible(block, cleared.text, cleared.spans);
+  }
+  if (!had) return block;
+  const stamped = applyMark(
+    block.text,
+    block.spans,
+    0,
+    block.text.length,
+    'link',
+    true,
+  );
+  return withVisible(block, stamped.text, stamped.spans);
+}
+
 export function deleteSelection(
   blocks: Block[],
   start: DocCaret,
@@ -81,7 +118,9 @@ export function deleteSelection(
           from.offset,
           to.offset,
         );
-        next[from.index] = withVisible(first, visible.text, visible.spans);
+        next[from.index] = reconcileWordLinks(
+          withVisible(first, visible.text, visible.spans),
+        );
         return { blocks: next, caret: from };
       }
     }
@@ -94,7 +133,9 @@ export function deleteSelection(
     case 'paragraph':
     case 'item': {
       const visible = sliceVisible(first.text, first.spans, 0, from.offset);
-      replacement.push(withVisible(first, visible.text, visible.spans));
+      replacement.push(
+        reconcileWordLinks(withVisible(first, visible.text, visible.spans)),
+      );
       break;
     }
   }
@@ -110,7 +151,9 @@ export function deleteSelection(
         last.text.length,
       );
       if (visible.text !== '') {
-        replacement.push(withVisible(last, visible.text, visible.spans));
+        replacement.push(
+          reconcileWordLinks(withVisible(last, visible.text, visible.spans)),
+        );
       }
       break;
     }
@@ -152,7 +195,9 @@ export function insertText(
         text,
         style,
       );
-      next[caret.index] = withVisible(block, inserted.text, inserted.spans);
+      next[caret.index] = reconcileWordLinks(
+        withVisible(block, inserted.text, inserted.spans),
+      );
       return {
         blocks: next,
         caret: { index: caret.index, offset: caret.offset + text.length },
@@ -775,6 +820,27 @@ export function enterAt(blocks: Block[], caret: DocCaret): EditResult {
       };
     }
     case 'paragraph': {
+      if (isUrlLine(block.text)) {
+        const stamped = applyMark(
+          block.text,
+          block.spans,
+          0,
+          block.text.length,
+          'link',
+          true,
+        );
+        const next = [...blocks];
+        next.splice(
+          caret.index,
+          1,
+          withVisible(block, stamped.text, stamped.spans),
+          { kind: 'paragraph', text: '' },
+        );
+        return {
+          blocks: next,
+          caret: { index: caret.index + 1, offset: 0 },
+        };
+      }
       const head = sliceVisible(block.text, block.spans, 0, caret.offset);
       const tail = sliceVisible(
         block.text,
@@ -800,6 +866,32 @@ export function enterAt(blocks: Block[], caret: DocCaret): EditResult {
           return outdentSelection(blocks, caret.index, caret.index, caret);
         }
         return toggleChecklist(blocks, caret.index, caret.index, caret);
+      }
+      if (isUrlLine(block.text)) {
+        const stamped = applyMark(
+          block.text,
+          block.spans,
+          0,
+          block.text.length,
+          'link',
+          true,
+        );
+        const next = [...blocks];
+        next.splice(
+          caret.index,
+          1,
+          withVisible(block, stamped.text, stamped.spans),
+          {
+            kind: 'item',
+            text: '',
+            checked: false,
+            indent: block.indent,
+          },
+        );
+        return {
+          blocks: next,
+          caret: { index: caret.index + 1, offset: 0 },
+        };
       }
 
       const head = sliceVisible(block.text, block.spans, 0, caret.offset);
