@@ -62,4 +62,10 @@ describe('lookup wiring', () => {
     expect(STORE).toContain('mt-link-preview');
     expect(STORE).toContain('remember');
   });
+
+  it('refuses a lookup that redirected onto a blocked host', () => {
+    const afterFetch = ACTION.slice(ACTION.indexOf('await fetch'));
+    expect(afterFetch).toContain('response.url');
+    expect(afterFetch).toContain('isBlockedHost(');
+  });
 });

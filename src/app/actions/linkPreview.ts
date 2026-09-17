@@ -20,6 +20,10 @@ export async function fetchLinkPreview(href: string): Promise<LinkPreview | null
       signal: AbortSignal.timeout(4000),
     });
 
+    if (isBlockedHost(new URL(response.url).hostname)) {
+      return null;
+    }
+
     if (!response.ok) {
       return null;
     }
