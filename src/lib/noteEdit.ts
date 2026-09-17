@@ -1,5 +1,12 @@
 import { joinIntoLine, stripIncoming } from './noteCopy';
-import { decodeBody, encodeBody, withVisible, type Block } from './noteDoc';
+import {
+  decodeBody,
+  encodeBody,
+  withVisible,
+  type Block,
+  type WordBlock,
+} from './noteDoc';
+import { isUrlLine, urlRanges } from './noteLink';
 import {
   defaultPicture,
   placePicture,
@@ -8,11 +15,13 @@ import {
 } from './notePicture';
 import {
   applyMark,
+  compactSpans,
   concatVisible,
   deleteVisible,
   insertVisible,
   rangeHasMark,
   sliceVisible,
+  stylesFor,
   type NoteMark,
   type NoteSpan,
   type NoteStyle,
@@ -44,6 +53,83 @@ export function ordered(a: DocCaret, b: DocCaret): [DocCaret, DocCaret] {
     return [a, b];
   }
   return [b, a];
+}
+
+export function lineHasLink(spans: NoteSpan[] | undefined): boolean {
+  return (spans ?? []).some((span) => span.link);
+}
+
+export function reconcileWordLinks(block: WordBlock): WordBlock {
+  return applyUrlLinkMarks(block, false);
+}
+
+export function stampWordLinks(block: WordBlock): WordBlock {
+  return applyUrlLinkMarks(block, true);
+}
+
+function applyUrlLinkMarks(block: WordBlock, stamp: boolean): WordBlock {
+  const ranges = urlRanges(block.text);
+  const had = lineHasLink(block.spans);
+  if (!had && !stamp) {
+    return block;
+  }
+  if (ranges.length === 0 && !had) {
+    return block;
+  }
+  const styles = stylesFor(block.text, block.spans);
+  const inUrl: boolean[] = [];
+  for (let index = 0; index < styles.length; index += 1) {
+    inUrl.push(false);
+  }
+  for (const range of ranges) {
+    for (let index = range.start; index < range.end; index += 1) {
+      inUrl[index] = true;
+    }
+  }
+  for (let index = 0; index < styles.length; index += 1) {
+    const linked = stamp ? inUrl[index] : inUrl[index] && styles[index].link;
+    styles[index] = { ...styles[index], link: linked };
+  }
+  return withVisible(block, block.text, compactSpans(styles));
+}
+
+export function linksAfterEdit(previous: WordBlock, next: WordBlock): WordBlock {
+  const spaces = (text: string) => (text.match(/[ \u00a0]/g) ?? []).length;
+  if (spaces(next.text) > spaces(previous.text)) {
+    return stampWordLinks(next);
+  }
+  return reconcileWordLinks(next);
+}
+
+export function lineNeedsModelTyping(
+  text: string,
+  spans: NoteSpan[] | undefined,
+): boolean {
+  return lineHasLink(spans) || urlRanges(text).length > 0;
+}
+
+export function insertNeedsModelTyping(
+  text: string,
+  spans: NoteSpan[] | undefined,
+  offset: number,
+  inserted: string,
+): boolean {
+  if (lineNeedsModelTyping(text, spans)) {
+    return true;
+  }
+  return (
+    urlRanges(text.slice(0, offset) + inserted + text.slice(offset)).length > 0
+  );
+}
+
+function reconcileProduced(block: Block): Block {
+  switch (block.kind) {
+    case 'picture':
+      return block;
+    case 'paragraph':
+    case 'item':
+      return reconcileWordLinks(block);
+  }
 }
 
 export function deleteSelection(
@@ -81,7 +167,9 @@ export function deleteSelection(
           from.offset,
           to.offset,
         );
-        next[from.index] = withVisible(first, visible.text, visible.spans);
+        next[from.index] = reconcileWordLinks(
+          withVisible(first, visible.text, visible.spans),
+        );
         return { blocks: next, caret: from };
       }
     }
@@ -94,7 +182,9 @@ export function deleteSelection(
     case 'paragraph':
     case 'item': {
       const visible = sliceVisible(first.text, first.spans, 0, from.offset);
-      replacement.push(withVisible(first, visible.text, visible.spans));
+      replacement.push(
+        reconcileWordLinks(withVisible(first, visible.text, visible.spans)),
+      );
       break;
     }
   }
@@ -110,7 +200,9 @@ export function deleteSelection(
         last.text.length,
       );
       if (visible.text !== '') {
-        replacement.push(withVisible(last, visible.text, visible.spans));
+        replacement.push(
+          reconcileWordLinks(withVisible(last, visible.text, visible.spans)),
+        );
       }
       break;
     }
@@ -152,7 +244,10 @@ export function insertText(
         text,
         style,
       );
-      next[caret.index] = withVisible(block, inserted.text, inserted.spans);
+      next[caret.index] = linksAfterEdit(
+        block,
+        withVisible(block, inserted.text, inserted.spans),
+      );
       return {
         blocks: next,
         caret: { index: caret.index, offset: caret.offset + text.length },
@@ -189,9 +284,9 @@ export function insertPicture(
       next.splice(
         caret.index,
         1,
-        withVisible(block, head.text, head.spans),
+        reconcileWordLinks(withVisible(block, head.text, head.spans)),
         picture,
-        withVisible(block, tail.text, tail.spans),
+        reconcileWordLinks(withVisible(block, tail.text, tail.spans)),
       );
       return {
         blocks: next,
@@ -210,12 +305,14 @@ export function insertPicture(
       next.splice(
         caret.index,
         1,
-        withVisible(block, head.text, head.spans),
+        reconcileWordLinks(withVisible(block, head.text, head.spans)),
         picture,
-        withVisible(
-          { ...block, checked: false },
-          tail.text,
-          tail.spans,
+        reconcileWordLinks(
+          withVisible(
+            { ...block, checked: false },
+            tail.text,
+            tail.spans,
+          ),
         ),
       );
       return {
@@ -404,10 +501,12 @@ export function pasteExternal(
             if (index === incoming.length - 1) {
               visible = concatVisible(visible, suffix);
             }
-            return withVisible(
-              { kind: 'paragraph', text: '' },
-              visible.text,
-              visible.spans,
+            return reconcileWordLinks(
+              withVisible(
+                { kind: 'paragraph', text: '' },
+                visible.text,
+                visible.spans,
+              ),
             );
           }
         }
@@ -517,7 +616,13 @@ export function pasteInternal(
   }
 
   const next = [...deleted.blocks];
-  next.splice(deleted.caret.index, 1, ...prefix, ...inserted, ...suffix);
+  next.splice(
+    deleted.caret.index,
+    1,
+    ...prefix.map(reconcileProduced),
+    ...inserted.map(reconcileProduced),
+    ...suffix.map(reconcileProduced),
+  );
   const caretIndex = deleted.caret.index + prefix.length + inserted.length - 1;
   return {
     blocks: next,
@@ -775,6 +880,19 @@ export function enterAt(blocks: Block[], caret: DocCaret): EditResult {
       };
     }
     case 'paragraph': {
+      if (isUrlLine(block.text)) {
+        const next = [...blocks];
+        next.splice(
+          caret.index,
+          1,
+          stampWordLinks(block),
+          { kind: 'paragraph', text: '' },
+        );
+        return {
+          blocks: next,
+          caret: { index: caret.index + 1, offset: 0 },
+        };
+      }
       const head = sliceVisible(block.text, block.spans, 0, caret.offset);
       const tail = sliceVisible(
         block.text,
@@ -786,8 +904,12 @@ export function enterAt(blocks: Block[], caret: DocCaret): EditResult {
       next.splice(
         caret.index,
         1,
-        withVisible({ kind: 'paragraph', text: '' }, head.text, head.spans),
-        withVisible({ kind: 'paragraph', text: '' }, tail.text, tail.spans),
+        reconcileWordLinks(
+          withVisible({ kind: 'paragraph', text: '' }, head.text, head.spans),
+        ),
+        reconcileWordLinks(
+          withVisible({ kind: 'paragraph', text: '' }, tail.text, tail.spans),
+        ),
       );
       return {
         blocks: next,
@@ -801,6 +923,24 @@ export function enterAt(blocks: Block[], caret: DocCaret): EditResult {
         }
         return toggleChecklist(blocks, caret.index, caret.index, caret);
       }
+      if (isUrlLine(block.text)) {
+        const next = [...blocks];
+        next.splice(
+          caret.index,
+          1,
+          stampWordLinks(block),
+          {
+            kind: 'item',
+            text: '',
+            checked: false,
+            indent: block.indent,
+          },
+        );
+        return {
+          blocks: next,
+          caret: { index: caret.index + 1, offset: 0 },
+        };
+      }
 
       const head = sliceVisible(block.text, block.spans, 0, caret.offset);
       const tail = sliceVisible(
@@ -813,16 +953,18 @@ export function enterAt(blocks: Block[], caret: DocCaret): EditResult {
       next.splice(
         caret.index,
         1,
-        withVisible(block, head.text, head.spans),
-        withVisible(
-          {
-            kind: 'item',
-            text: '',
-            checked: false,
-            indent: block.indent,
-          },
-          tail.text,
-          tail.spans,
+        reconcileWordLinks(withVisible(block, head.text, head.spans)),
+        reconcileWordLinks(
+          withVisible(
+            {
+              kind: 'item',
+              text: '',
+              checked: false,
+              indent: block.indent,
+            },
+            tail.text,
+            tail.spans,
+          ),
         ),
       );
       return {
@@ -899,10 +1041,8 @@ export function backspaceAtStart(
           const joinOffset = blockLength(previous);
           const next = [...blocks];
           const joined = concatVisible(previous, block);
-          next[previousIndex] = withVisible(
-            previous,
-            joined.text,
-            joined.spans,
+          next[previousIndex] = reconcileWordLinks(
+            withVisible(previous, joined.text, joined.spans),
           );
           next.splice(caret.index, 1);
           return {

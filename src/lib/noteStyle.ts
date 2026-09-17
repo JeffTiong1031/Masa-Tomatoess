@@ -1,8 +1,9 @@
-export type NoteMark = 'bold' | 'underline';
+export type NoteMark = 'bold' | 'underline' | 'link';
 
 export type NoteStyle = {
   bold: boolean;
   underline: boolean;
+  link: boolean;
 };
 
 export type NoteSpan = {
@@ -10,9 +11,14 @@ export type NoteSpan = {
   end: number;
   bold: boolean;
   underline: boolean;
+  link: boolean;
 };
 
-export const PLAIN_STYLE: NoteStyle = { bold: false, underline: false };
+export const PLAIN_STYLE: NoteStyle = {
+  bold: false,
+  underline: false,
+  link: false,
+};
 
 export function styleAt(
   spans: NoteSpan[] | undefined,
@@ -20,7 +26,7 @@ export function styleAt(
 ): NoteStyle {
   for (const span of spans ?? []) {
     if (index >= span.start && index < span.end) {
-      return { bold: span.bold, underline: span.underline };
+      return { bold: span.bold, underline: span.underline, link: span.link };
     }
   }
   return PLAIN_STYLE;
@@ -49,7 +55,11 @@ export function stylesFor(
     const from = Math.max(0, span.start);
     const to = Math.min(text.length, span.end);
     for (let index = from; index < to; index += 1) {
-      styles[index] = { bold: span.bold, underline: span.underline };
+      styles[index] = {
+        bold: span.bold,
+        underline: span.underline,
+        link: span.link,
+      };
     }
   }
   return styles;
@@ -60,7 +70,7 @@ export function compactSpans(styles: NoteStyle[]): NoteSpan[] {
   let index = 0;
   while (index < styles.length) {
     const current = styles[index];
-    if (!current.bold && !current.underline) {
+    if (!current.bold && !current.underline && !current.link) {
       index += 1;
       continue;
     }
@@ -68,7 +78,8 @@ export function compactSpans(styles: NoteStyle[]): NoteSpan[] {
     while (
       end < styles.length &&
       styles[end].bold === current.bold &&
-      styles[end].underline === current.underline
+      styles[end].underline === current.underline &&
+      styles[end].link === current.link
     ) {
       end += 1;
     }
@@ -77,6 +88,7 @@ export function compactSpans(styles: NoteStyle[]): NoteSpan[] {
       end,
       bold: current.bold,
       underline: current.underline,
+      link: current.link,
     });
     index = end;
   }
@@ -96,9 +108,10 @@ export function visibleFields(
 export function noteRuns(
   text: string,
   spans: NoteSpan[] | undefined,
-): { text: string; bold: boolean; underline: boolean }[] {
+): { text: string; bold: boolean; underline: boolean; link: boolean }[] {
   const styles = stylesFor(text, spans);
-  const runs: { text: string; bold: boolean; underline: boolean }[] = [];
+  const runs: { text: string; bold: boolean; underline: boolean; link: boolean }[] =
+    [];
   let index = 0;
   while (index < styles.length) {
     const current = styles[index];
@@ -106,7 +119,8 @@ export function noteRuns(
     while (
       end < styles.length &&
       styles[end].bold === current.bold &&
-      styles[end].underline === current.underline
+      styles[end].underline === current.underline &&
+      styles[end].link === current.link
     ) {
       end += 1;
     }
@@ -114,23 +128,28 @@ export function noteRuns(
       text: text.slice(index, end),
       bold: current.bold,
       underline: current.underline,
+      link: current.link,
     });
     index = end;
   }
   if (runs.length === 0) {
-    return [{ text, bold: false, underline: false }];
+    return [{ text, bold: false, underline: false, link: false }];
   }
   return runs;
 }
 
 export function spansFromLeaves(
-  leaves: { text: string; bold: boolean; underline: boolean }[],
+  leaves: { text: string; bold: boolean; underline: boolean; link: boolean }[],
 ): { text: string; spans?: NoteSpan[] } {
   const text = leaves.map((leaf) => leaf.text).join('');
   const styles: NoteStyle[] = [];
   for (const leaf of leaves) {
     for (let index = 0; index < leaf.text.length; index += 1) {
-      styles.push({ bold: leaf.bold, underline: leaf.underline });
+      styles.push({
+        bold: leaf.bold,
+        underline: leaf.underline,
+        link: leaf.link,
+      });
     }
   }
   return visibleFields(text, compactSpans(styles));
@@ -172,7 +191,11 @@ export function insertVisible(
   const styles = stylesFor(text, spans);
   const insertedStyles: NoteStyle[] = [];
   for (let index = 0; index < inserted.length; index += 1) {
-    insertedStyles.push({ bold: used.bold, underline: used.underline });
+    insertedStyles.push({
+      bold: used.bold,
+      underline: used.underline,
+      link: used.link,
+    });
   }
   return visibleFields(
     text.slice(0, offset) + inserted + text.slice(offset),
@@ -208,7 +231,12 @@ export function rangeHasMark(
     return false;
   }
   const styles = stylesFor(text, spans);
-  for (let index = start; index < end; index += 1) {
+  const from = Math.max(0, start);
+  const to = Math.min(end, styles.length);
+  if (from >= to) {
+    return false;
+  }
+  for (let index = from; index < to; index += 1) {
     switch (mark) {
       case 'bold':
         if (!styles[index].bold) {
@@ -217,6 +245,11 @@ export function rangeHasMark(
         break;
       case 'underline':
         if (!styles[index].underline) {
+          return false;
+        }
+        break;
+      case 'link':
+        if (!styles[index].link) {
           return false;
         }
         break;
@@ -244,6 +277,9 @@ export function applyMark(
         break;
       case 'underline':
         styles[index] = { ...styles[index], underline: value };
+        break;
+      case 'link':
+        styles[index] = { ...styles[index], link: value };
         break;
     }
   }

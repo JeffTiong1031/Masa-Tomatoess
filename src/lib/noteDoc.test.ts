@@ -73,7 +73,9 @@ describe('decodeBody / encodeBody', () => {
       {
         kind: 'paragraph' as const,
         text: 'hello world',
-        spans: [{ start: 6, end: 11, bold: true, underline: true }],
+        spans: [
+          { start: 6, end: 11, bold: true, underline: true, link: false },
+        ],
       },
     ];
     const encoded = encodeBody(blocks);
@@ -89,6 +91,32 @@ describe('decodeBody / encodeBody', () => {
     expect(decodeLine(`${NOTE_RUN_START}nope`)).toEqual({
       kind: 'paragraph',
       text: 'nope',
+    });
+  });
+
+  it('round-trips a link run and still reads old bold-only notes', () => {
+    const block = {
+      kind: 'paragraph' as const,
+      text: 'https://github.com/JeffTiong1031',
+      spans: [
+        {
+          start: 0,
+          end: 'https://github.com/JeffTiong1031'.length,
+          bold: false,
+          underline: false,
+          link: true,
+        },
+      ],
+    };
+    expect(decodeBody(encodeBody([block]))).toEqual([block]);
+    expect(
+      decodeLine(`${NOTE_RUN_START}${NOTE_RUN_BOLD}${NOTE_RUN_SEP}Eggs`),
+    ).toEqual({
+      kind: 'paragraph',
+      text: 'Eggs',
+      spans: [
+        { start: 0, end: 4, bold: true, underline: false, link: false },
+      ],
     });
   });
 });

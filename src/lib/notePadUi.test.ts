@@ -34,6 +34,10 @@ const DATA = readFileSync(
   path.resolve(process.cwd(), 'src/store/useNotesDataStore.ts'),
   'utf8',
 );
+const CARD = readFileSync(
+  path.resolve(process.cwd(), 'src/components/notes/NotesLinkCard.tsx'),
+  'utf8',
+);
 
 describe('notes pad select', () => {
   it('lets you pick tabs and delete the picked ones', () => {
@@ -249,5 +253,39 @@ describe('notes window host', () => {
     expect(DATA).toContain('loadPendingDeletes');
     expect(DATA).toContain('mergeNotesAfterReconcile');
     expect(DATA).not.toContain('mergeNotes(current, reconciled, [])');
+  });
+});
+
+describe('notes pad links', () => {
+  it('draws a link run and reads it back from the line', () => {
+    expect(EDITOR).toContain('data-note-link');
+    expect(EDITOR).toContain('closest(\'[data-note-link]\')');
+    expect(EDITOR).toContain("getAttribute('data-note-link')");
+    expect(EDITOR).toContain('linksAfterEdit(');
+    expect(EDITOR).toContain('onLinkPress');
+    expect(EDITOR).not.toContain('block.text.trim()');
+    expect(EDITOR).not.toContain('<a ');
+  });
+
+  it('shows cream on a computer and a peek on a phone, and opens from the card', () => {
+    expect(PAD).toContain('NotesLinkCard');
+    expect(PAD).toContain('fetchLinkPreview(');
+    expect(PAD).toContain('isUrlLine(');
+    expect(PAD).toContain('fallbackPreview(');
+    expect(CARD).toContain('useIsMdUp');
+    expect(CARD).toContain('window.open');
+    expect(CARD).toContain("'_blank'");
+    expect(CARD).toContain('noopener,noreferrer');
+    expect(CARD).toContain('--mt-accent');
+    expect(CARD).toContain('--mt-glass');
+    expect(CARD).not.toContain('Replace URL');
+  });
+
+  it('sits the card under the address, even in a tall maximised pad', () => {
+    expect(PAD).toContain('linkCardPlacement(');
+    expect(PAD).toContain('getBoundingClientRect()');
+    expect(EDITOR).toContain('getBoundingClientRect()');
+    expect(PAD).toContain('absolute z-20');
+    expect(PAD).not.toContain('top-3');
   });
 });

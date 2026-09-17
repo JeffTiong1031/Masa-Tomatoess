@@ -22,11 +22,15 @@ import {
   pasteInternal,
   selectedRoots,
   selectionHasMark,
+  insertNeedsModelTyping,
+  lineNeedsModelTyping,
+  linksAfterEdit,
   toggleChecked,
   toggleChecklist,
   toggleMarkInRange,
 } from './noteEdit';
 import type { Block } from './noteDoc';
+import { isUrlLine } from './noteLink';
 import { defaultPicture } from './notePicture';
 
 const EDITOR = readFileSync(
@@ -561,7 +565,9 @@ describe('toggleMarkInRange', () => {
     expect(bolded.blocks[0]).toEqual({
       kind: 'paragraph',
       text: 'hello world',
-      spans: [{ start: 6, end: 11, bold: true, underline: false }],
+      spans: [
+        { start: 6, end: 11, bold: true, underline: false, link: false },
+      ],
     });
     expect(selectionHasMark(bolded.blocks, start, end, 'bold')).toBe(true);
     expect(
@@ -574,7 +580,9 @@ describe('toggleMarkInRange', () => {
       {
         kind: 'paragraph',
         text: 'hello world',
-        spans: [{ start: 6, end: 11, bold: true, underline: false }],
+        spans: [
+          { start: 6, end: 11, bold: true, underline: false, link: false },
+        ],
       },
     ];
     const next = enterAt(blocks, { index: 0, offset: 6 });
@@ -582,7 +590,283 @@ describe('toggleMarkInRange', () => {
     expect(next.blocks[1]).toEqual({
       kind: 'paragraph',
       text: 'world',
-      spans: [{ start: 0, end: 5, bold: true, underline: false }],
+      spans: [
+        { start: 0, end: 5, bold: true, underline: false, link: false },
+      ],
+    });
+  });
+});
+
+const HREF = 'https://github.com/JeffTiong1031';
+
+describe('enterAt url line', () => {
+  it('stamps the whole line and starts a new empty line, even from the middle', () => {
+    const blocks: Block[] = [{ kind: 'paragraph', text: HREF }];
+    const next = enterAt(blocks, { index: 0, offset: 8 });
+    expect(next.blocks[0]).toMatchObject({
+      kind: 'paragraph',
+      text: HREF,
+    });
+    expect(
+      next.blocks[0].kind === 'paragraph' ? next.blocks[0].spans : undefined,
+    ).toEqual([
+      {
+        start: 0,
+        end: HREF.length,
+        bold: false,
+        underline: false,
+        link: true,
+      },
+    ]);
+    expect(next.blocks[1]).toEqual({ kind: 'paragraph', text: '' });
+    expect(next.caret).toEqual({ index: 1, offset: 0 });
+  });
+
+  it('stamps a tick-list URL and adds an empty item under it', () => {
+    const blocks: Block[] = [
+      { kind: 'item', text: HREF, checked: false, indent: 1 },
+    ];
+    const next = enterAt(blocks, { index: 0, offset: HREF.length });
+    expect(next.blocks[0]).toMatchObject({ text: HREF, indent: 1 });
+    expect(next.blocks[1]).toEqual({
+      kind: 'item',
+      text: '',
+      checked: false,
+      indent: 1,
+    });
+  });
+
+  it('still splits a line that is not only a URL', () => {
+    const blocks: Block[] = [{ kind: 'paragraph', text: 'Hello' }];
+    const next = enterAt(blocks, { index: 0, offset: 2 });
+    expect(next.blocks.map((block) => block.kind === 'paragraph' && block.text)).toEqual(
+      ['He', 'llo'],
+    );
+  });
+});
+
+const LINK = {
+  bold: false,
+  underline: false,
+  link: true,
+} as const;
+
+describe('insertNeedsModelTyping', () => {
+  it('takes over Space after a pasted URL, so React does not wrap a dirty line', () => {
+    expect(insertNeedsModelTyping(HREF, undefined, HREF.length, ' ')).toBe(true);
+    expect(lineNeedsModelTyping(HREF, undefined)).toBe(true);
+  });
+
+  it('leaves ordinary words to the browser', () => {
+    expect(insertNeedsModelTyping('hello', undefined, 5, ' ')).toBe(false);
+    expect(lineNeedsModelTyping('hello', undefined)).toBe(false);
+  });
+});
+
+describe('linksAfterEdit', () => {
+  it('stamps when a space is added after a pasted URL, not when the URL is pasted', () => {
+    const pasted: Block = { kind: 'paragraph', text: HREF };
+    expect(linksAfterEdit({ kind: 'paragraph', text: '' }, pasted)).toEqual(
+      pasted,
+    );
+    expect(linksAfterEdit(pasted, { kind: 'paragraph', text: `${HREF} ` })).toEqual({
+      kind: 'paragraph',
+      text: `${HREF} `,
+      spans: [{ start: 0, end: HREF.length, ...LINK }],
+    });
+  });
+});
+
+describe('paste does not stamp a URL', () => {
+  it('leaves a pasted address as ordinary words until Space', () => {
+    const next = pasteExternal(
+      [{ kind: 'paragraph', text: '' }],
+      { index: 0, offset: 0 },
+      { index: 0, offset: 0 },
+      HREF,
+    );
+    expect(next.blocks[0]).toEqual({ kind: 'paragraph', text: HREF });
+    const typed = insertText(next.blocks, { index: 0, offset: HREF.length }, 'x');
+    expect(typed.blocks[0]).toEqual({
+      kind: 'paragraph',
+      text: `${HREF}x`,
+    });
+  });
+});
+
+describe('selectionHasMark', () => {
+  it('does not throw when a drag offset sits past an empty line', () => {
+    const blocks: Block[] = [{ kind: 'paragraph', text: '' }];
+    expect(() =>
+      selectionHasMark(
+        blocks,
+        { index: 0, offset: 0 },
+        { index: 0, offset: 8 },
+        'bold',
+      ),
+    ).not.toThrow();
+    expect(
+      selectionHasMark(
+        blocks,
+        { index: 0, offset: 0 },
+        { index: 0, offset: 8 },
+        'bold',
+      ),
+    ).toBe(false);
+  });
+});
+
+describe('reconcileWordLinks', () => {
+  it('stamps the URL on Space and stays on the same line', () => {
+    const blocks: Block[] = [{ kind: 'paragraph', text: HREF }];
+    const next = insertText(blocks, { index: 0, offset: HREF.length }, ' ');
+    expect(next.blocks).toEqual([
+      {
+        kind: 'paragraph',
+        text: `${HREF} `,
+        spans: [{ start: 0, end: HREF.length, ...LINK }],
+      },
+    ]);
+    expect(next.caret).toEqual({ index: 0, offset: HREF.length + 1 });
+  });
+
+  it('keeps the URL linked when words sit before and after it', () => {
+    const linked: Block[] = [
+      {
+        kind: 'paragraph',
+        text: HREF,
+        spans: [{ start: 0, end: HREF.length, ...LINK }],
+      },
+    ];
+    const longer = insertText(linked, { index: 0, offset: HREF.length }, '/x');
+    expect(isUrlLine(longer.blocks[0].kind === 'paragraph' ? longer.blocks[0].text : '')).toBe(
+      true,
+    );
+    expect(longer.blocks[0]).toMatchObject({
+      text: `${HREF}/x`,
+    });
+    expect(
+      longer.blocks[0].kind === 'paragraph' &&
+        longer.blocks[0].spans?.every((span) => span.link),
+    ).toBe(true);
+
+    const after = insertText(linked, { index: 0, offset: HREF.length }, ' ltr');
+    const around = insertText(after.blocks, { index: 0, offset: 0 }, 'see ');
+    expect(around.blocks[0]).toEqual({
+      kind: 'paragraph',
+      text: `see ${HREF} ltr`,
+      spans: [{ start: 4, end: 4 + HREF.length, ...LINK }],
+    });
+  });
+
+  it('keeps the URL linked when a linked line is joined with extra words', () => {
+    const linked: Block[] = [
+      {
+        kind: 'paragraph',
+        text: HREF,
+        spans: [{ start: 0, end: HREF.length, ...LINK }],
+      },
+      { kind: 'paragraph', text: ' extra words' },
+    ];
+    const joined = backspaceAtStart(linked, { index: 1, offset: 0 });
+    expect(joined?.blocks).toEqual([
+      {
+        kind: 'paragraph',
+        text: `${HREF} extra words`,
+        spans: [{ start: 0, end: HREF.length, ...LINK }],
+      },
+    ]);
+  });
+
+  it('drops leftover marks when a linked fragment is pasted onto hello', () => {
+    const hello: Block[] = [{ kind: 'paragraph', text: 'hello ' }];
+    const fragment: Block[] = [
+      {
+        kind: 'paragraph',
+        text: 'github.com/JeffTiong1031',
+        spans: [
+          {
+            start: 0,
+            end: 'github.com/JeffTiong1031'.length,
+            bold: false,
+            underline: false,
+            link: true,
+          },
+        ],
+      },
+    ];
+    const next = pasteInternal(
+      hello,
+      { index: 0, offset: 6 },
+      { index: 0, offset: 6 },
+      fragment,
+    );
+    expect(
+      next.blocks.every(
+        (block) =>
+          block.kind === 'picture' ||
+          !(block.spans ?? []).some((span) => span.link),
+      ),
+    ).toBe(true);
+  });
+
+  it('drops leftover marks after a multi-line paste onto a linked address', () => {
+    const linked: Block[] = [
+      {
+        kind: 'paragraph',
+        text: HREF,
+        spans: [
+          {
+            start: 0,
+            end: HREF.length,
+            bold: false,
+            underline: false,
+            link: true,
+          },
+        ],
+      },
+    ];
+    const next = pasteExternal(
+      linked,
+      { index: 0, offset: HREF.length },
+      { index: 0, offset: HREF.length },
+      ' extra\nwords',
+    );
+    expect(next.blocks[0]).toEqual({
+      kind: 'paragraph',
+      text: `${HREF} extra`,
+      spans: [{ start: 0, end: HREF.length, ...LINK }],
+    });
+    expect(next.blocks[1]).toEqual({
+      kind: 'paragraph',
+      text: 'words',
+    });
+  });
+
+  it('drops leftover marks when a picture splits a linked address', () => {
+    const linked: Block[] = [
+      {
+        kind: 'paragraph',
+        text: HREF,
+        spans: [
+          {
+            start: 0,
+            end: HREF.length,
+            bold: false,
+            underline: false,
+            link: true,
+          },
+        ],
+      },
+    ];
+    const next = insertPicture(linked, { index: 0, offset: 8 }, pic.src);
+    expect(next.blocks[0]).toEqual({
+      kind: 'paragraph',
+      text: HREF.slice(0, 8),
+    });
+    expect(next.blocks[2]).toEqual({
+      kind: 'paragraph',
+      text: HREF.slice(8),
     });
   });
 });

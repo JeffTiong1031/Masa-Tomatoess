@@ -33,7 +33,9 @@ describe('copyOut', () => {
         {
           kind: 'paragraph',
           text: 'hello world',
-          spans: [{ start: 6, end: 11, bold: true, underline: true }],
+          spans: [
+            { start: 6, end: 11, bold: true, underline: true, link: false },
+          ],
         },
       ]),
     ).toBe('hello world');

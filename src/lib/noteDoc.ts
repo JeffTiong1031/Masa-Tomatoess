@@ -12,6 +12,7 @@ export const NOTE_RUN_START = '\u001D';
 export const NOTE_RUN_SEP = '\u001C';
 export const NOTE_RUN_BOLD = '\u0011';
 export const NOTE_RUN_UNDERLINE = '\u0013';
+export const NOTE_RUN_LINK = '\u0012';
 
 export type { NoteSpan };
 
@@ -68,7 +69,8 @@ export function stripMarks(raw: string): string {
     .replaceAll(NOTE_RUN_START, '')
     .replaceAll(NOTE_RUN_SEP, '')
     .replaceAll(NOTE_RUN_BOLD, '')
-    .replaceAll(NOTE_RUN_UNDERLINE, '');
+    .replaceAll(NOTE_RUN_UNDERLINE, '')
+    .replaceAll(NOTE_RUN_LINK, '');
 }
 
 export function decodeVisible(
@@ -78,7 +80,12 @@ export function decodeVisible(
     return { text: stripMarks(raw) };
   }
 
-  const runs: { text: string; bold: boolean; underline: boolean }[] = [];
+  const runs: {
+    text: string;
+    bold: boolean;
+    underline: boolean;
+    link: boolean;
+  }[] = [];
   let cursor = 0;
   while (cursor < raw.length) {
     if (raw[cursor] !== NOTE_RUN_START) {
@@ -87,6 +94,7 @@ export function decodeVisible(
     cursor += 1;
     let bold = false;
     let underline = false;
+    let link = false;
     if (raw[cursor] === NOTE_RUN_BOLD) {
       bold = true;
       cursor += 1;
@@ -95,13 +103,22 @@ export function decodeVisible(
       underline = true;
       cursor += 1;
     }
+    if (raw[cursor] === NOTE_RUN_LINK) {
+      link = true;
+      cursor += 1;
+    }
     if (raw[cursor] !== NOTE_RUN_SEP) {
       return { text: stripMarks(raw) };
     }
     cursor += 1;
     const nextStart = raw.indexOf(NOTE_RUN_START, cursor);
     const end = nextStart === -1 ? raw.length : nextStart;
-    runs.push({ text: stripMarks(raw.slice(cursor, end)), bold, underline });
+    runs.push({
+      text: stripMarks(raw.slice(cursor, end)),
+      bold,
+      underline,
+      link,
+    });
     cursor = end;
   }
   return spansFromLeaves(runs);
@@ -126,13 +143,15 @@ export function encodeVisible(
     while (
       end < styles.length &&
       styles[end].bold === current.bold &&
-      styles[end].underline === current.underline
+      styles[end].underline === current.underline &&
+      styles[end].link === current.link
     ) {
       end += 1;
     }
     const flags =
       (current.bold ? NOTE_RUN_BOLD : '') +
-      (current.underline ? NOTE_RUN_UNDERLINE : '');
+      (current.underline ? NOTE_RUN_UNDERLINE : '') +
+      (current.link ? NOTE_RUN_LINK : '');
     encoded += `${NOTE_RUN_START}${flags}${NOTE_RUN_SEP}${clean.slice(index, end)}`;
     index = end;
   }

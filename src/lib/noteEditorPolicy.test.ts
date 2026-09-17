@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import {
   beforeInputAction,
   clipboardAction,
+  liveCaretOffset,
   shouldCommitFromInput,
   shouldReplaceEditorBody,
   shouldRestoreCaretAfterTextCommit,
@@ -62,6 +63,13 @@ describe('beforeInputAction', () => {
   });
 });
 
+describe('liveCaretOffset', () => {
+  it('keeps the live caret when the saved line is still one letter behind', () => {
+    expect(liveCaretOffset(1)).toBe(1);
+    expect(liveCaretOffset(6)).toBe(6);
+  });
+});
+
 describe('shouldReplaceEditorBody', () => {
   it('ignores the editor’s own encoded echo', () => {
     expect(shouldReplaceEditorBody('hello', 'hello')).toBe(false);
@@ -93,6 +101,21 @@ describe('NotesEditor wiring', () => {
     expect(EDITOR).toContain('beforeInputAction(');
     expect(EDITOR).toContain("case 'enter':");
     expect(EDITOR).toContain('enterAt(');
+  });
+
+  it('maps the caret from the live letters, not the last saved line', () => {
+    expect(EDITOR).toContain('liveCaretOffset(');
+    const mapper = EDITOR.slice(
+      EDITOR.indexOf('const pointForNode'),
+      EDITOR.indexOf('const editorSelection'),
+    );
+    expect(mapper).toContain('liveCaretOffset(');
+    expect(mapper).not.toContain('blockLength(');
+  });
+
+  it('takes over typing on a URL line before the browser dirties the marks', () => {
+    expect(EDITOR).toContain('insertNeedsModelTyping(');
+    expect(EDITOR).toContain('lineNeedsModelTyping(');
   });
 
   it('reloads blocks when an outside body does not match encodeBody', () => {

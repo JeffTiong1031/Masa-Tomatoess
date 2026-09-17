@@ -1,0 +1,112 @@
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
+import { describe, expect, it } from 'vitest';
+import {
+  fallbackPreview,
+  isBlockedHost,
+  isUrlLine,
+  urlRanges,
+} from './noteLink';
+
+const ACTION = readFileSync(
+  path.resolve(process.cwd(), 'src/app/actions/linkPreview.ts'),
+  'utf8',
+);
+const STORE = readFileSync(
+  path.resolve(process.cwd(), 'src/store/useLinkPreviewStore.ts'),
+  'utf8',
+);
+
+describe('isUrlLine', () => {
+  it('accepts http and https with a host, and ignores end spaces', () => {
+    expect(isUrlLine('https://github.com/JeffTiong1031')).toBe(true);
+    expect(isUrlLine('http://example.com')).toBe(true);
+    expect(isUrlLine('  https://github.com/JeffTiong1031  ')).toBe(true);
+  });
+
+  it('rejects extra words, missing scheme, and javascript', () => {
+    expect(
+      isUrlLine('see https://github.com/JeffTiong1031 later'),
+    ).toBe(false);
+    expect(isUrlLine('https://github.com/JeffTiong1031 later')).toBe(false);
+    expect(isUrlLine('www.github.com/JeffTiong1031')).toBe(false);
+    expect(isUrlLine('javascript:alert(1)')).toBe(false);
+    expect(isUrlLine('https://localhost/secret')).toBe(false);
+  });
+
+  it('rejects loopback aliases the parser still accepts', () => {
+    expect(isUrlLine('http://127.0.0.2/secret')).toBe(false);
+    expect(isUrlLine('http://[::ffff:127.0.0.1]/')).toBe(false);
+    expect(isUrlLine('http://localhost./')).toBe(false);
+  });
+});
+
+describe('urlRanges', () => {
+  it('finds a URL among other words', () => {
+    const href =
+      'https://www.udemy.com/course/git-and-github-bootcamp/learn/lecture/24619666#overview';
+    expect(urlRanges(`see ${href} ltr`)).toEqual([
+      { start: 4, end: 4 + href.length, href },
+    ]);
+  });
+
+  it('does not include the space after a lone URL', () => {
+    const href = 'https://github.com/JeffTiong1031';
+    expect(urlRanges(`${href} `)).toEqual([
+      { start: 0, end: href.length, href },
+    ]);
+  });
+});
+
+describe('isBlockedHost', () => {
+  it('blocks loopback, private, and link-local names', () => {
+    expect(isBlockedHost('localhost')).toBe(true);
+    expect(isBlockedHost('localhost.')).toBe(true);
+    expect(isBlockedHost('127.0.0.1')).toBe(true);
+    expect(isBlockedHost('127.0.0.2')).toBe(true);
+    expect(isBlockedHost('::ffff:127.0.0.1')).toBe(true);
+    expect(isBlockedHost('[::ffff:127.0.0.1]')).toBe(true);
+    expect(isBlockedHost('10.0.0.1')).toBe(true);
+    expect(isBlockedHost('192.168.0.1')).toBe(true);
+    expect(isBlockedHost('169.254.169.254')).toBe(true);
+    expect(isBlockedHost('github.com')).toBe(false);
+  });
+});
+
+describe('fallbackPreview', () => {
+  it('builds name and site from the address', () => {
+    expect(fallbackPreview('https://github.com/JeffTiong1031')).toEqual({
+      href: 'https://github.com/JeffTiong1031',
+      name: 'JeffTiong1031',
+      site: 'github.com',
+      text: '',
+      icon: null,
+    });
+  });
+
+  it('does not throw when the line is no longer a URL', () => {
+    expect(() =>
+      fallbackPreview('See thishttps://github.com/JeffTiong1031'),
+    ).not.toThrow();
+    expect(() =>
+      fallbackPreview('https://github.com/JeffTiong1031 later'),
+    ).not.toThrow();
+  });
+});
+
+describe('lookup wiring', () => {
+  it('asks the server, blocks private hosts, and remembers on this device', () => {
+    expect(ACTION).toContain("'use server'");
+    expect(ACTION).toContain('isUrlLine(');
+    expect(ACTION).toContain('isBlockedHost(');
+    expect(ACTION).toContain('previewFromHtml(');
+    expect(STORE).toContain('mt-link-preview');
+    expect(STORE).toContain('remember');
+  });
+
+  it('refuses a lookup that redirected onto a blocked host', () => {
+    const afterFetch = ACTION.slice(ACTION.indexOf('await fetch'));
+    expect(afterFetch).toContain('response.url');
+    expect(afterFetch).toContain('isBlockedHost(');
+  });
+});

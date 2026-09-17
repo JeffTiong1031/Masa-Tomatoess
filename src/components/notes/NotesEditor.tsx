@@ -2,6 +2,7 @@
 
 import {
   forwardRef,
+  Fragment,
   useEffect,
   useImperativeHandle,
   useLayoutEffect,
@@ -20,8 +21,11 @@ import {
   enterAt,
   extendCaret,
   indentSelection,
+  insertNeedsModelTyping,
   insertPicture,
   insertText,
+  lineNeedsModelTyping,
+  linksAfterEdit,
   ordered,
   outdentSelection,
   pasteExternal,
@@ -45,6 +49,7 @@ import { decodeBody, encodeBody, withVisible, type Block } from '@/lib/noteDoc';
 import {
   beforeInputAction,
   clipboardAction,
+  liveCaretOffset,
   shouldCommitFromInput,
   shouldReplaceEditorBody,
   shouldRestoreCaretAfterTextCommit,
@@ -119,6 +124,10 @@ interface NotesEditorProps {
   disabled?: boolean;
   onChange: (body: string) => void;
   onCaret: (info: NotesCaretInfo) => void;
+  onLinkPress?: (
+    href: string,
+    from: { top: number; left: number; width: number; height: number },
+  ) => void;
 }
 
 interface EditorSelection {
@@ -193,7 +202,7 @@ function slicedBlock(block: Block, start: number, end: number): Block {
 function inheritedStyleFor(block: Block, offset: number): NoteStyle {
   switch (block.kind) {
     case 'picture':
-      return { bold: false, underline: false };
+      return { bold: false, underline: false, link: false };
     case 'paragraph':
     case 'item':
       return inheritStyle(block.text, block.spans, offset);
@@ -226,8 +235,9 @@ function textPoint(
 
 function leavesFrom(
   element: HTMLElement,
-): { text: string; bold: boolean; underline: boolean }[] {
-  const leaves: { text: string; bold: boolean; underline: boolean }[] = [];
+): { text: string; bold: boolean; underline: boolean; link: boolean }[] {
+  const leaves: { text: string; bold: boolean; underline: boolean; link: boolean }[] =
+    [];
   const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
   let node = walker.nextNode();
   while (node) {
@@ -236,7 +246,9 @@ function leavesFrom(
       text: node.textContent ?? '',
       bold: Boolean(parent?.closest('strong, b')),
       underline:
-        Boolean(parent?.closest('u')) || Boolean(parent?.closest('.underline')),
+        Boolean(parent?.closest('u')) ||
+        Boolean(parent?.closest('.underline:not([data-note-link])')),
+      link: Boolean(parent?.closest('[data-note-link]')),
     });
     node = walker.nextNode();
   }
@@ -245,26 +257,45 @@ function leavesFrom(
 
 function noteRunNodes(text: string, spans?: NoteSpan[]): ReactNode {
   const runs = noteRuns(text, spans);
-  if (runs.length === 1 && !runs[0].bold && !runs[0].underline) {
+  if (
+    runs.length === 1 &&
+    !runs[0].bold &&
+    !runs[0].underline &&
+    !runs[0].link
+  ) {
     return text;
   }
   return runs.map((run, index) => {
-    if (!run.bold && !run.underline) {
+    if (!run.bold && !run.underline && !run.link) {
       return run.text;
     }
+    let node: ReactNode = run.text;
+    if (run.underline) {
+      node = <u>{node}</u>;
+    }
     if (run.bold) {
+      node = <strong>{node}</strong>;
+    }
+    if (run.link) {
       return (
-        <strong key={index} className={run.underline ? 'underline' : undefined}>
-          {run.text}
-        </strong>
+        <span
+          key={index}
+          data-note-link={run.text}
+          className="underline decoration-[var(--mt-accent)] underline-offset-2 text-[var(--mt-text)]"
+        >
+          {node}
+        </span>
       );
     }
-    return <u key={index}>{run.text}</u>;
+    return <Fragment key={index}>{node}</Fragment>;
   });
 }
 
 export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
-  function NotesEditor({ body, lineGap, disabled = false, onChange, onCaret }, ref) {
+  function NotesEditor(
+    { body, lineGap, disabled = false, onChange, onCaret, onLinkPress },
+    ref,
+  ) {
     const [blocks, setBlocks] = useState<Block[]>(() => decodeBody(body));
     const blocksRef = useRef(blocks);
     const blockNodesRef = useRef<(HTMLSpanElement | null)[]>([]);
@@ -489,11 +520,7 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
         range.setEnd(node, offset);
         return {
           index,
-          offset: Math.min(
-            range.toString().length,
-            element.textContent?.length ??
-              blockLength(blocksRef.current[index]),
-          ),
+          offset: liveCaretOffset(range.toString().length),
         };
       }
       return null;
@@ -562,7 +589,10 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
           return;
         case 'paragraph':
         case 'item':
-          next[index] = withVisible(block, parsed.text, parsed.spans);
+          next[index] = linksAfterEdit(
+            block,
+            withVisible(block, parsed.text, parsed.spans),
+          );
       }
       commit(
         next,
@@ -1050,6 +1080,14 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
               contentEditable={block.kind !== 'picture' && !disabled}
               tabIndex={block.kind === 'picture' && !disabled ? 0 : undefined}
               suppressContentEditableWarning
+              onClick={(event) => {
+                if (block.kind === 'picture') return;
+                const target = event.target as HTMLElement;
+                const link = target.closest('[data-note-link]');
+                const href = link?.getAttribute('data-note-link');
+                if (!href || !link) return;
+                onLinkPress?.(href, link.getBoundingClientRect());
+              }}
               onFocus={() => {
                 focusedRef.current = true;
                 updateCaret(index);
@@ -1091,6 +1129,77 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
                     range.focus,
                     native.data,
                     pendingRef.current,
+                  );
+                  commit(result.blocks, result.caret);
+                  return;
+                }
+                const focusBlock = blocksRef.current[range.focus.index];
+                if (
+                  collapsed &&
+                  focusBlock.kind !== 'picture' &&
+                  native.inputType === 'insertText' &&
+                  native.data &&
+                  insertNeedsModelTyping(
+                    focusBlock.text,
+                    focusBlock.spans,
+                    range.focus.offset,
+                    native.data,
+                  )
+                ) {
+                  event.preventDefault();
+                  if (!typingRunRef.current) {
+                    historyRef.current = remember(historyRef.current, snapshot());
+                    typingRunRef.current = true;
+                  }
+                  const result = insertText(
+                    blocksRef.current,
+                    range.focus,
+                    native.data,
+                  );
+                  commit(result.blocks, result.caret);
+                  return;
+                }
+                if (
+                  collapsed &&
+                  focusBlock.kind !== 'picture' &&
+                  lineNeedsModelTyping(focusBlock.text, focusBlock.spans) &&
+                  (native.inputType === 'deleteContentBackward' ||
+                    native.inputType === 'deleteContentForward')
+                ) {
+                  event.preventDefault();
+                  rememberCurrent();
+                  if (native.inputType === 'deleteContentBackward') {
+                    if (range.focus.offset === 0) {
+                      const joined = backspaceAtStart(
+                        blocksRef.current,
+                        range.focus,
+                      );
+                      if (joined) {
+                        commit(joined.blocks, joined.caret);
+                      }
+                      return;
+                    }
+                    const result = deleteSelection(
+                      blocksRef.current,
+                      {
+                        index: range.focus.index,
+                        offset: range.focus.offset - 1,
+                      },
+                      range.focus,
+                    );
+                    commit(result.blocks, result.caret);
+                    return;
+                  }
+                  if (range.focus.offset === blockLength(focusBlock)) {
+                    return;
+                  }
+                  const result = deleteSelection(
+                    blocksRef.current,
+                    range.focus,
+                    {
+                      index: range.focus.index,
+                      offset: range.focus.offset + 1,
+                    },
                   );
                   commit(result.blocks, result.caret);
                   return;
