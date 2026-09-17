@@ -28,12 +28,22 @@ describe('isUrlLine', () => {
     expect(isUrlLine('javascript:alert(1)')).toBe(false);
     expect(isUrlLine('https://localhost/secret')).toBe(false);
   });
+
+  it('rejects loopback aliases the parser still accepts', () => {
+    expect(isUrlLine('http://127.0.0.2/secret')).toBe(false);
+    expect(isUrlLine('http://[::ffff:127.0.0.1]/')).toBe(false);
+    expect(isUrlLine('http://localhost./')).toBe(false);
+  });
 });
 
 describe('isBlockedHost', () => {
   it('blocks loopback, private, and link-local names', () => {
     expect(isBlockedHost('localhost')).toBe(true);
+    expect(isBlockedHost('localhost.')).toBe(true);
     expect(isBlockedHost('127.0.0.1')).toBe(true);
+    expect(isBlockedHost('127.0.0.2')).toBe(true);
+    expect(isBlockedHost('::ffff:127.0.0.1')).toBe(true);
+    expect(isBlockedHost('[::ffff:127.0.0.1]')).toBe(true);
     expect(isBlockedHost('10.0.0.1')).toBe(true);
     expect(isBlockedHost('192.168.0.1')).toBe(true);
     expect(isBlockedHost('169.254.169.254')).toBe(true);
@@ -50,6 +60,15 @@ describe('fallbackPreview', () => {
       text: '',
       icon: null,
     });
+  });
+
+  it('does not throw when the line is no longer a URL', () => {
+    expect(() =>
+      fallbackPreview('See thishttps://github.com/JeffTiong1031'),
+    ).not.toThrow();
+    expect(() =>
+      fallbackPreview('https://github.com/JeffTiong1031 later'),
+    ).not.toThrow();
   });
 });
 

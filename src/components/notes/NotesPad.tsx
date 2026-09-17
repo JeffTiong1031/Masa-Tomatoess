@@ -17,7 +17,7 @@ import { deleteAsk } from '@/lib/noteBin';
 import { suggestedTitle } from '@/lib/noteFiles';
 import { folderById } from '@/lib/noteFolder';
 import { DEFAULT_NOTE_LINE_GAP } from '@/lib/noteLineGap';
-import { fallbackPreview, type LinkPreview } from '@/lib/noteLink';
+import { fallbackPreview, isUrlLine, type LinkPreview } from '@/lib/noteLink';
 import { isSaveShortcut } from '@/lib/noteShortcut';
 import { openTabs } from '@/lib/noteTabs';
 import { useLinkPreviewStore } from '@/store/useLinkPreviewStore';
@@ -135,6 +135,9 @@ export const NotesPad = forwardRef<NotesPadHandle, { onLeave?: () => void }>(
     }, [requestSave]);
 
     const showLinkCard = (href: string) => {
+      if (!isUrlLine(href)) {
+        return;
+      }
       const cached = useLinkPreviewStore.getState().lookup(href);
       const next = cached ? { ...cached, href } : fallbackPreview(href);
       previewRef.current = next;
@@ -154,6 +157,9 @@ export const NotesPad = forwardRef<NotesPadHandle, { onLeave?: () => void }>(
     };
 
     const onLinkPress = (href: string) => {
+      if (!isUrlLine(href)) {
+        return;
+      }
       if (previewRef.current?.href === href) {
         previewRef.current = null;
         setPreview(null);

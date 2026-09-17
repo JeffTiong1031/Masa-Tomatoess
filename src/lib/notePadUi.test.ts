@@ -268,6 +268,7 @@ describe('notes pad links', () => {
   it('shows cream on a computer and a peek on a phone, and opens from the card', () => {
     expect(PAD).toContain('NotesLinkCard');
     expect(PAD).toContain('fetchLinkPreview(');
+    expect(PAD).toContain('isUrlLine(');
     expect(PAD).toContain('fallbackPreview(');
     expect(CARD).toContain('useIsMdUp');
     expect(CARD).toContain('window.open');

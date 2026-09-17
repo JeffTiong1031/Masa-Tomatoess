@@ -83,6 +83,16 @@ export function reconcileWordLinks(block: WordBlock): WordBlock {
   return withVisible(block, stamped.text, stamped.spans);
 }
 
+function reconcileProduced(block: Block): Block {
+  switch (block.kind) {
+    case 'picture':
+      return block;
+    case 'paragraph':
+    case 'item':
+      return reconcileWordLinks(block);
+  }
+}
+
 export function deleteSelection(
   blocks: Block[],
   start: DocCaret,
@@ -234,9 +244,9 @@ export function insertPicture(
       next.splice(
         caret.index,
         1,
-        withVisible(block, head.text, head.spans),
+        reconcileWordLinks(withVisible(block, head.text, head.spans)),
         picture,
-        withVisible(block, tail.text, tail.spans),
+        reconcileWordLinks(withVisible(block, tail.text, tail.spans)),
       );
       return {
         blocks: next,
@@ -255,12 +265,14 @@ export function insertPicture(
       next.splice(
         caret.index,
         1,
-        withVisible(block, head.text, head.spans),
+        reconcileWordLinks(withVisible(block, head.text, head.spans)),
         picture,
-        withVisible(
-          { ...block, checked: false },
-          tail.text,
-          tail.spans,
+        reconcileWordLinks(
+          withVisible(
+            { ...block, checked: false },
+            tail.text,
+            tail.spans,
+          ),
         ),
       );
       return {
@@ -449,10 +461,12 @@ export function pasteExternal(
             if (index === incoming.length - 1) {
               visible = concatVisible(visible, suffix);
             }
-            return withVisible(
-              { kind: 'paragraph', text: '' },
-              visible.text,
-              visible.spans,
+            return reconcileWordLinks(
+              withVisible(
+                { kind: 'paragraph', text: '' },
+                visible.text,
+                visible.spans,
+              ),
             );
           }
         }
@@ -562,7 +576,13 @@ export function pasteInternal(
   }
 
   const next = [...deleted.blocks];
-  next.splice(deleted.caret.index, 1, ...prefix, ...inserted, ...suffix);
+  next.splice(
+    deleted.caret.index,
+    1,
+    ...prefix.map(reconcileProduced),
+    ...inserted.map(reconcileProduced),
+    ...suffix.map(reconcileProduced),
+  );
   const caretIndex = deleted.caret.index + prefix.length + inserted.length - 1;
   return {
     blocks: next,
@@ -991,10 +1011,8 @@ export function backspaceAtStart(
           const joinOffset = blockLength(previous);
           const next = [...blocks];
           const joined = concatVisible(previous, block);
-          next[previousIndex] = withVisible(
-            previous,
-            joined.text,
-            joined.spans,
+          next[previousIndex] = reconcileWordLinks(
+            withVisible(previous, joined.text, joined.spans),
           );
           next.splice(caret.index, 1);
           return {

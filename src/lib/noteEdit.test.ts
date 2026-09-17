@@ -677,4 +677,118 @@ describe('reconcileWordLinks', () => {
       text: `${HREF} later`,
     });
   });
+
+  it('drops the mark when a linked URL line is joined with extra words', () => {
+    const linked: Block[] = [
+      {
+        kind: 'paragraph',
+        text: HREF,
+        spans: [
+          {
+            start: 0,
+            end: HREF.length,
+            bold: false,
+            underline: false,
+            link: true,
+          },
+        ],
+      },
+      { kind: 'paragraph', text: ' extra words' },
+    ];
+    const joined = backspaceAtStart(linked, { index: 1, offset: 0 });
+    expect(joined?.blocks).toEqual([
+      { kind: 'paragraph', text: `${HREF} extra words` },
+    ]);
+  });
+
+  it('drops leftover marks when a linked fragment is pasted onto hello', () => {
+    const hello: Block[] = [{ kind: 'paragraph', text: 'hello ' }];
+    const fragment: Block[] = [
+      {
+        kind: 'paragraph',
+        text: 'github.com/JeffTiong1031',
+        spans: [
+          {
+            start: 0,
+            end: 'github.com/JeffTiong1031'.length,
+            bold: false,
+            underline: false,
+            link: true,
+          },
+        ],
+      },
+    ];
+    const next = pasteInternal(
+      hello,
+      { index: 0, offset: 6 },
+      { index: 0, offset: 6 },
+      fragment,
+    );
+    expect(
+      next.blocks.every(
+        (block) =>
+          block.kind === 'picture' ||
+          !(block.spans ?? []).some((span) => span.link),
+      ),
+    ).toBe(true);
+  });
+
+  it('drops leftover marks after a multi-line paste onto a linked address', () => {
+    const linked: Block[] = [
+      {
+        kind: 'paragraph',
+        text: HREF,
+        spans: [
+          {
+            start: 0,
+            end: HREF.length,
+            bold: false,
+            underline: false,
+            link: true,
+          },
+        ],
+      },
+    ];
+    const next = pasteExternal(
+      linked,
+      { index: 0, offset: HREF.length },
+      { index: 0, offset: HREF.length },
+      ' extra\nwords',
+    );
+    expect(next.blocks[0]).toEqual({
+      kind: 'paragraph',
+      text: `${HREF} extra`,
+    });
+    expect(next.blocks[1]).toEqual({
+      kind: 'paragraph',
+      text: 'words',
+    });
+  });
+
+  it('drops leftover marks when a picture splits a linked address', () => {
+    const linked: Block[] = [
+      {
+        kind: 'paragraph',
+        text: HREF,
+        spans: [
+          {
+            start: 0,
+            end: HREF.length,
+            bold: false,
+            underline: false,
+            link: true,
+          },
+        ],
+      },
+    ];
+    const next = insertPicture(linked, { index: 0, offset: 8 }, pic.src);
+    expect(next.blocks[0]).toEqual({
+      kind: 'paragraph',
+      text: HREF.slice(0, 8),
+    });
+    expect(next.blocks[2]).toEqual({
+      kind: 'paragraph',
+      text: HREF.slice(8),
+    });
+  });
 });

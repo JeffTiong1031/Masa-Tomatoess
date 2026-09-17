@@ -41,12 +41,40 @@ function isPrivateIpv4(host: string): boolean {
   return false;
 }
 
+function normalizeHost(host: string): string {
+  let normalized = host.toLowerCase();
+  if (normalized.startsWith('[') && normalized.endsWith(']')) {
+    normalized = normalized.slice(1, -1);
+  }
+  while (normalized.endsWith('.')) {
+    normalized = normalized.slice(0, -1);
+  }
+  return normalized;
+}
+
+function ipv4FromMapped(host: string): string | null {
+  const dotted = host.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/);
+  if (dotted) {
+    return dotted[1];
+  }
+  const hex = host.match(/^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/);
+  if (!hex) {
+    return null;
+  }
+  const hi = Number.parseInt(hex[1], 16);
+  const lo = Number.parseInt(hex[2], 16);
+  return `${(hi >> 8) & 255}.${hi & 255}.${(lo >> 8) & 255}.${lo & 255}`;
+}
+
+function isLoopbackIpv4(host: string): boolean {
+  const octets = ipv4Octets(host);
+  return octets !== null && octets[0] === 127;
+}
+
 export function isBlockedHost(host: string): boolean {
-  const normalized = host.toLowerCase();
+  const normalized = normalizeHost(host);
   if (
     normalized === 'localhost' ||
-    normalized === '127.0.0.1' ||
-    normalized === '[::1]' ||
     normalized === '::1' ||
     normalized === '0.0.0.0'
   ) {
@@ -55,7 +83,11 @@ export function isBlockedHost(host: string): boolean {
   if (normalized.endsWith('.local')) {
     return true;
   }
-  return isPrivateIpv4(normalized);
+  const ipv4 = ipv4FromMapped(normalized) ?? normalized;
+  if (isLoopbackIpv4(ipv4) || ipv4 === '0.0.0.0') {
+    return true;
+  }
+  return isPrivateIpv4(ipv4);
 }
 
 export function isUrlLine(text: string): boolean {
@@ -83,6 +115,15 @@ export function isUrlLine(text: string): boolean {
 
 export function fallbackPreview(href: string): LinkPreview {
   const trimmed = href.trim();
+  if (!isUrlLine(trimmed)) {
+    return {
+      href: trimmed,
+      name: trimmed,
+      site: '',
+      text: '',
+      icon: null,
+    };
+  }
   const url = new URL(trimmed);
   const site = url.hostname.replace(/^www\./, '');
   const segments = url.pathname.split('/').filter(Boolean);
