@@ -11,13 +11,16 @@ import {
 import Link from 'next/link';
 import { FolderOpen } from 'lucide-react';
 import ConfirmDialog, { type ConfirmChoice } from '@/components/ui/ConfirmDialog';
+import { fetchLinkPreview } from '@/app/actions/linkPreview';
 import { NOTE_SAVE_PAUSE_MS, type Note } from '@/lib/note';
 import { deleteAsk } from '@/lib/noteBin';
 import { suggestedTitle } from '@/lib/noteFiles';
 import { folderById } from '@/lib/noteFolder';
 import { DEFAULT_NOTE_LINE_GAP } from '@/lib/noteLineGap';
+import { fallbackPreview, type LinkPreview } from '@/lib/noteLink';
 import { isSaveShortcut } from '@/lib/noteShortcut';
 import { openTabs } from '@/lib/noteTabs';
+import { useLinkPreviewStore } from '@/store/useLinkPreviewStore';
 import { useNotesDataStore } from '@/store/useNotesDataStore';
 import { useNotesUiStore } from '@/store/useNotesUiStore';
 import {
@@ -25,6 +28,7 @@ import {
   type NotesCaretInfo,
   type NotesEditorHandle,
 } from './NotesEditor';
+import { NotesLinkCard } from './NotesLinkCard';
 import { NotesStrip } from './NotesStrip';
 import SaveNoteModal from './SaveNoteModal';
 
@@ -66,11 +70,13 @@ export const NotesPad = forwardRef<NotesPadHandle, { onLeave?: () => void }>(
       bold: false,
       underline: false,
     });
+    const [preview, setPreview] = useState<LinkPreview | null>(null);
 
     const editorRef = useRef<NotesEditorHandle>(null);
     const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
     const pendingSave = useRef<Note | null>(null);
     const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const previewRef = useRef<LinkPreview | null>(null);
 
     const tabs = openTabs(notes, openIds);
     const active = tabs.find((note) => note.id === activeId) ?? tabs[0] ?? null;
@@ -127,6 +133,52 @@ export const NotesPad = forwardRef<NotesPadHandle, { onLeave?: () => void }>(
       window.addEventListener('keydown', onKeyDown);
       return () => window.removeEventListener('keydown', onKeyDown);
     }, [requestSave]);
+
+    const showLinkCard = (href: string) => {
+      const cached = useLinkPreviewStore.getState().lookup(href);
+      const next = cached ? { ...cached, href } : fallbackPreview(href);
+      previewRef.current = next;
+      setPreview(next);
+      void fetchLinkPreview(href).then((found) => {
+        if (found === null) return;
+        if (previewRef.current?.href !== href) return;
+        const shown = { ...found, href };
+        const store = useLinkPreviewStore.getState();
+        store.remember(shown);
+        if (found.href !== href) {
+          store.remember(found);
+        }
+        previewRef.current = shown;
+        setPreview(shown);
+      });
+    };
+
+    const onLinkPress = (href: string) => {
+      if (previewRef.current?.href === href) {
+        previewRef.current = null;
+        setPreview(null);
+        return;
+      }
+      showLinkCard(href);
+    };
+
+    useEffect(() => {
+      if (preview === null) return;
+      const onPointerDown = (event: PointerEvent) => {
+        const target = event.target as HTMLElement;
+        if (target.closest('[data-note-card]')) return;
+        if (target.closest('[data-note-link]')) return;
+        previewRef.current = null;
+        setPreview(null);
+      };
+      const timer = window.setTimeout(() => {
+        document.addEventListener('pointerdown', onPointerDown);
+      }, 0);
+      return () => {
+        window.clearTimeout(timer);
+        document.removeEventListener('pointerdown', onPointerDown);
+      };
+    }, [preview]);
 
     const startRename = (note: Note) => {
       flushPendingSave();
@@ -392,14 +444,33 @@ export const NotesPad = forwardRef<NotesPadHandle, { onLeave?: () => void }>(
               }}
               onDeletePicked={deletePicked}
             />
-            <NotesEditor
-              key={active.id}
-              ref={editorRef}
-              body={active.body}
-              lineGap={lineGap}
-              onChange={updateBody}
-              onCaret={setStrip}
-            />
+            <div className="relative flex min-h-0 flex-1 flex-col">
+              <NotesEditor
+                key={active.id}
+                ref={editorRef}
+                body={active.body}
+                lineGap={lineGap}
+                onChange={updateBody}
+                onCaret={setStrip}
+                onLinkPress={onLinkPress}
+              />
+              {preview !== null && (
+                <div className="pointer-events-none absolute inset-x-3 top-3 z-10">
+                  <div className="pointer-events-auto mt-2">
+                    <NotesLinkCard
+                      preview={preview}
+                      onOpen={() => {
+                        window.open(
+                          preview.href,
+                          '_blank',
+                          'noopener,noreferrer',
+                        );
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
           </>
         )}
 

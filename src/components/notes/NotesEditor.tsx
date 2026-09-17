@@ -2,6 +2,7 @@
 
 import {
   forwardRef,
+  Fragment,
   useEffect,
   useImperativeHandle,
   useLayoutEffect,
@@ -27,6 +28,7 @@ import {
   pasteExternal,
   pasteInternal,
   placePictureAt,
+  reconcileWordLinks,
   selectedRoots,
   selectionHasMark,
   sizePictureAt,
@@ -119,6 +121,7 @@ interface NotesEditorProps {
   disabled?: boolean;
   onChange: (body: string) => void;
   onCaret: (info: NotesCaretInfo) => void;
+  onLinkPress?: (href: string) => void;
 }
 
 interface EditorSelection {
@@ -237,8 +240,9 @@ function leavesFrom(
       text: node.textContent ?? '',
       bold: Boolean(parent?.closest('strong, b')),
       underline:
-        Boolean(parent?.closest('u')) || Boolean(parent?.closest('.underline')),
-      link: false,
+        Boolean(parent?.closest('u')) ||
+        Boolean(parent?.closest('.underline:not([data-note-link])')),
+      link: Boolean(parent?.closest('[data-note-link]')),
     });
     node = walker.nextNode();
   }
@@ -247,26 +251,45 @@ function leavesFrom(
 
 function noteRunNodes(text: string, spans?: NoteSpan[]): ReactNode {
   const runs = noteRuns(text, spans);
-  if (runs.length === 1 && !runs[0].bold && !runs[0].underline) {
+  if (
+    runs.length === 1 &&
+    !runs[0].bold &&
+    !runs[0].underline &&
+    !runs[0].link
+  ) {
     return text;
   }
   return runs.map((run, index) => {
-    if (!run.bold && !run.underline) {
+    if (!run.bold && !run.underline && !run.link) {
       return run.text;
     }
+    let node: ReactNode = run.text;
+    if (run.underline) {
+      node = <u>{node}</u>;
+    }
     if (run.bold) {
+      node = <strong>{node}</strong>;
+    }
+    if (run.link) {
       return (
-        <strong key={index} className={run.underline ? 'underline' : undefined}>
-          {run.text}
-        </strong>
+        <span
+          key={index}
+          data-note-link=""
+          className="underline decoration-[var(--mt-accent)] underline-offset-2 text-[var(--mt-text)]"
+        >
+          {node}
+        </span>
       );
     }
-    return <u key={index}>{run.text}</u>;
+    return <Fragment key={index}>{node}</Fragment>;
   });
 }
 
 export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
-  function NotesEditor({ body, lineGap, disabled = false, onChange, onCaret }, ref) {
+  function NotesEditor(
+    { body, lineGap, disabled = false, onChange, onCaret, onLinkPress },
+    ref,
+  ) {
     const [blocks, setBlocks] = useState<Block[]>(() => decodeBody(body));
     const blocksRef = useRef(blocks);
     const blockNodesRef = useRef<(HTMLSpanElement | null)[]>([]);
@@ -564,7 +587,9 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
           return;
         case 'paragraph':
         case 'item':
-          next[index] = withVisible(block, parsed.text, parsed.spans);
+          next[index] = reconcileWordLinks(
+            withVisible(block, parsed.text, parsed.spans),
+          );
       }
       commit(
         next,
@@ -1052,6 +1077,13 @@ export const NotesEditor = forwardRef<NotesEditorHandle, NotesEditorProps>(
               contentEditable={block.kind !== 'picture' && !disabled}
               tabIndex={block.kind === 'picture' && !disabled ? 0 : undefined}
               suppressContentEditableWarning
+              onClick={(event) => {
+                if (block.kind === 'picture') return;
+                const target = event.target as HTMLElement;
+                if (!target.closest('[data-note-link]')) return;
+                event.preventDefault();
+                onLinkPress?.(block.text.trim());
+              }}
               onFocus={() => {
                 focusedRef.current = true;
                 updateCaret(index);
