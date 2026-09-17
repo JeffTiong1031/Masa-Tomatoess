@@ -193,7 +193,7 @@ function slicedBlock(block: Block, start: number, end: number): Block {
 function inheritedStyleFor(block: Block, offset: number): NoteStyle {
   switch (block.kind) {
     case 'picture':
-      return { bold: false, underline: false };
+      return { bold: false, underline: false, link: false };
     case 'paragraph':
     case 'item':
       return inheritStyle(block.text, block.spans, offset);
@@ -226,8 +226,9 @@ function textPoint(
 
 function leavesFrom(
   element: HTMLElement,
-): { text: string; bold: boolean; underline: boolean }[] {
-  const leaves: { text: string; bold: boolean; underline: boolean }[] = [];
+): { text: string; bold: boolean; underline: boolean; link: boolean }[] {
+  const leaves: { text: string; bold: boolean; underline: boolean; link: boolean }[] =
+    [];
   const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
   let node = walker.nextNode();
   while (node) {
@@ -237,6 +238,7 @@ function leavesFrom(
       bold: Boolean(parent?.closest('strong, b')),
       underline:
         Boolean(parent?.closest('u')) || Boolean(parent?.closest('.underline')),
+      link: false,
     });
     node = walker.nextNode();
   }

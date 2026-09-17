@@ -561,7 +561,9 @@ describe('toggleMarkInRange', () => {
     expect(bolded.blocks[0]).toEqual({
       kind: 'paragraph',
       text: 'hello world',
-      spans: [{ start: 6, end: 11, bold: true, underline: false }],
+      spans: [
+        { start: 6, end: 11, bold: true, underline: false, link: false },
+      ],
     });
     expect(selectionHasMark(bolded.blocks, start, end, 'bold')).toBe(true);
     expect(
@@ -574,7 +576,9 @@ describe('toggleMarkInRange', () => {
       {
         kind: 'paragraph',
         text: 'hello world',
-        spans: [{ start: 6, end: 11, bold: true, underline: false }],
+        spans: [
+          { start: 6, end: 11, bold: true, underline: false, link: false },
+        ],
       },
     ];
     const next = enterAt(blocks, { index: 0, offset: 6 });
@@ -582,7 +586,9 @@ describe('toggleMarkInRange', () => {
     expect(next.blocks[1]).toEqual({
       kind: 'paragraph',
       text: 'world',
-      spans: [{ start: 0, end: 5, bold: true, underline: false }],
+      spans: [
+        { start: 0, end: 5, bold: true, underline: false, link: false },
+      ],
     });
   });
 });
