@@ -277,4 +277,14 @@ describe('notes pad links', () => {
     expect(CARD).toContain('--mt-glass');
     expect(CARD).not.toContain('Replace URL');
   });
+
+  it('sits the card after the editor, not over the address', () => {
+    const editor = PAD.lastIndexOf('<NotesEditor');
+    const card = PAD.indexOf('<NotesLinkCard');
+    expect(editor).toBeGreaterThan(-1);
+    expect(card).toBeGreaterThan(editor);
+    expect(PAD.slice(editor, card)).not.toContain('absolute');
+    expect(PAD.slice(editor, card)).not.toContain('top-3');
+    expect(PAD.slice(editor, card)).toContain('mt-2');
+  });
 });

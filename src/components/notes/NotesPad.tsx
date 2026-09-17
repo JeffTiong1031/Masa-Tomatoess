@@ -444,7 +444,7 @@ export const NotesPad = forwardRef<NotesPadHandle, { onLeave?: () => void }>(
               }}
               onDeletePicked={deletePicked}
             />
-            <div className="relative flex min-h-0 flex-1 flex-col">
+            <div className="flex min-h-0 flex-1 flex-col">
               <NotesEditor
                 key={active.id}
                 ref={editorRef}
@@ -455,19 +455,17 @@ export const NotesPad = forwardRef<NotesPadHandle, { onLeave?: () => void }>(
                 onLinkPress={onLinkPress}
               />
               {preview !== null && (
-                <div className="pointer-events-none absolute inset-x-3 top-3 z-10">
-                  <div className="pointer-events-auto mt-2">
-                    <NotesLinkCard
-                      preview={preview}
-                      onOpen={() => {
-                        window.open(
-                          preview.href,
-                          '_blank',
-                          'noopener,noreferrer',
-                        );
-                      }}
-                    />
-                  </div>
+                <div className="mt-2 shrink-0 px-3 pb-3">
+                  <NotesLinkCard
+                    preview={preview}
+                    onOpen={() => {
+                      window.open(
+                        preview.href,
+                        '_blank',
+                        'noopener,noreferrer',
+                      );
+                    }}
+                  />
                 </div>
               )}
             </div>
