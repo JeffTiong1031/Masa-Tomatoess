@@ -1,7 +1,7 @@
 # Notes pad links — design
 
 **Date:** 2026-09-17
-**Status:** Awaiting review
+**Status:** Approved
 **Builds on:** [2026-09-09-notes-design.md](2026-09-09-notes-design.md),
 [2026-09-10-notes-checklist-design.md](2026-09-10-notes-checklist-design.md),
 [2026-09-15-notes-files-design.md](2026-09-15-notes-files-design.md),
