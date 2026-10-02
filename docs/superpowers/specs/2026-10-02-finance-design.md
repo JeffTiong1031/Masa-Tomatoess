@@ -1,7 +1,7 @@
 # Finance — design
 
 **Date:** 2026-10-02
-**Status:** Awaiting review
+**Status:** Approved 2026-10-02 (Q9 changed, colour rules tightened; see §5, §10, §12)
 **Setup required:** [2026-10-02-finance-setup.sql](2026-10-02-finance-setup.sql)
 
 ## 1. Context
@@ -107,6 +107,8 @@ date          the day it happened
 note          optional
 period_start  empty for entries you type; for a Saving entry, the first
               day of the budget period it closes
+budget_sen    empty for entries you type; for a Saving entry, the budget
+              amount the period closed with
 ```
 
 - The database checks that an entry's category belongs to the same person
@@ -116,6 +118,9 @@ period_start  empty for entries you type; for a Saving entry, the first
 - **One Saving entry per person per period** is a uniqueness rule in the
   database, on `(owner, period_start)`. This is what makes the end-of-period
   step safe to repeat.
+- `period_start` and `budget_sen` are filled together or not at all. Keeping
+  the closing budget on the row is what lets a Saving entry be recalculated
+  later without asking what the budget was back then (§5).
 
 ### finance_templates
 
@@ -160,15 +165,27 @@ interface Category {
   archived: boolean;
 }
 
-interface Entry {
+interface EntryBase {
   id: string;
-  kind: EntryKind;
   amountSen: number;
   categoryId: string;
   date: string;
   note: string | null;
-  periodStart: string | null;
 }
+
+interface HandEntry extends EntryBase {
+  source: 'hand';
+  kind: EntryKind;
+}
+
+interface SavingEntry extends EntryBase {
+  source: 'saving';
+  kind: 'income';
+  periodStart: string;
+  budgetSen: number;
+}
+
+type Entry = HandEntry | SavingEntry;
 
 interface Template {
   id: string;
@@ -196,6 +213,17 @@ interface BudgetPeriod {
 
 All of this is pure functions in `src/lib/financeBudget.ts`. None of them
 read the clock; `today` is passed in, so tests can stand on any date.
+
+### What "today" means
+
+Everywhere in Finance, today is the **Malaysia date**, from `malaysiaDate`
+in `lib/dates.ts`, whatever time zone the phone thinks it is in. The page
+works it out once when it loads and again when Malaysia's midnight passes,
+using `msUntilNextMalaysiaMidnight` to set a single timer. So at 00:05 in
+Kuala Lumpur it is already the new day, even on a laptop set to London
+time where it is still 17:05 the evening before. The Today/Yesterday
+buttons, the period the bar shows, the "days left" count, the newest
+month in the picker and the end-of-period step all use this one value.
 
 ### Periods
 
@@ -284,12 +312,12 @@ For each it returns one income entry in Saving:
 - amount = that period's budget − what was spent in it (negative if over)
 - dated the period's last day
 - `period_start` = the period's first day
+- `budget_sen` = the budget it closed with
 
 The page runs this:
 
 1. when Finance loads,
-2. when the date changes while the page is open (the same midnight timer
-   Countdown uses), and
+2. when Malaysia's midnight passes while the page is open, and
 3. just before any budget change is saved.
 
 All missing entries are sent in one request that tells the database to
@@ -299,6 +327,41 @@ the app was closed all appear on the next visit, each dated its own last
 day.
 
 A period that ends exactly on budget gets a RM 0.00 Saving entry (§12, Q3).
+
+### Changing the past: recalculating a closed period
+
+When an expense is **added, edited, deleted, or put back with Undo**, and
+its date falls inside a period that already has a Saving entry, that
+Saving entry is recalculated:
+
+> amount = the Saving row's own `budget_sen` − every expense now dated in
+> that period
+
+It uses the budget the period **closed with**, stored on the row, never the
+current one. If an edit moves an entry from one date to another, both
+the period it left and the period it joined are recalculated (once each,
+if they are the same period). Changing an entry's kind or category is
+handled by the same rule, because the period's expense total is simply
+worked out again.
+
+`savingRecalcs(entries, touchedDates)` takes every entry *after* the change
+and the date or dates the change touched, and returns
+`{ id, amountSen }` for each Saving entry whose amount is now different.
+The page writes those updates after the entry itself is saved. If the
+recalculation write fails, the page says so and tries the same sums again
+on the next load: a load runs `savingRecalcs` over every Saving entry, so
+a missed update heals itself.
+
+Budget changes are the one thing that still never touches a past Saving
+entry: the amount stored on a closed period is fixed when it closes.
+
+**The "Yesterday" case.** It is Fri 9 Oct, the first day of a new weekly
+period, and Finance has just closed Fri 2 – Thu 8 with a Saving of
+−RM 40.50 (budget RM 600, spent RM 640.50). Jeff remembers a RM 12.00
+lunch and adds it with **Yesterday**, so it is dated Thu 8 Oct. That date
+is inside the closed period, so its Saving becomes
+600 − 652.50 = **−RM 52.50**. The new period's bar does not change, since
+the lunch is not in it.
 
 ## 6. Worked example
 
@@ -325,6 +388,11 @@ On **Fri 9 Oct**, opening Finance:
 - The bar starts fresh for Fri 9 – Thu 15: **RM 600.00 left · 7 days left
   · ~RM 85.71/day**. The RM 40.50 overspend does not carry over.
 - Opening Finance again on Fri 9 creates nothing more.
+
+The Saving row stores RM 600 as its closing budget. If Jeff later adds a
+forgotten RM 12.00 expense dated Wed 7 Oct, that Saving is recalculated to
+−RM 52.50 (§5, "Changing the past") — still against RM 600, even if the
+current budget has since moved to something else.
 
 If instead nothing is opened until **Mon 19 Oct**, and nothing was spent
 Fri 9 – Thu 15, that visit creates both missing entries at once:
@@ -381,7 +449,9 @@ Tapping an entry in the Daily list opens the same sheet, filled in, with
 
 Swiping a row left past a third of its width deletes it; a shorter swipe
 springs back. The row leaves the list, and a bar at the bottom says
-"Deleted · Undo" for 5 seconds.
+"Deleted · Undo" for 5 seconds. Deleting, and putting back with Undo, both
+recalculate a closed period's Saving if the entry was dated inside one
+(§5).
 
 The delete is sent to the database straight away. **Undo puts the same
 entry back** — same id, same fields — rather than holding the delete
@@ -484,24 +554,33 @@ So the fills get their own deeper colours, following `--mac-accent-meals-deep`:
 
 | Tone | Raw colour (globals.css) | What components use |
 |---|---|---|
-| calm | new `--mac-accent-finance-deep`, the finance blue taken deep | `--mt-budget-calm` |
-| warning | new `--mac-budget-warn`, a deep amber | `--mt-budget-warn` |
-| over | existing `--mac-danger-deep` `#C1473A` | `--mt-budget-over` |
+| calm | new `--mac-accent-finance-deep` `#4F7EBD`: the finance blue (`#A9C4E8`) taken deep | `--mt-budget-calm: var(--mac-accent-finance-deep)` |
+| warning | new `--mac-budget-warn` `#9C772C`: the Flexible accent's hue (`#F0CE87`) taken deep | `--mt-budget-warn: var(--mac-budget-warn)` |
+| over | the existing danger colour | `--mt-budget-over: var(--mt-danger)` |
 
-The exact hex values are chosen during implementation by measurement, and a
-new `src/lib/financeContrast.test.ts` pins them. It checks:
+The three `--mt-budget-*` tokens are declared in the same mood blocks as
+`--mt-accent-meals-deep`. `--mt-budget-over` points at `--mt-danger` rather
+than adding a second name for `--mac-danger-deep`, so it follows the danger
+colour if that is ever retuned. Because it sits in the mood block that also
+declares `--mt-danger`, it resolves to that block's danger colour.
 
-- each fill is at least **3:1** against the bar's track and against white
-  (a bar is a mark, not text, so 3:1 is the target)
-- the calm fill stays within 5° of the finance accent's hue and at least
-  ΔE 20 deeper, so it reads as "finance, darker", like meals-deep
+A new `src/lib/financeContrast.test.ts` pins both new hex values and checks:
+
+- each fill is at least **3:1** against white, cream and the bar's track
+  (`--mac-border-light`). A bar is a mark, not text, so 3:1 is the target.
+  Measured: calm 3.33:1 and warn 3.30:1 on the track, the hardest of the three.
+- the calm fill stays within **5°** of the finance accent's hue, and the warn
+  fill within 5° of the Flexible accent's hue, each at least ΔE 20 deeper —
+  "the same colour, darker", like meals-deep
 - the three fills are at least ΔE 20 from each other
-- each `--mt-budget-*` token is wired to its raw colour
+- each `--mt-budget-*` token is wired as in the table above
 
-Colour is never the only signal: "over" also changes the words, and
-"warning" is visible in the shrinking "left" figure. The summary bars use
-the calm colour. `--mac-accent-finance` itself is unchanged, so
-`accents.test.ts` is untouched.
+**Text is never coloured by tone.** The 3:1 target is for the bar alone. Every
+amount and label on the bar card ("RM 40.50 over", "RM 69.50 left") stays in
+`--mt-text`, and only the bar carries the colour. Colour is never the only
+signal either: "over" changes the words, and "warning" shows in the shrinking
+"left" figure. The summary bars use the calm colour. `--mac-accent-finance`
+itself is unchanged, so `accents.test.ts` is untouched.
 
 ## 11. Testing
 
@@ -536,6 +615,11 @@ Vitest, pure functions only, each test written to fail first.
 - Switching back clears the pending switch.
 - Folding happens only once today has reached `next.from`.
 
+**Today in Malaysia**
+- 2026-10-08 16:05 UTC is 00:05 on Fri 9 Oct in Malaysia: the bar shows the
+  new period, and Thu 8's period gets its Saving entry.
+- 2026-10-08 15:59 UTC is still Thu 8 in Malaysia: nothing closes yet.
+
 **financeBudget — Saving**
 - One period ended → one Saving entry, amount budget − spent, dated its last
   day, `periodStart` its first day.
@@ -546,6 +630,20 @@ Vitest, pure functions only, each test written to fail first.
 - The current, unfinished period never gets one.
 - A switch in the middle of a missed stretch: the old-type periods and the
   new-type periods are both settled, with the right boundaries.
+- Each Saving entry carries the budget it closed with.
+
+**financeBudget — changing the past**
+- Adding an expense inside a closed period lowers that period's Saving.
+- Deleting one raises it; editing its amount changes it by the difference.
+- Moving an entry from one closed period to another recalculates both.
+- Moving an entry out of a closed period into the current one recalculates
+  only the closed one.
+- An entry in the current, open period recalculates nothing.
+- Recalculation uses the Saving row's stored budget, not the current plan's
+  amount, after a budget change.
+- Income added inside a closed period leaves its Saving unchanged.
+- The "Yesterday" case: on Fri 9 Oct (first day of a new period), a RM 12.00
+  lunch dated Yesterday turns Thu 8's Saving from −RM 40.50 into −RM 52.50.
 
 **financeMonths**
 - Range from earliest entry to this month; no entries → just this month.
@@ -572,9 +670,10 @@ Vitest, pure functions only, each test written to fail first.
 
 **financeContrast** — §10.
 
-## 12. Open questions
+## 12. Open questions — resolved
 
-Each with the answer I propose. Say if any should go the other way.
+Reviewed 2026-10-02. Q1–Q8 and Q10 accepted as proposed. Q9 changed:
+closed periods are recalculated (§5, "Changing the past").
 
 **Q1. Switching Week ↔ Month and changing the amount in the same save.**
 The locked rule says a new amount applies to the current period at once.
@@ -622,8 +721,8 @@ history across two categories with the same name.
 This follows from "past Saving entries never change", but it is worth
 saying out loud: if you add a forgotten RM 30 expense to last week, last
 week's Saving entry stays as it was.
-*Proposed:* accept that. The Saving entry is a snapshot taken when the
-period closed.
+*Decided:* no snapshot. The closed period's Saving is recalculated against
+the budget it closed with, which is stored on the Saving row. See §5.
 
 **Q10. Removing the budget altogether.**
 *Proposed:* not in this version. You can change the amount and the period,

@@ -7,6 +7,10 @@
 -- write every row, and the app filters by owner.
 --
 -- Money is stored as whole sen (RM 12.00 is 1200), never as a decimal.
+--
+-- A Saving entry (period_start set) also stores budget_sen, the budget its
+-- period closed with, so it can be recalculated when an older expense is
+-- added, edited or deleted.
 
 create table finance_categories (
   id          uuid primary key default gen_random_uuid(),
@@ -37,6 +41,7 @@ create table finance_entries (
   date         date not null,
   note         text,
   period_start date,
+  budget_sen   integer check (budget_sen > 0),
   created_at   timestamptz not null default now(),
   updated_at   timestamptz not null default now(),
 
@@ -49,7 +54,9 @@ create table finance_entries (
   constraint finance_entries_saving_is_income
     check (period_start is null or kind = 'income'),
   constraint finance_entries_saving_dated_in_period
-    check (period_start is null or date >= period_start)
+    check (period_start is null or date >= period_start),
+  constraint finance_entries_saving_keeps_its_budget
+    check ((period_start is null) = (budget_sen is null))
 );
 
 create index finance_entries_owner_date_idx
