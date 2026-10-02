@@ -171,6 +171,7 @@ interface EntryBase {
   categoryId: string;
   date: string;
   note: string | null;
+  createdAt: string;
 }
 
 interface HandEntry extends EntryBase {
@@ -686,8 +687,8 @@ switches Week/Month, the amount travels with the switch and starts on
 has `next_amount_sen`. If you prefer the strict reading, that column goes.)
 
 **Q2. Can Saving entries be edited or deleted?**
-*Proposed:* no. They are labelled "Auto", cannot be swiped, and open
-read-only. A deleted one would only come back on the next visit anyway,
+*Proposed:* no. They are labelled "Auto", cannot be swiped or opened, and
+show the budget period they closed on the row itself. A deleted one would only come back on the next visit anyway,
 because its period would look unsettled again. Saving is also not offered
 as a category when you add income by hand.
 
