@@ -84,6 +84,9 @@
 
   --mac-accent-meals-deep: #8D7053;
 
+  --mac-accent-finance-deep: #4F7EBD;
+  --mac-budget-warn: #9C772C;
+
   /* The light pair is measured against what the rank text ACTUALLY sits
      on, which is not the white card: a leaderboard row tints the card,
      and the progress fill tints it again, landing on rgb(240,238,242).
@@ -207,6 +210,9 @@ body {
   --mt-accent-ink: var(--mac-cocoa);
   --mt-accent-deep: var(--mac-accent-calendar-deep);
   --mt-accent-meals-deep: var(--mac-accent-meals-deep);
+  --mt-budget-calm: var(--mac-accent-finance-deep);
+  --mt-budget-warn: var(--mac-budget-warn);
+  --mt-budget-over: var(--mt-danger);
   /* See the :root copies for why these are 94/97 and not 72/88. */
   --mt-glass: color-mix(in srgb, var(--mac-white) 94%, transparent);
   --mt-glass-strong: color-mix(in srgb, var(--mac-white) 97%, transparent);
@@ -248,6 +254,9 @@ body {
   --mt-accent-ink: var(--mac-cocoa);
   --mt-accent-deep: var(--mac-accent-calendar-deep);
   --mt-accent-meals-deep: var(--mac-accent-meals-deep);
+  --mt-budget-calm: var(--mac-accent-finance-deep);
+  --mt-budget-warn: var(--mac-budget-warn);
+  --mt-budget-over: var(--mt-danger);
   --mt-glass: color-mix(in srgb, var(--mac-plum) 45%, transparent);
   --mt-glass-strong: color-mix(in srgb, var(--mac-plum) 62%, transparent);
   /* 4.95:1 on #31262E — --mac-danger already clears AA in dark mood. */
