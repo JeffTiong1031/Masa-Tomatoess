@@ -3,7 +3,7 @@ import {
   resolveTimetablePaint,
   type ColourSwatch,
 } from '@/lib/colourPalette';
-import { rowSpanOf } from '@/lib/timetableGrid';
+import { gridRowsTemplate, rowSpanOf } from '@/lib/timetableGrid';
 import type { TimetableRule } from '@/lib/timetableRule';
 
 const HEADER_ROWS = 1;
@@ -39,7 +39,7 @@ export default function TimetableGrid({
         className={`grid min-w-[45rem] border-l border-t border-[color-mix(in_srgb,var(--mt-text)_28%,var(--mt-surface))]`}
         style={{
           gridTemplateColumns: '2.75rem repeat(7, minmax(6rem, 1fr))',
-          gridTemplateRows: `auto repeat(${rowCount}, 2.75rem)`,
+          gridTemplateRows: gridRowsTemplate(rowCount),
         }}
       >
         <div className={`bg-[var(--mt-surface)] ${LINE}`} />
@@ -59,7 +59,7 @@ export default function TimetableGrid({
         {Array.from({ length: rowCount }, (_, index) => (
           <div
             key={`hour-${index}`}
-            className={`bg-[var(--mt-surface)] pr-2 text-right text-[10px] leading-[2.75rem] text-[var(--mt-text-subtle)] ${LINE}`}
+            className={`flex items-center justify-end bg-[var(--mt-surface)] pr-2 text-[10px] text-[var(--mt-text-subtle)] ${LINE}`}
             style={{ gridColumn: 1, gridRow: index + 1 + HEADER_ROWS }}
           >
             {`${hours.from + index}`.padStart(2, '0')}
