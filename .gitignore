@@ -50,3 +50,6 @@ next-env.d.ts
 # Claude Code local worktrees
 .claude/worktrees/
 .worktrees/
+
+# Playwright MCP browser screenshots and logs
+.playwright-mcp/
