@@ -2,10 +2,10 @@
 
 import { useEffect } from 'react';
 import { isTypingElement } from '@/lib/noteShortcut';
-import { isSpaceToggle } from '@/lib/spaceShortcut';
+import { flexibleKeyFor, type FlexibleKey } from '@/lib/flexibleShortcut';
 import { useNotesUiStore } from '@/store/useNotesUiStore';
 
-export function useSpaceToggle(onToggle: () => void) {
+export function useFlexibleKeys(onKey: (key: FlexibleKey) => void) {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const target = event.target as {
@@ -17,7 +17,7 @@ export function useSpaceToggle(onToggle: () => void) {
       const overlayOpen =
         useNotesUiStore.getState().open ||
         document.querySelector('[role="dialog"]') !== null;
-      const pressed = isSpaceToggle(
+      const key = flexibleKeyFor(
         event.key,
         typing,
         tagName,
@@ -25,11 +25,11 @@ export function useSpaceToggle(onToggle: () => void) {
         overlayOpen,
         event.repeat,
       );
-      if (!pressed) return;
+      if (key === null) return;
       event.preventDefault();
-      onToggle();
+      onKey(key);
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [onToggle]);
+  }, [onKey]);
 }

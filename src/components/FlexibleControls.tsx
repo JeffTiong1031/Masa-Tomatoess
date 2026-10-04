@@ -3,7 +3,12 @@
 import { useFlexibleStore } from '@/store/useFlexibleStore';
 import { Play, Square, RotateCcw, SkipForward, Coffee } from 'lucide-react';
 import { useState } from 'react';
-import { useSpaceToggle } from '@/hooks/useSpaceToggle';
+import { useFlexibleKeys } from '@/hooks/useFlexibleKeys';
+import {
+  flexibleKeyAction,
+  flexibleView,
+  type FlexibleKeyAction,
+} from '@/lib/flexibleShortcut';
 import SessionConflictDialog from '@/components/SessionConflictDialog';
 import {
   getBlockingOwner,
@@ -11,6 +16,11 @@ import {
 } from '@/lib/sessionOwnership';
 
 export default function FlexibleControls() {
+  const view = useFlexibleStore(flexibleView);
+  return <FlexibleControlsPanel key={view} />;
+}
+
+function FlexibleControlsPanel() {
   const {
     phase,
     isActive,
@@ -39,16 +49,24 @@ export default function FlexibleControls() {
     startStudy();
   };
 
-  const toggleWithSpace = () => {
-    if (isAlarmRinging || awaitingChoice || phase === 'rest') return;
-    if (isActive) {
-      stopStudy();
-      return;
-    }
-    handleStart();
+  const keyActions: Record<FlexibleKeyAction, () => void> = {
+    start: handleStart,
+    stop: stopStudy,
+    continue: continueStudy,
+    rest: proceedToRest,
+    ready: reset,
   };
 
-  useSpaceToggle(toggleWithSpace);
+  useFlexibleKeys((key) => {
+    const action = flexibleKeyAction(key, {
+      phase,
+      isActive,
+      awaitingChoice,
+      isAlarmRinging,
+      elapsedSeconds,
+    });
+    if (action !== null) keyActions[action]();
+  });
 
   const handleConfirmConflict = () => {
     setShowConflict(false);
