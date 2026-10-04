@@ -3,6 +3,7 @@
 import { useTimerStore } from '@/store/useTimerStore';
 import { Play, Pause, SkipForward, RotateCcw } from 'lucide-react';
 import { useState } from 'react';
+import { useSpaceToggle } from '@/hooks/useSpaceToggle';
 import SessionConflictDialog from '@/components/SessionConflictDialog';
 import {
   getBlockingOwner,
@@ -28,6 +29,8 @@ export default function Controls() {
     }
     start();
   };
+
+  useSpaceToggle(handlePlayPause);
 
   const handleConfirmConflict = () => {
     setShowConflict(false);
