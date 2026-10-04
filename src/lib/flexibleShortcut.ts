@@ -9,7 +9,9 @@ export type FlexibleKeyAction =
   | 'stop'
   | 'continue'
   | 'rest'
-  | 'restart';
+  | 'ready';
+
+export type FlexibleView = 'alarm' | 'choice' | 'rest' | 'main';
 
 export interface FlexibleKeyState {
   phase: FlexiblePhase;
@@ -40,7 +42,7 @@ export function flexibleKeyAction(
 ): FlexibleKeyAction | null {
   const resting = state.isAlarmRinging || state.phase === 'rest';
   if (key === 'enter') {
-    if (resting) return 'restart';
+    if (resting) return 'ready';
     if (state.awaitingChoice && state.elapsedSeconds > 0) return 'rest';
     return null;
   }
@@ -48,4 +50,13 @@ export function flexibleKeyAction(
   if (state.isActive) return 'stop';
   if (state.awaitingChoice) return 'continue';
   return 'start';
+}
+
+export function flexibleView(
+  state: Pick<FlexibleKeyState, 'phase' | 'awaitingChoice' | 'isAlarmRinging'>,
+): FlexibleView {
+  if (state.isAlarmRinging) return 'alarm';
+  if (state.awaitingChoice) return 'choice';
+  if (state.phase === 'rest') return 'rest';
+  return 'main';
 }

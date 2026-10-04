@@ -4,6 +4,7 @@ import path from 'node:path';
 import {
   flexibleKeyAction,
   flexibleKeyFor,
+  flexibleView,
   type FlexibleKeyState,
 } from './flexibleShortcut';
 
@@ -73,14 +74,24 @@ describe('flexibleKeyAction', () => {
     ).toBeNull();
   });
 
-  it('enter during rest or the end-of-rest alarm starts a fresh study', () => {
-    expect(flexibleKeyAction('enter', resting)).toBe('restart');
-    expect(flexibleKeyAction('enter', ringing)).toBe('restart');
+  it('enter during rest or the end-of-rest alarm goes back to ready', () => {
+    expect(flexibleKeyAction('enter', resting)).toBe('ready');
+    expect(flexibleKeyAction('enter', ringing)).toBe('ready');
   });
 
   it('enter does nothing while idle or mid-study', () => {
     expect(flexibleKeyAction('enter', idle)).toBeNull();
     expect(flexibleKeyAction('enter', studying)).toBeNull();
+  });
+});
+
+describe('flexibleView', () => {
+  it('names a separate screen for each stage', () => {
+    expect(flexibleView(idle)).toBe('main');
+    expect(flexibleView(studying)).toBe('main');
+    expect(flexibleView(stopped)).toBe('choice');
+    expect(flexibleView(resting)).toBe('rest');
+    expect(flexibleView(ringing)).toBe('alarm');
   });
 });
 
@@ -91,6 +102,12 @@ describe('keyboard shortcut wiring', () => {
     );
     expect(read('src/components/Controls.tsx')).not.toMatch(
       /useSpaceToggle|useFlexibleKeys/,
+    );
+  });
+
+  it('rebuilds the controls per screen so focus never lands on Reset', () => {
+    expect(read('src/components/FlexibleControls.tsx')).toMatch(
+      /key=\{view\}/,
     );
   });
 });

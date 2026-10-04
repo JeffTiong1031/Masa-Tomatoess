@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { useFlexibleKeys } from '@/hooks/useFlexibleKeys';
 import {
   flexibleKeyAction,
+  flexibleView,
   type FlexibleKeyAction,
 } from '@/lib/flexibleShortcut';
 import SessionConflictDialog from '@/components/SessionConflictDialog';
@@ -15,6 +16,11 @@ import {
 } from '@/lib/sessionOwnership';
 
 export default function FlexibleControls() {
+  const view = useFlexibleStore(flexibleView);
+  return <FlexibleControlsPanel key={view} />;
+}
+
+function FlexibleControlsPanel() {
   const {
     phase,
     isActive,
@@ -43,21 +49,12 @@ export default function FlexibleControls() {
     startStudy();
   };
 
-  const restartStudy = () => {
-    reset();
-    if (getBlockingOwner() === 'classic') {
-      setShowConflict(true);
-      return;
-    }
-    startStudy();
-  };
-
   const keyActions: Record<FlexibleKeyAction, () => void> = {
     start: handleStart,
     stop: stopStudy,
     continue: continueStudy,
     rest: proceedToRest,
-    restart: restartStudy,
+    ready: reset,
   };
 
   useFlexibleKeys((key) => {
