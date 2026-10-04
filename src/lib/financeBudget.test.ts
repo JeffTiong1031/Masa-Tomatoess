@@ -5,6 +5,7 @@ import {
   applyBudgetEdit,
   budgetBar,
   budgetLines,
+  budgetTank,
   budgetText,
   closedPeriods,
   foldPlan,
@@ -471,5 +472,46 @@ describe('the bar on a narrow screen', () => {
       headline: 'RM 40.50 over',
       detail: null,
     });
+  });
+});
+
+describe('the water tank', () => {
+  it('fills to the share still left and reads out the week', () => {
+    expect(budgetTank(budgetBar(weekly500, firstWeek.slice(0, 1), '2026-10-02'))).toEqual({
+      level: 0.83,
+      amount: 'RM 415.00',
+      caption: 'left of RM 500.00',
+      stats: [
+        { label: 'Spent', value: 'RM 85.00' },
+        { label: 'Time', value: '7 days left' },
+        { label: 'Daily limit', value: '~RM 59.28' },
+      ],
+    });
+  });
+
+  it('says one day, not one days', () => {
+    expect(budgetTank(budgetBar(weekly500, [], '2026-10-08')).stats[1].value).toBe('1 day left');
+  });
+
+  it('runs dry with no daily limit once the money is gone', () => {
+    const tank = budgetTank(budgetBar(weekly500, [expense('2026-10-02', 50000)], '2026-10-04'));
+    expect(tank.level).toBe(0);
+    expect(tank.amount).toBe('RM 0.00');
+    expect(tank.stats[2].value).toBe('RM 0.00');
+  });
+
+  it('fills back up by the share overspent and names the overspend', () => {
+    expect(budgetTank(budgetBar(weekly600, firstWeek, '2026-10-07'))).toMatchObject({
+      level: 0.0675,
+      amount: 'RM 40.50',
+      caption: 'over the RM 600.00 budget',
+    });
+  });
+
+  it('tops out once the overspend matches the budget', () => {
+    const doubled = budgetBar(weekly500, [expense('2026-10-02', 100000)], '2026-10-02');
+    const beyond = budgetBar(weekly500, [expense('2026-10-02', 160000)], '2026-10-02');
+    expect(budgetTank(doubled).level).toBe(1);
+    expect(budgetTank(beyond).level).toBe(1);
   });
 });

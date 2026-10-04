@@ -230,5 +230,4 @@ When fixing a bug, write the test so it fails against the bug first.
 
 ## Commits
 
-Commit as Jeff's account only. Never add a `Co-Authored-By` trailer or any
-other generated-with attribution.
+Make sure to add a `Co-Authored-By` trailer or any other generated-with attribution so I can get the Pair Extraordinaire achievements

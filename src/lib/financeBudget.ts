@@ -115,12 +115,45 @@ export function budgetBar(plan: BudgetPlan, entries: Entry[], today: string): Bu
   };
 }
 
+function daysLeftText(daysLeft: number): string {
+  return daysLeft === 1 ? '1 day left' : `${daysLeft} days left`;
+}
+
 export function budgetLines(bar: BudgetBar): { headline: string; detail: string | null } {
   if (bar.leftSen < 0) return { headline: `${formatRM(-bar.leftSen)} over`, detail: null };
-  const days = bar.daysLeft === 1 ? '1 day left' : `${bar.daysLeft} days left`;
   return {
     headline: `${formatRM(bar.leftSen)} left`,
-    detail: `${days} · ~${formatRM(bar.perDaySen)}/day`,
+    detail: `${daysLeftText(bar.daysLeft)} · ~${formatRM(bar.perDaySen)}/day`,
+  };
+}
+
+export interface TankStat {
+  label: string;
+  value: string;
+}
+
+export interface BudgetTank {
+  level: number;
+  amount: string;
+  caption: string;
+  stats: TankStat[];
+}
+
+export function budgetTank(bar: BudgetBar): BudgetTank {
+  const budget = formatRM(bar.period.amountSen);
+  const over = bar.leftSen < 0;
+  return {
+    level: Math.min(Math.abs(bar.leftSen) / bar.period.amountSen, 1),
+    amount: formatRM(Math.abs(bar.leftSen)),
+    caption: over ? `over the ${budget} budget` : `left of ${budget}`,
+    stats: [
+      { label: 'Spent', value: formatRM(bar.spentSen) },
+      { label: 'Time', value: daysLeftText(bar.daysLeft) },
+      {
+        label: 'Daily limit',
+        value: bar.perDaySen > 0 ? `~${formatRM(bar.perDaySen)}` : formatRM(0),
+      },
+    ],
   };
 }
 

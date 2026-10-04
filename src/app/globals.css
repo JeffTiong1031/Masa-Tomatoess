@@ -213,6 +213,9 @@ body {
   --mt-budget-calm: var(--mac-accent-finance-deep);
   --mt-budget-warn: var(--mac-budget-warn);
   --mt-budget-over: var(--mt-danger);
+  --mt-budget-water-calm: var(--mac-accent-finance);
+  --mt-budget-water-warn: var(--mac-accent-flexible);
+  --mt-budget-water-over: var(--mac-danger);
   /* See the :root copies for why these are 94/97 and not 72/88. */
   --mt-glass: color-mix(in srgb, var(--mac-white) 94%, transparent);
   --mt-glass-strong: color-mix(in srgb, var(--mac-white) 97%, transparent);
@@ -257,6 +260,9 @@ body {
   --mt-budget-calm: var(--mac-accent-finance-deep);
   --mt-budget-warn: var(--mac-budget-warn);
   --mt-budget-over: var(--mt-danger);
+  --mt-budget-water-calm: var(--mac-accent-finance);
+  --mt-budget-water-warn: var(--mac-accent-flexible);
+  --mt-budget-water-over: var(--mac-danger);
   --mt-glass: color-mix(in srgb, var(--mac-plum) 45%, transparent);
   --mt-glass-strong: color-mix(in srgb, var(--mac-plum) 62%, transparent);
   /* 4.95:1 on #31262E — --mac-danger already clears AA in dark mood. */
@@ -413,7 +419,59 @@ body {
   animation: mt-aurora 28s ease infinite;
 }
 
+@keyframes mt-wave {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes mt-bubble {
+  0%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.55;
+  }
+  50% {
+    transform: translateY(-10px);
+    opacity: 0.9;
+  }
+}
+
+@keyframes mt-fill {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.mt-water {
+  animation: mt-fill 1.2s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  transition:
+    height 1.2s cubic-bezier(0.2, 0.8, 0.2, 1),
+    color 0.5s ease;
+}
+
+.mt-wave {
+  animation: mt-wave 10s linear infinite;
+}
+
+.mt-bubble {
+  animation: mt-bubble 4s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .mt-water,
+  .mt-wave,
+  .mt-bubble {
+    animation: none;
+    transition: none;
+  }
+
   .mt-live-gradient {
     animation: none;
     background-position: 50% 50%;

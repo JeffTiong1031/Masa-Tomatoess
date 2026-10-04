@@ -205,13 +205,19 @@ function settled(label: string, error: RemoteError | null): boolean {
   return true;
 }
 
-export async function ensureSaving(owner: UserName): Promise<boolean | 'missing-table'> {
-  const { error } = await supabase
+function upsertSaving(owner: UserName) {
+  return supabase
     .from('finance_categories')
     .upsert(
       { owner, kind: 'income', name: 'Saving', system: 'saving' },
       { onConflict: 'owner,system', ignoreDuplicates: true },
     );
+}
+
+export async function ensureSaving(owner: UserName): Promise<boolean | 'missing-table'> {
+  let { error } = await upsertSaving(owner);
+  if (error && MISSING_TABLE_CODES.includes(error.code)) return 'missing-table';
+  if (error?.code === DUPLICATE_CODE) ({ error } = await upsertSaving(owner));
   if (error && MISSING_TABLE_CODES.includes(error.code)) return 'missing-table';
   return settled('Failed to create the Saving category:', error);
 }

@@ -124,6 +124,35 @@ describe('finance cloud repository', () => {
     );
   });
 
+  it('treats a Saving created at the same moment as already there', async () => {
+    const taken = {
+      data: null,
+      error: {
+        code: '23505',
+        message:
+          'duplicate key value violates unique constraint "finance_categories_live_name_idx"',
+      },
+    };
+    respond('finance_categories', taken, { data: null, error: null });
+
+    await expect(ensureSaving('Jeff')).resolves.toBe(true);
+    expect(mocks.queryFor('finance_categories').upsert).toHaveBeenCalledTimes(2);
+  });
+
+  it('still fails when the Saving name stays taken', async () => {
+    const taken = {
+      data: null,
+      error: {
+        code: '23505',
+        message:
+          'duplicate key value violates unique constraint "finance_categories_live_name_idx"',
+      },
+    };
+    respond('finance_categories', taken, taken);
+
+    await expect(ensureSaving('Jeff')).resolves.toBe(false);
+  });
+
   it('asks the database to skip periods that already have a Saving entry', async () => {
     await insertSavings('Jeff', 'saving-id', [
       { amountSen: -4050, date: '2026-10-08', periodStart: '2026-10-02', budgetSen: 60000 },

@@ -1,4 +1,4 @@
-import { addDays, formatLongDate, monthOf } from './dates';
+import { addDays, formatLongDate, formatShortDate, monthOf } from './dates';
 import type { Category, Entry, EntryKind, Template } from './finance';
 
 export interface DayGroup {
@@ -14,6 +14,11 @@ export interface SummaryRow {
   name: string;
   spentSen: number;
   percent: number;
+}
+
+export interface EntryLines {
+  title: string;
+  subtitle: string | null;
 }
 
 export interface MonthSummary {
@@ -96,4 +101,19 @@ export function categoriesByUse(
 export function liveTemplates(templates: Template[], categories: Category[]): Template[] {
   const live = new Set(categories.filter((c) => !c.archived).map((c) => c.id));
   return templates.filter((template) => live.has(template.categoryId));
+}
+
+export function entryLines(entry: Entry, categoryName: string): EntryLines {
+  if (entry.source === 'saving') {
+    return {
+      title: categoryName,
+      subtitle: `Budget ${formatShortDate(entry.periodStart)} – ${formatShortDate(entry.date)}`,
+    };
+  }
+  const income = entry.kind === 'income' ? 'Income' : null;
+  if (entry.note === null) return { title: categoryName, subtitle: income };
+  return {
+    title: entry.note,
+    subtitle: income === null ? categoryName : `${income} · ${categoryName}`,
+  };
 }
