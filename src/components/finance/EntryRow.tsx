@@ -1,10 +1,10 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { formatShortDate } from '@/lib/dates';
 import type { Entry, HandEntry } from '@/lib/finance';
 import { formatRM } from '@/lib/financeMoney';
 import { swipeOutcome } from '@/lib/financeSwipe';
+import { entryLines } from '@/lib/financeViews';
 
 const TAP_SLOP_PX = 6;
 
@@ -14,22 +14,21 @@ function amountText(entry: Entry): string {
 }
 
 function Body({ entry, categoryName }: { entry: Entry; categoryName: string }) {
+  const { title, subtitle } = entryLines(entry, categoryName);
   return (
     <div className="grid grid-cols-[1fr_auto] items-center gap-3 px-4 py-2.5">
       <div className="min-w-0">
         <div className="flex items-center gap-2 text-sm text-[var(--mt-text)]">
-          <span className="truncate">{categoryName}</span>
+          <span className="truncate">{title}</span>
           {entry.source === 'saving' && (
             <span className="rounded-full border border-[var(--mt-border)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--mt-text-muted)]">
               Auto
             </span>
           )}
         </div>
-        <div className="truncate text-xs text-[var(--mt-text-muted)]">
-          {entry.source === 'saving'
-            ? `Budget ${formatShortDate(entry.periodStart)} – ${formatShortDate(entry.date)}`
-            : [entry.kind === 'income' ? 'Income' : null, entry.note].filter(Boolean).join(' · ')}
-        </div>
+        {subtitle !== null && (
+          <div className="truncate text-xs text-[var(--mt-text-muted)]">{subtitle}</div>
+        )}
       </div>
       <span className="text-sm font-semibold tabular-nums text-[var(--mt-text)]">
         {amountText(entry)}
@@ -76,7 +75,7 @@ function SwipeRow({
       <div
         role="button"
         tabIndex={0}
-        aria-label={`Edit ${categoryName} ${amountText(entry)}`}
+        aria-label={`Edit ${entryLines(entry, categoryName).title} ${amountText(entry)}`}
         className={`relative touch-pan-y select-none bg-[var(--mt-surface)] ${offset === 0 ? 'transition-transform' : ''}`}
         style={{ transform: `translateX(${offset}px)` }}
         onKeyDown={(event) => {

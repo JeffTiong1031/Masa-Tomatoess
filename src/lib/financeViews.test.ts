@@ -3,6 +3,7 @@ import type { Category, Entry, Template } from './finance';
 import {
   categoriesByUse,
   dailyGroups,
+  entryLines,
   liveTemplates,
   monthSummary,
 } from './financeViews';
@@ -109,5 +110,37 @@ describe('quick templates', () => {
       { id: 't2', kind: 'expense', label: 'Cinema', amountSen: 2300, categoryId: 'fun' },
     ];
     expect(liveTemplates(templates, categories).map((t) => t.id)).toEqual(['t1']);
+  });
+});
+
+describe('an entry row', () => {
+  const food = entry('n', 'food', '2026-10-03', 5500);
+  const pay = entry('p', 'pay', '2026-10-03', 300000);
+
+  it('leads with the note and puts the category underneath', () => {
+    expect(entryLines({ ...food, note: 'Lunch' }, 'Food')).toEqual({
+      title: 'Lunch',
+      subtitle: 'Food',
+    });
+  });
+
+  it('shows the category alone when there is no note', () => {
+    expect(entryLines(food, 'Food')).toEqual({ title: 'Food', subtitle: null });
+  });
+
+  it('marks income under the note, beside the category', () => {
+    expect(entryLines({ ...pay, note: 'October pay' }, 'Pay')).toEqual({
+      title: 'October pay',
+      subtitle: 'Income · Pay',
+    });
+    expect(entryLines(pay, 'Pay')).toEqual({ title: 'Pay', subtitle: 'Income' });
+  });
+
+  it('labels a budget saving with its period', () => {
+    const saving = october.find((e) => e.source === 'saving')!;
+    expect(entryLines(saving, 'Saving')).toEqual({
+      title: 'Saving',
+      subtitle: 'Budget 2 Oct – 8 Oct',
+    });
   });
 });

@@ -195,6 +195,14 @@ export default function AddSheet({
       }
     >
       <div className="grid gap-4">
+        <input
+          aria-label="Note"
+          value={note}
+          onChange={(event) => setNote(event.target.value)}
+          placeholder="What was it? (optional)"
+          className={field}
+        />
+
         <Segmented
           label="Entry type"
           options={KINDS}
@@ -293,25 +301,16 @@ export default function AddSheet({
           )}
         </div>
 
-        <div>
-          <input
-            aria-label="Note"
-            value={note}
-            onChange={(event) => setNote(event.target.value)}
-            placeholder="Note (optional)"
-            className={field}
-          />
-          {editing === null && (
-            <button
-              type="button"
-              onClick={saveTemplate}
-              disabled={amountSen === 0 || categoryId === null || trimmedNote === ''}
-              className="mt-1 min-h-11 text-sm font-semibold text-[var(--mt-text-muted)] underline underline-offset-2 disabled:no-underline disabled:opacity-50"
-            >
-              Save as quick add
-            </button>
-          )}
-        </div>
+        {editing === null && (
+          <button
+            type="button"
+            onClick={saveTemplate}
+            disabled={amountSen === 0 || categoryId === null || trimmedNote === ''}
+            className="min-h-11 justify-self-start text-sm font-semibold text-[var(--mt-text-muted)] underline underline-offset-2 disabled:no-underline disabled:opacity-50"
+          >
+            Save as quick add
+          </button>
+        )}
       </div>
     </Modal>
   );
