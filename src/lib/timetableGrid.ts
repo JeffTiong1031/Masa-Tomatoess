@@ -35,3 +35,7 @@ export function rowSpanOf(
     endRow: endHourOf(rule.endTime) - from + 1,
   };
 }
+
+export function gridRowsTemplate(rowCount: number): string {
+  return `auto repeat(${rowCount}, minmax(2.75rem, auto))`;
+}

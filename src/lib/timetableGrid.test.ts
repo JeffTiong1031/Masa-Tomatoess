@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { gridHours, rowSpanOf, rulesByWeekday } from './timetableGrid';
+import {
+  gridHours,
+  gridRowsTemplate,
+  rowSpanOf,
+  rulesByWeekday,
+} from './timetableGrid';
 import type { TimetableRule } from './timetableRule';
 
 function rule(over: Partial<TimetableRule> = {}): TimetableRule {
@@ -95,5 +100,11 @@ describe('rowSpanOf', () => {
   it('rounds a part-hour end up so the block covers the hour it runs into', () => {
     const span = rowSpanOf(rule({ startTime: '10:00', endTime: '10:30' }), 8);
     expect(span.endRow - span.startRow).toBe(1);
+  });
+});
+
+describe('gridRowsTemplate', () => {
+  it('lets every hour row grow past its minimum to fit a long class', () => {
+    expect(gridRowsTemplate(3)).toBe('auto repeat(3, minmax(2.75rem, auto))');
   });
 });
