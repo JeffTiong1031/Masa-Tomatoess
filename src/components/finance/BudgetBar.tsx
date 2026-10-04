@@ -1,7 +1,12 @@
 import { CalendarDays, Gauge, Pencil, Wallet } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import { formatLongDate } from '@/lib/dates';
-import { budgetTank, budgetText, type BudgetBar as Bar, type BudgetTone } from '@/lib/financeBudget';
+import {
+  budgetTank,
+  budgetText,
+  type BudgetTone,
+  type BudgetView,
+} from '@/lib/financeBudget';
 
 const WATER: Record<BudgetTone, string> = {
   calm: 'var(--mt-budget-water-calm)',
@@ -70,8 +75,21 @@ function Water({ level, color }: { level: number; color: string }) {
   );
 }
 
-export default function BudgetBar({ bar, onEdit }: { bar: Bar | null; onEdit: () => void }) {
-  if (bar === null) {
+function EditButton({ onEdit }: { onEdit: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onEdit}
+      aria-label="Edit budget"
+      className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full border border-[var(--mt-border)] bg-[var(--mt-surface)] text-[var(--mt-text-muted)] shadow-sm"
+    >
+      <Pencil size={18} aria-hidden />
+    </button>
+  );
+}
+
+export default function BudgetBar({ view, onEdit }: { view: BudgetView; onEdit: () => void }) {
+  if (view.kind === 'none') {
     return (
       <Card>
         <div className={label}>Budget</div>
@@ -87,6 +105,19 @@ export default function BudgetBar({ bar, onEdit }: { bar: Bar | null; onEdit: ()
     );
   }
 
+  if (view.kind === 'pending') {
+    return (
+      <Card className="grid grid-cols-[1fr_auto] items-start gap-3">
+        <div>
+          <div className={label}>Budget</div>
+          <p className="mt-1 text-sm text-[var(--mt-text-muted)]">{view.note}</p>
+        </div>
+        <EditButton onEdit={onEdit} />
+      </Card>
+    );
+  }
+
+  const { bar } = view;
   const tank = budgetTank(bar);
 
   return (
@@ -108,14 +139,7 @@ export default function BudgetBar({ bar, onEdit }: { bar: Bar | null; onEdit: ()
             <p className="mt-2 text-xs text-[var(--mt-text-muted)]">{bar.switchNote}</p>
           )}
         </div>
-        <button
-          type="button"
-          onClick={onEdit}
-          aria-label="Edit budget"
-          className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full border border-[var(--mt-border)] bg-[var(--mt-surface)] text-[var(--mt-text-muted)] shadow-sm"
-        >
-          <Pencil size={18} aria-hidden />
-        </button>
+        <EditButton onEdit={onEdit} />
       </div>
 
       <dl className="mt-glass grid grid-cols-3 divide-x divide-[var(--mt-border)] rounded-2xl">

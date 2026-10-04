@@ -7,11 +7,16 @@ import {
   budgetLines,
   budgetTank,
   budgetText,
+  budgetView,
   closedPeriods,
   foldPlan,
   missingSavings,
   periodAt,
+  resetNote,
+  savedSoFar,
   savingRecalcs,
+  startNotes,
+  startPlan,
   allSavingRecalcs,
   withSavingUpdates,
 } from './financeBudget';
@@ -207,10 +212,23 @@ describe('the budget bar', () => {
 });
 
 describe('changing the budget', () => {
-  it('anchors the first budget to the day it is set', () => {
-    expect(applyBudgetEdit(null, { amountSen: 50000, period: 'week' }, '2026-10-02')).toEqual(
-      weekly500,
-    );
+  it('anchors the first budget to the start day chosen', () => {
+    expect(startPlan({ amountSen: 50000, period: 'week' }, '2026-10-02')).toEqual(weekly500);
+  });
+
+  it('replaces a budget that has not started yet, keeping its start day', () => {
+    const later: BudgetPlan = {
+      amountSen: 200000,
+      period: 'month',
+      anchor: '2026-12-01',
+      next: null,
+    };
+    expect(applyBudgetEdit(later, { amountSen: 50000, period: 'week' }, '2026-10-05')).toEqual({
+      amountSen: 50000,
+      period: 'week',
+      anchor: '2026-12-01',
+      next: null,
+    });
   });
 
   it('applies a new amount to the current period straight away', () => {
@@ -513,5 +531,110 @@ describe('the water tank', () => {
     const beyond = budgetBar(weekly500, [expense('2026-10-02', 160000)], '2026-10-02');
     expect(budgetTank(doubled).level).toBe(1);
     expect(budgetTank(beyond).level).toBe(1);
+  });
+});
+
+describe('choosing when the first budget starts', () => {
+  const firstLine = 'Your first week runs Mon 5 Oct – Sun 11 Oct, then repeats.';
+
+  it('describes a budget starting today', () => {
+    expect(startNotes('week', '2026-10-05', '2026-10-05')).toEqual([firstLine]);
+  });
+
+  it('says nothing is tracked before a future start', () => {
+    expect(startNotes('week', '2026-10-09', '2026-10-05')).toEqual([
+      'Your first week runs Fri 9 Oct – Thu 15 Oct, then repeats.',
+      'Nothing is tracked until Fri 9 Oct.',
+    ]);
+  });
+
+  it('counts the weeks a past start has already closed', () => {
+    expect(startNotes('week', '2026-09-21', '2026-10-05')).toEqual([
+      'Your first week runs Mon 21 Sep – Sun 27 Sep, then repeats.',
+      '2 weeks have already ended. Their leftovers become savings straight away.',
+    ]);
+  });
+
+  it('speaks of a single closed month in the singular', () => {
+    expect(startNotes('month', '2026-08-31', '2026-10-05')).toEqual([
+      'Your first month runs Mon 31 Aug – Tue 29 Sep, then repeats.',
+      '1 month has already ended. Its leftover becomes a saving straight away.',
+    ]);
+  });
+
+  it('closes the weeks before today as soon as a past start is saved', () => {
+    const plan = startPlan({ amountSen: 60000, period: 'week' }, '2026-09-21');
+    expect(missingSavings(plan, [], '2026-10-05').map((row) => row.periodStart)).toEqual([
+      '2026-09-21',
+      '2026-09-28',
+    ]);
+  });
+
+  it('closes nothing while a future start is still ahead', () => {
+    const plan = startPlan({ amountSen: 60000, period: 'week' }, '2026-10-09');
+    expect(missingSavings(plan, [], '2026-10-05')).toEqual([]);
+  });
+});
+
+describe('what the budget card shows', () => {
+  it('offers to set a budget when there is none', () => {
+    expect(budgetView(null, [], '2026-10-05')).toEqual({ kind: 'none' });
+  });
+
+  it('names the start day of a budget that has not begun', () => {
+    const later = startPlan({ amountSen: 60000, period: 'week' }, '2026-10-09');
+    expect(budgetView(later, [], '2026-10-05')).toEqual({
+      kind: 'pending',
+      note: 'Weekly budget of RM 600.00 starts Fri 9 Oct',
+    });
+  });
+
+  it('shows the running bar from the start day on', () => {
+    const later = startPlan({ amountSen: 60000, period: 'week' }, '2026-10-09');
+    expect(budgetView(later, [], '2026-10-09')).toEqual({
+      kind: 'running',
+      bar: budgetBar(later, [], '2026-10-09'),
+    });
+  });
+});
+
+describe('saved so far', () => {
+  it('adds up every Saving entry, overspent weeks included', () => {
+    const entries: Entry[] = [
+      expense('2026-10-03', 9000),
+      saving('2026-09-21', '2026-09-27', 60000, 28500),
+      saving('2026-09-28', '2026-10-04', 60000, -6000),
+      income('2026-10-01', 80000),
+    ];
+    expect(savedSoFar(entries)).toBe(22500);
+  });
+
+  it('has nothing to show before the first period closes', () => {
+    expect(savedSoFar([expense('2026-10-03', 9000)])).toBeNull();
+  });
+});
+
+describe('resetting the budget', () => {
+  it('says how many automatic Savings go with it', () => {
+    const entries: Entry[] = [
+      expense('2026-10-03', 9000),
+      saving('2026-09-21', '2026-09-27', 60000, 28500),
+      saving('2026-09-28', '2026-10-04', 60000, -6000),
+    ];
+    expect(resetNote(entries)).toBe(
+      'This deletes your budget and the 2 automatic savings it made. Your own entries stay.',
+    );
+  });
+
+  it('speaks of one Saving in the singular', () => {
+    expect(resetNote([saving('2026-09-28', '2026-10-04', 60000, 100)])).toBe(
+      'This deletes your budget and the 1 automatic saving it made. Your own entries stay.',
+    );
+  });
+
+  it('mentions no Savings before any period has closed', () => {
+    expect(resetNote([expense('2026-10-03', 9000)])).toBe(
+      'This deletes your budget. It has not made any savings yet. Your own entries stay.',
+    );
   });
 });

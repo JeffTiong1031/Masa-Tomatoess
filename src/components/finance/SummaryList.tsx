@@ -1,7 +1,13 @@
 import { formatRM } from '@/lib/financeMoney';
 import type { MonthSummary } from '@/lib/financeViews';
 
-export default function SummaryList({ summary }: { summary: MonthSummary }) {
+export default function SummaryList({
+  summary,
+  savedSen,
+}: {
+  summary: MonthSummary;
+  savedSen: number | null;
+}) {
   return (
     <div className="mt-soft grid gap-4 p-5">
       {summary.rows.length === 0 ? (
@@ -40,6 +46,14 @@ export default function SummaryList({ summary }: { summary: MonthSummary }) {
             {formatRM(summary.totalIncomeSen)}
           </dd>
         </div>
+        {savedSen !== null && (
+          <div className="flex justify-between">
+            <dt className="text-[var(--mt-text-muted)]">Saved so far</dt>
+            <dd className="font-semibold tabular-nums text-[var(--mt-text)]">
+              {formatRM(savedSen)}
+            </dd>
+          </div>
+        )}
       </dl>
     </div>
   );

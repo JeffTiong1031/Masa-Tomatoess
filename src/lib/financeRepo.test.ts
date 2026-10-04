@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => {
     'select',
     'eq',
     'is',
+    'not',
     'order',
     'range',
     'insert',
@@ -42,6 +43,7 @@ import {
   insertCategory,
   insertSavings,
   loadFinance,
+  resetBudget,
   restoreEntry,
 } from './financeRepo';
 
@@ -202,5 +204,26 @@ describe('finance cloud repository', () => {
     await expect(insertCategory('Jeff', 'expense', 'Food')).resolves.toEqual({
       status: 'duplicate',
     });
+  });
+
+  it('resets by deleting the automatic Savings before the budget itself', async () => {
+    await expect(resetBudget('Jeff')).resolves.toBe(true);
+    const entries = mocks.queryFor('finance_entries');
+    const budgets = mocks.queryFor('finance_budgets');
+    expect(mocks.from.mock.calls.map(([table]) => table)).toEqual([
+      'finance_entries',
+      'finance_budgets',
+    ]);
+    expect(entries.delete).toHaveBeenCalled();
+    expect(entries.eq).toHaveBeenCalledWith('owner', 'Jeff');
+    expect(entries.not).toHaveBeenCalledWith('period_start', 'is', null);
+    expect(budgets.delete).toHaveBeenCalled();
+    expect(budgets.eq).toHaveBeenCalledWith('owner', 'Jeff');
+  });
+
+  it('keeps the budget when its Savings could not be deleted', async () => {
+    respond('finance_entries', { error: { code: '08006' } });
+    await expect(resetBudget('Jeff')).resolves.toBe(false);
+    expect(mocks.from.mock.calls.map(([table]) => table)).toEqual(['finance_entries']);
   });
 });

@@ -387,6 +387,17 @@ export async function deleteTemplate(owner: UserName, id: string): Promise<boole
   return settled('Failed to delete a template:', error);
 }
 
+export async function resetBudget(owner: UserName): Promise<boolean> {
+  const savings = await supabase
+    .from('finance_entries')
+    .delete()
+    .eq('owner', owner)
+    .not('period_start', 'is', null);
+  if (!settled('Failed to delete the budget Savings:', savings.error)) return false;
+  const { error } = await supabase.from('finance_budgets').delete().eq('owner', owner);
+  return settled('Failed to delete the budget:', error);
+}
+
 export async function saveBudget(owner: UserName, plan: BudgetPlan): Promise<boolean> {
   const { error } = await supabase.from('finance_budgets').upsert(
     {

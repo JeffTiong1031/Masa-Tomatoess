@@ -6,7 +6,6 @@ import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import { useHasMounted } from '@/hooks/useHasMounted';
 import { formatMonthYear, malaysiaDate, monthOf, msUntilNextMalaysiaMidnight } from '@/lib/dates';
 import type {
-  BudgetPeriodKind,
   Category,
   Entry,
   EntryDraft,
@@ -17,11 +16,15 @@ import type {
 import {
   allSavingRecalcs,
   applyBudgetEdit,
-  budgetBar,
+  budgetView,
   foldPlan,
   missingSavings,
+  resetNote,
+  savedSoFar,
   savingRecalcs,
+  startPlan,
   withSavingUpdates,
+  type BudgetEdit,
 } from '@/lib/financeBudget';
 import { monthSpan } from '@/lib/financeMonths';
 import {
@@ -35,6 +38,7 @@ import {
   insertTemplate,
   loadFinance,
   renameCategory,
+  resetBudget,
   restoreCategory,
   restoreEntry,
   saveBudget,
@@ -70,6 +74,7 @@ type Dialog =
   | { kind: 'add' }
   | { kind: 'edit'; entry: HandEntry }
   | { kind: 'budget' }
+  | { kind: 'reset' }
   | { kind: 'categories' }
   | { kind: 'archive'; category: Category };
 
@@ -283,19 +288,26 @@ export default function FinanceBoard() {
     }
   };
 
-  const saveBudgetEdit = async (
-    amountSen: number,
-    period: BudgetPeriodKind,
-  ): Promise<string | null> => {
+  const saveBudgetEdit = async (edit: BudgetEdit, start: string): Promise<string | null> => {
     const fresh = await loadFinance(owner);
     if (fresh.status !== 'ok') return OFFLINE;
     if ((await settle(owner, fresh.data, today)) === 'failed') {
       return 'Could not close the last budget period first, so the budget was not changed. Check your connection.';
     }
-    const plan = applyBudgetEdit(fresh.data.plan, { amountSen, period }, today);
+    const plan =
+      fresh.data.plan === null
+        ? startPlan(edit, start)
+        : applyBudgetEdit(fresh.data.plan, edit, today);
     if (!(await saveBudget(owner, plan))) return OFFLINE;
     await load(owner, today);
     return null;
+  };
+
+  const clearBudget = async () => {
+    setDialog(null);
+    const cleared = await resetBudget(owner);
+    await load(owner, today);
+    if (!cleared) setNotice('Could not reset the budget. Check your connection and try again.');
   };
 
   if (!mounted) return null;
@@ -329,7 +341,7 @@ export default function FinanceBoard() {
       ) : (
         <>
           <BudgetBar
-            bar={data.plan === null ? null : budgetBar(data.plan, data.entries, today)}
+            view={budgetView(data.plan, data.entries, today)}
             onEdit={() => setDialog({ kind: 'budget' })}
           />
           <MonthPicker
@@ -357,7 +369,10 @@ export default function FinanceBoard() {
               onDelete={removeEntry}
             />
           ) : (
-            <SummaryList summary={monthSummary(data.entries, data.categories, month)} />
+            <SummaryList
+              summary={monthSummary(data.entries, data.categories, month)}
+              savedSen={savedSoFar(data.entries)}
+            />
           )}
         </>
       )}
@@ -397,6 +412,7 @@ export default function FinanceBoard() {
           today={today}
           onClose={() => setDialog(null)}
           onSave={saveBudgetEdit}
+          onReset={() => setDialog({ kind: 'reset' })}
         />
       )}
 
@@ -412,6 +428,17 @@ export default function FinanceBoard() {
           onRestore={async (category) => keepCategory(await restoreCategory(owner, category.id))}
         />
       )}
+
+      <ConfirmDialog
+        open={dialog?.kind === 'reset'}
+        title="Reset budget?"
+        body={resetNote(data.entries)}
+        onDismiss={() => setDialog({ kind: 'budget' })}
+        choices={[
+          { label: 'Cancel', tone: 'plain', onPick: () => setDialog({ kind: 'budget' }) },
+          { label: 'Reset', tone: 'danger', onPick: clearBudget },
+        ]}
+      />
 
       <ConfirmDialog
         open={dialog?.kind === 'archive'}
