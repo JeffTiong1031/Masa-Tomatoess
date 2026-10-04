@@ -21,6 +21,11 @@ export interface BudgetBar {
   switchNote: string | null;
 }
 
+export type BudgetView =
+  | { kind: 'none' }
+  | { kind: 'pending'; note: string }
+  | { kind: 'running'; bar: BudgetBar };
+
 export interface BudgetEdit {
   amountSen: number;
   period: BudgetPeriodKind;
@@ -115,6 +120,21 @@ export function budgetBar(plan: BudgetPlan, entries: Entry[], today: string): Bu
   };
 }
 
+export function budgetView(
+  plan: BudgetPlan | null,
+  entries: Entry[],
+  today: string,
+): BudgetView {
+  if (plan === null) return { kind: 'none' };
+  if (today < plan.anchor) {
+    return {
+      kind: 'pending',
+      note: `${PERIOD_NAME[plan.period]} budget of ${formatRM(plan.amountSen)} starts ${formatLongDate(plan.anchor)}`,
+    };
+  }
+  return { kind: 'running', bar: budgetBar(plan, entries, today) };
+}
+
 function daysLeftText(daysLeft: number): string {
   return daysLeft === 1 ? '1 day left' : `${daysLeft} days left`;
 }
@@ -172,14 +192,30 @@ export function foldPlan(plan: BudgetPlan, today: string): BudgetPlan {
   };
 }
 
-export function applyBudgetEdit(
-  plan: BudgetPlan | null,
-  edit: BudgetEdit,
-  today: string,
-): BudgetPlan {
-  if (plan === null) {
-    return { amountSen: edit.amountSen, period: edit.period, anchor: today, next: null };
+export function startPlan(edit: BudgetEdit, start: string): BudgetPlan {
+  return { amountSen: edit.amountSen, period: edit.period, anchor: start, next: null };
+}
+
+const PERIOD_NOUN: Record<BudgetPeriodKind, string> = { week: 'week', month: 'month' };
+
+export function startNotes(kind: BudgetPeriodKind, start: string, today: string): string[] {
+  const noun = PERIOD_NOUN[kind];
+  const first = periodAt(kind, start, start);
+  const opening = `Your first ${noun} runs ${formatLongDate(first.start)} – ${formatLongDate(first.end)}, then repeats.`;
+  if (start > today) return [opening, `Nothing is tracked until ${formatLongDate(start)}.`];
+  const ended = closedPeriods(startPlan({ amountSen: 0, period: kind }, start), today).length;
+  if (ended === 0) return [opening];
+  if (ended === 1) {
+    return [opening, `1 ${noun} has already ended. Its leftover becomes a saving straight away.`];
   }
+  return [
+    opening,
+    `${ended} ${noun}s have already ended. Their leftovers become savings straight away.`,
+  ];
+}
+
+export function applyBudgetEdit(plan: BudgetPlan, edit: BudgetEdit, today: string): BudgetPlan {
+  if (today < plan.anchor) return startPlan(edit, plan.anchor);
   const current = foldPlan(plan, today);
   if (edit.period === current.period) {
     return { ...current, amountSen: edit.amountSen, next: null };
@@ -219,6 +255,21 @@ export function missingSavings(
       periodStart: period.start,
       budgetSen: period.amountSen,
     }));
+}
+
+export function savedSoFar(entries: Entry[]): number | null {
+  const savings = savingsOf(entries);
+  if (savings.length === 0) return null;
+  return savings.reduce((sum, entry) => sum + entry.amountSen, 0);
+}
+
+export function resetNote(entries: Entry[]): string {
+  const count = savingsOf(entries).length;
+  if (count === 0) {
+    return 'This deletes your budget. It has not made any savings yet. Your own entries stay.';
+  }
+  const savings = count === 1 ? '1 automatic saving' : `${count} automatic savings`;
+  return `This deletes your budget and the ${savings} it made. Your own entries stay.`;
 }
 
 function recalc(entries: Entry[], savings: SavingEntry[]): SavingUpdate[] {
