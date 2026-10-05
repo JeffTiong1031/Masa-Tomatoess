@@ -13,10 +13,19 @@ function amountText(entry: Entry): string {
   return entry.amountSen < 0 ? formatRM(entry.amountSen) : `+${formatRM(entry.amountSen)}`;
 }
 
-function Body({ entry, categoryName }: { entry: Entry; categoryName: string }) {
+function Body({
+  entry,
+  categoryName,
+  fill,
+}: {
+  entry: Entry;
+  categoryName: string;
+  fill: string;
+}) {
   const { title, subtitle } = entryLines(entry, categoryName);
   return (
-    <div className="grid grid-cols-[1fr_auto] items-center gap-3 px-4 py-2.5">
+    <div className="grid grid-cols-[auto_1fr_auto] items-center gap-3 px-4 py-2.5">
+      <span aria-hidden className="h-2.5 w-2.5 rounded-full" style={{ background: fill }} />
       <div className="min-w-0">
         <div className="flex items-center gap-2 text-sm text-[var(--mt-text)]">
           <span className="truncate">{title}</span>
@@ -40,11 +49,13 @@ function Body({ entry, categoryName }: { entry: Entry; categoryName: string }) {
 function SwipeRow({
   entry,
   categoryName,
+  fill,
   onEdit,
   onDelete,
 }: {
   entry: HandEntry;
   categoryName: string;
+  fill: string;
   onEdit: (entry: HandEntry) => void;
   onDelete: (entry: HandEntry) => void;
 }) {
@@ -102,7 +113,7 @@ function SwipeRow({
           setOffset(0);
         }}
       >
-        <Body entry={entry} categoryName={categoryName} />
+        <Body entry={entry} categoryName={categoryName} fill={fill} />
       </div>
     </li>
   );
@@ -111,20 +122,30 @@ function SwipeRow({
 export default function EntryRow({
   entry,
   categoryName,
+  fill,
   onEdit,
   onDelete,
 }: {
   entry: Entry;
   categoryName: string;
+  fill: string;
   onEdit: (entry: HandEntry) => void;
   onDelete: (entry: HandEntry) => void;
 }) {
   if (entry.source === 'saving') {
     return (
       <li>
-        <Body entry={entry} categoryName={categoryName} />
+        <Body entry={entry} categoryName={categoryName} fill={fill} />
       </li>
     );
   }
-  return <SwipeRow entry={entry} categoryName={categoryName} onEdit={onEdit} onDelete={onDelete} />;
+  return (
+    <SwipeRow
+      entry={entry}
+      categoryName={categoryName}
+      fill={fill}
+      onEdit={onEdit}
+      onDelete={onDelete}
+    />
+  );
 }

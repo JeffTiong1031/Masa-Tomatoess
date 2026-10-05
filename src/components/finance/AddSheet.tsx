@@ -3,12 +3,14 @@
 import { useEffect, useState } from 'react';
 import { Check, Plus } from 'lucide-react';
 import Modal from '@/components/ui/Modal';
+import type { ColourSwatch } from '@/lib/colourPalette';
 import { addDays } from '@/lib/dates';
 import type { Category, EntryDraft, EntryKind, HandEntry, Template } from '@/lib/finance';
 import { inputToSen, senToInput } from '@/lib/financeMoney';
 import type { CategoryWrite } from '@/lib/financeRepo';
 import AmountKeypad from './AmountKeypad';
 import Segmented from './Segmented';
+import SwatchPicker from './SwatchPicker';
 import TemplateChips from './TemplateChips';
 
 export type SheetMode = { kind: 'add' } | { kind: 'edit'; entry: HandEntry };
@@ -33,6 +35,10 @@ function chipClass(chosen: boolean): string {
   }`;
 }
 
+function ChipDot({ fill }: { fill: string }) {
+  return <span aria-hidden className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: fill }} />;
+}
+
 function initialChoice(date: string, today: string): DateChoice {
   if (date === today) return 'today';
   return date === addDays(today, -1) ? 'yesterday' : 'pick';
@@ -44,6 +50,9 @@ export default function AddSheet({
   categoriesFor,
   templates,
   names,
+  fills,
+  swatches,
+  suggested,
   onClose,
   onSave,
   onDelete,
@@ -57,13 +66,20 @@ export default function AddSheet({
   categoriesFor: (kind: EntryKind) => Category[];
   templates: Template[];
   names: Map<string, string>;
+  fills: Map<string, string>;
+  swatches: ColourSwatch[];
+  suggested: string | null;
   onClose: () => void;
   onSave: (draft: EntryDraft) => Promise<boolean>;
   onDelete: (entry: HandEntry) => void;
   onUseTemplate: (template: Template, date: string) => Promise<boolean>;
   onAddTemplate: (template: Omit<Template, 'id'>) => Promise<boolean>;
   onDeleteTemplate: (template: Template) => void;
-  onAddCategory: (kind: EntryKind, name: string) => Promise<CategoryWrite>;
+  onAddCategory: (
+    kind: EntryKind,
+    name: string,
+    swatchId: string | null,
+  ) => Promise<CategoryWrite>;
 }) {
   const editing = mode.kind === 'edit' ? mode.entry : null;
   const [kind, setKind] = useState<EntryKind>(editing?.kind ?? 'expense');
@@ -75,6 +91,7 @@ export default function AddSheet({
   const [picked, setPicked] = useState(editing?.date ?? today);
   const [note, setNote] = useState(editing?.note ?? '');
   const [newName, setNewName] = useState<string | null>(null);
+  const [newColour, setNewColour] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
@@ -135,10 +152,11 @@ export default function AddSheet({
 
   const createCategory = async () => {
     if (newName === null || newName.trim() === '') return;
-    const result = await onAddCategory(kind, newName);
+    const result = await onAddCategory(kind, newName, newColour ?? suggested);
     if (result.status === 'ok') {
       setCategoryId(result.category.id);
       setNewName(null);
+      setNewColour(null);
       return;
     }
     setProblem(
@@ -237,11 +255,15 @@ export default function AddSheet({
                 onClick={() => setCategoryId(category.id)}
                 className={chipClass(category.id === categoryId)}
               >
+                <ChipDot fill={fills.get(category.id)!} />
                 {category.name}
               </button>
             ))}
             {editing !== null && !categories.some((c) => c.id === categoryId) && categoryId !== null && (
-              <span className={chipClass(true)}>{names.get(categoryId)}</span>
+              <span className={chipClass(true)}>
+                <ChipDot fill={fills.get(categoryId)!} />
+                {names.get(categoryId)}
+              </span>
             )}
             {newName === null ? (
               <button type="button" onClick={() => setNewName('')} className={chipClass(false)}>
@@ -249,26 +271,33 @@ export default function AddSheet({
               </button>
             ) : (
               <form
-                className="flex w-full gap-2"
+                className="grid w-full gap-3"
                 onSubmit={(event) => {
                   event.preventDefault();
                   createCategory();
                 }}
               >
-                <input
-                  autoFocus
-                  aria-label="New category name"
-                  value={newName}
-                  onChange={(event) => setNewName(event.target.value)}
-                  className={field}
-                  placeholder="e.g. Food"
+                <div className="flex gap-2">
+                  <input
+                    autoFocus
+                    aria-label="New category name"
+                    value={newName}
+                    onChange={(event) => setNewName(event.target.value)}
+                    className={field}
+                    placeholder="e.g. Food"
+                  />
+                  <button
+                    type="submit"
+                    className="min-h-11 rounded-xl bg-[var(--mt-accent)] px-4 text-sm font-semibold text-[var(--mt-accent-contrast)]"
+                  >
+                    Add
+                  </button>
+                </div>
+                <SwatchPicker
+                  swatches={swatches}
+                  value={newColour ?? suggested}
+                  onChange={setNewColour}
                 />
-                <button
-                  type="submit"
-                  className="min-h-11 rounded-xl bg-[var(--mt-accent)] px-4 text-sm font-semibold text-[var(--mt-accent-contrast)]"
-                >
-                  Add
-                </button>
               </form>
             )}
           </div>

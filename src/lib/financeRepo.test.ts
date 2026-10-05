@@ -39,6 +39,7 @@ vi.mock('./supabase', () => ({ supabase: { from: mocks.from } }));
 
 import {
   ENTRY_PAGE,
+  editCategory,
   ensureSaving,
   insertCategory,
   insertSavings,
@@ -201,9 +202,63 @@ describe('finance cloud repository', () => {
 
   it('tells a clashing category name apart from a failure', async () => {
     respond('finance_categories', { data: null, error: { code: '23505' } });
-    await expect(insertCategory('Jeff', 'expense', 'Food')).resolves.toEqual({
+    await expect(insertCategory('Jeff', 'expense', 'Food', 'red')).resolves.toEqual({
       status: 'duplicate',
     });
+  });
+
+  it('saves the colour picked for a new category and reads it back', async () => {
+    respond('finance_categories', {
+      data: {
+        id: 'food',
+        kind: 'expense',
+        name: 'Food',
+        system: null,
+        archived_at: null,
+        swatch_id: 'red',
+      },
+      error: null,
+    });
+    await expect(insertCategory('Jeff', 'expense', ' Food ', 'red')).resolves.toEqual({
+      status: 'ok',
+      category: {
+        id: 'food',
+        kind: 'expense',
+        name: 'Food',
+        system: null,
+        archived: false,
+        swatchId: 'red',
+      },
+    });
+    expect(mocks.queryFor('finance_categories').insert).toHaveBeenCalledWith({
+      owner: 'Jeff',
+      kind: 'expense',
+      name: 'Food',
+      swatch_id: 'red',
+    });
+  });
+
+  it('changes a category name and colour together, never the Saving one', async () => {
+    respond('finance_categories', {
+      data: {
+        id: 'food',
+        kind: 'expense',
+        name: 'Meals',
+        system: null,
+        archived_at: null,
+        swatch_id: 'teal',
+      },
+      error: null,
+    });
+    await expect(editCategory('Jeff', 'food', ' Meals ', 'teal')).resolves.toMatchObject({
+      status: 'ok',
+      category: { name: 'Meals', swatchId: 'teal' },
+    });
+    const query = mocks.queryFor('finance_categories');
+    expect(query.update).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'Meals', swatch_id: 'teal' }),
+    );
+    expect(query.is).toHaveBeenCalledWith('system', null);
   });
 
   it('resets by deleting the automatic Savings before the budget itself', async () => {

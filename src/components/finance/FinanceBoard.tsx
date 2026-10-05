@@ -4,6 +4,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Plus, Tags } from 'lucide-react';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import { useHasMounted } from '@/hooks/useHasMounted';
+import type { ColourSwatch } from '@/lib/colourPalette';
+import { fetchPalette, insertSwatch } from '@/lib/colourRepo';
 import { formatMonthYear, malaysiaDate, monthOf, msUntilNextMalaysiaMidnight } from '@/lib/dates';
 import type {
   Category,
@@ -26,10 +28,12 @@ import {
   withSavingUpdates,
   type BudgetEdit,
 } from '@/lib/financeBudget';
+import { categoryFills, suggestedSwatch } from '@/lib/financeColours';
 import { monthSpan } from '@/lib/financeMonths';
 import {
   archiveCategory,
   deleteEntry,
+  editCategory,
   deleteTemplate,
   ensureSaving,
   insertCategory,
@@ -37,7 +41,6 @@ import {
   insertSavings,
   insertTemplate,
   loadFinance,
-  renameCategory,
   resetBudget,
   restoreCategory,
   restoreEntry,
@@ -125,6 +128,7 @@ export default function FinanceBoard() {
   const [today, setToday] = useState('');
   const [status, setStatus] = useState<Status>('loading');
   const [data, setData] = useState<FinanceData>(EMPTY);
+  const [swatches, setSwatches] = useState<ColourSwatch[]>([]);
   const [chosenMonth, setChosenMonth] = useState<string | null>(null);
   const [view, setView] = useState<View>('daily');
   const [dialog, setDialog] = useState<Dialog | null>(null);
@@ -141,7 +145,8 @@ export default function FinanceBoard() {
       setStatus('error');
       return;
     }
-    let result = await loadFinance(who);
+    const [first, palette] = await Promise.all([loadFinance(who), fetchPalette(who, 'finance')]);
+    let result = first;
     if (result.status !== 'ok') {
       setStatus(result.status);
       return;
@@ -152,11 +157,14 @@ export default function FinanceBoard() {
       if (again.status === 'ok') result = again;
     }
     setData(result.data);
+    setSwatches(palette ?? []);
     setStatus('ok');
     setNotice(
       outcome === 'failed'
         ? 'Could not close the last budget period. It will try again next time.'
-        : null,
+        : palette === null
+          ? 'Could not load your category colours. Check your connection.'
+          : null,
     );
   }, []);
 
@@ -190,6 +198,16 @@ export default function FinanceBoard() {
   const names = useMemo(
     () => new Map(data.categories.map((category) => [category.id, category.name])),
     [data.categories],
+  );
+
+  const fills = useMemo(
+    () => categoryFills(data.categories, swatches),
+    [data.categories, swatches],
+  );
+
+  const suggested = useMemo(
+    () => suggestedSwatch(swatches, data.categories),
+    [swatches, data.categories],
   );
 
   const recalcAfter = async (entries: Entry[], dates: string[]) => {
@@ -261,8 +279,14 @@ export default function FinanceBoard() {
     return result;
   };
 
-  const addCategory = async (kind: EntryKind, name: string) =>
-    keepCategory(await insertCategory(owner, kind, name));
+  const addCategory = async (kind: EntryKind, name: string, swatchId: string | null) =>
+    keepCategory(await insertCategory(owner, kind, name, swatchId));
+
+  const addColour = async (fill: string) => {
+    const created = await insertSwatch(owner, 'finance', fill, null);
+    if (created !== null) setSwatches((current) => [...current, created]);
+    return created;
+  };
 
   const archive = async (category: Category) => {
     const result = keepCategory(await archiveCategory(owner, category.id));
@@ -365,12 +389,14 @@ export default function FinanceBoard() {
               groups={dailyGroups(data.entries, month, today)}
               emptyText={`Nothing logged in ${formatMonthYear(month)}.`}
               names={names}
+              fills={fills}
               onEdit={(entry) => setDialog({ kind: 'edit', entry })}
               onDelete={removeEntry}
             />
           ) : (
             <SummaryList
               summary={monthSummary(data.entries, data.categories, month)}
+              fills={fills}
               savedSen={savedSoFar(data.entries)}
             />
           )}
@@ -396,6 +422,9 @@ export default function FinanceBoard() {
           categoriesFor={(kind) => categoriesByUse(data.categories, data.entries, kind)}
           templates={liveTemplates(data.templates, data.categories)}
           names={names}
+          fills={fills}
+          swatches={swatches}
+          suggested={suggested}
           onClose={() => setDialog(null)}
           onSave={saveDraft}
           onDelete={removeEntry}
@@ -419,11 +448,15 @@ export default function FinanceBoard() {
       {dialog?.kind === 'categories' && (
         <CategorySheet
           categories={data.categories}
+          swatches={swatches}
+          fills={fills}
+          suggested={suggested}
           onClose={() => setDialog(null)}
           onAdd={addCategory}
-          onRename={async (category, name) =>
-            keepCategory(await renameCategory(owner, category.id, name))
+          onEdit={async (category, name, swatchId) =>
+            keepCategory(await editCategory(owner, category.id, name, swatchId))
           }
+          onAddColour={addColour}
           onArchive={(category) => setDialog({ kind: 'archive', category })}
           onRestore={async (category) => keepCategory(await restoreCategory(owner, category.id))}
         />
