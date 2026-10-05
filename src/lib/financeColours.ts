@@ -1,7 +1,7 @@
 import type { ColourSwatch } from './colourPalette';
 import type { Category } from './finance';
 
-export const SAVING_FILL = 'var(--mt-budget-calm)';
+export const SAVING_FILL = 'var(--mt-finance-saving)';
 export const UNPAINTED_FILL = 'var(--mt-text-muted)';
 
 function fillOf(category: Category, paints: Map<string, string>): string {
