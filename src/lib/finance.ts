@@ -8,6 +8,7 @@ export interface Category {
   name: string;
   system: 'saving' | null;
   archived: boolean;
+  swatchId: string | null;
 }
 
 interface EntryBase {

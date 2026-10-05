@@ -1,4 +1,4 @@
-export type PaletteKind = 'timetable' | 'calendar';
+export type PaletteKind = 'timetable' | 'calendar' | 'finance';
 
 export interface ColourSwatch {
   id: string;

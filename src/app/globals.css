@@ -86,6 +86,7 @@
 
   --mac-accent-finance-deep: #4F7EBD;
   --mac-budget-warn: #9C772C;
+  --mac-saving-gold: #A68A00;
 
   /* The light pair is measured against what the rank text ACTUALLY sits
      on, which is not the white card: a leaderboard row tints the card,
@@ -212,6 +213,7 @@ body {
   --mt-accent-meals-deep: var(--mac-accent-meals-deep);
   --mt-budget-calm: var(--mac-accent-finance-deep);
   --mt-budget-warn: var(--mac-budget-warn);
+  --mt-finance-saving: var(--mac-saving-gold);
   --mt-budget-over: var(--mt-danger);
   --mt-budget-water-calm: var(--mac-accent-finance);
   --mt-budget-water-warn: var(--mac-accent-flexible);
@@ -259,6 +261,7 @@ body {
   --mt-accent-meals-deep: var(--mac-accent-meals-deep);
   --mt-budget-calm: var(--mac-accent-finance-deep);
   --mt-budget-warn: var(--mac-budget-warn);
+  --mt-finance-saving: var(--mac-saving-gold);
   --mt-budget-over: var(--mt-danger);
   --mt-budget-water-calm: var(--mac-accent-finance);
   --mt-budget-water-warn: var(--mac-accent-flexible);

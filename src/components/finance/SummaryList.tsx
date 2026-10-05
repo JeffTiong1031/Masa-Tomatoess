@@ -3,9 +3,11 @@ import type { MonthSummary } from '@/lib/financeViews';
 
 export default function SummaryList({
   summary,
+  fills,
   savedSen,
 }: {
   summary: MonthSummary;
+  fills: Map<string, string>;
   savedSen: number | null;
 }) {
   return (
@@ -26,7 +28,7 @@ export default function SummaryList({
               <div className="h-1.5 overflow-hidden rounded-full bg-[var(--mt-border)]" aria-hidden>
                 <div
                   className="h-full rounded-full"
-                  style={{ width: `${row.percent}%`, background: 'var(--mt-budget-calm)' }}
+                  style={{ width: `${row.percent}%`, background: fills.get(row.categoryId) }}
                 />
               </div>
             </li>

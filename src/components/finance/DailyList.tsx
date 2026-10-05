@@ -13,12 +13,14 @@ export default function DailyList({
   groups,
   emptyText,
   names,
+  fills,
   onEdit,
   onDelete,
 }: {
   groups: DayGroup[];
   emptyText: string;
   names: Map<string, string>;
+  fills: Map<string, string>;
   onEdit: (entry: HandEntry) => void;
   onDelete: (entry: HandEntry) => void;
 }) {
@@ -49,6 +51,7 @@ export default function DailyList({
                 key={entry.id}
                 entry={entry}
                 categoryName={names.get(entry.categoryId)!}
+                fill={fills.get(entry.categoryId)!}
                 onEdit={onEdit}
                 onDelete={onDelete}
               />

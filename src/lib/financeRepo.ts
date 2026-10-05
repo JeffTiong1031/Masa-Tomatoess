@@ -19,7 +19,7 @@ export const ENTRY_PAGE = 1000;
 const MISSING_TABLE_CODES = ['42P01', 'PGRST205'];
 const DUPLICATE_CODE = '23505';
 
-const CATEGORY_COLUMNS = 'id, kind, name, system, archived_at';
+const CATEGORY_COLUMNS = 'id, kind, name, system, archived_at, swatch_id';
 const ENTRY_COLUMNS =
   'id, kind, amount_sen, category_id, date, note, period_start, budget_sen, created_at';
 const TEMPLATE_COLUMNS = 'id, kind, label, amount_sen, category_id';
@@ -31,6 +31,7 @@ interface CategoryRow {
   name: string;
   system: 'saving' | null;
   archived_at: string | null;
+  swatch_id: string | null;
 }
 
 interface EntryRow {
@@ -86,6 +87,7 @@ function toCategory(row: CategoryRow): Category {
     name: row.name,
     system: row.system,
     archived: row.archived_at !== null,
+    swatchId: row.swatch_id,
   };
 }
 
@@ -316,10 +318,11 @@ export async function insertCategory(
   owner: UserName,
   kind: EntryKind,
   name: string,
+  swatchId: string | null,
 ): Promise<CategoryWrite> {
   const { data, error } = await supabase
     .from('finance_categories')
-    .insert({ owner, kind, name: name.trim() })
+    .insert({ owner, kind, name: name.trim(), swatch_id: swatchId })
     .select(CATEGORY_COLUMNS)
     .single();
   return categoryResult('Failed to add a category:', data, error);
@@ -328,7 +331,7 @@ export async function insertCategory(
 async function changeCategory(
   owner: UserName,
   id: string,
-  change: { name?: string; archived_at?: string | null },
+  change: { name?: string; swatch_id?: string | null; archived_at?: string | null },
   label: string,
 ): Promise<CategoryWrite> {
   const { data, error } = await supabase
@@ -342,8 +345,13 @@ async function changeCategory(
   return categoryResult(label, data, error);
 }
 
-export function renameCategory(owner: UserName, id: string, name: string) {
-  return changeCategory(owner, id, { name: name.trim() }, 'Failed to rename a category:');
+export function editCategory(owner: UserName, id: string, name: string, swatchId: string | null) {
+  return changeCategory(
+    owner,
+    id,
+    { name: name.trim(), swatch_id: swatchId },
+    'Failed to change a category:',
+  );
 }
 
 export function archiveCategory(owner: UserName, id: string) {

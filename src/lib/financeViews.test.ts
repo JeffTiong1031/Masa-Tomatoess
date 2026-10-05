@@ -9,12 +9,12 @@ import {
 } from './financeViews';
 
 const categories: Category[] = [
-  { id: 'food', kind: 'expense', name: 'Food', system: null, archived: false },
-  { id: 'bills', kind: 'expense', name: 'Bills', system: null, archived: false },
-  { id: 'fun', kind: 'expense', name: 'Fun', system: null, archived: true },
-  { id: 'travel', kind: 'expense', name: 'Travel', system: null, archived: false },
-  { id: 'pay', kind: 'income', name: 'Pay', system: null, archived: false },
-  { id: 'saving', kind: 'income', name: 'Saving', system: 'saving', archived: false },
+  { id: 'food', kind: 'expense', name: 'Food', system: null, archived: false, swatchId: null },
+  { id: 'bills', kind: 'expense', name: 'Bills', system: null, archived: false, swatchId: null },
+  { id: 'fun', kind: 'expense', name: 'Fun', system: null, archived: true, swatchId: null },
+  { id: 'travel', kind: 'expense', name: 'Travel', system: null, archived: false, swatchId: null },
+  { id: 'pay', kind: 'income', name: 'Pay', system: null, archived: false, swatchId: null },
+  { id: 'saving', kind: 'income', name: 'Saving', system: 'saving', archived: false, swatchId: null },
 ];
 
 function entry(

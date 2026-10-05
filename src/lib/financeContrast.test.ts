@@ -2,6 +2,8 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { contrastRatio, deltaE76, hueDistance } from './color';
+import { STARTER_FILLS } from './colourPalette';
+import { SAVING_FILL } from './financeColours';
 
 const CSS = readFileSync(
   path.resolve(process.cwd(), 'src/app/globals.css'),
@@ -82,4 +84,31 @@ describe('budget bar colours', () => {
       expect(block).toContain('--mt-budget-over: var(--mt-danger);');
     },
   );
+});
+
+describe('Saving dot colour', () => {
+  const semantic = /^var\((--mt-[a-z-]+)\)$/.exec(SAVING_FILL)![1];
+  const raw = new RegExp(`${semantic}:\\s*var\\((--mac-[a-z-]+)\\)`).exec(moodBlock('light'))![1];
+  const fill = readToken(raw);
+
+  it('pins the Saving fill', () => {
+    expect(fill).toBe('#A68A00');
+  });
+
+  it('stands apart from every starting palette colour a category can pick', () => {
+    for (const starter of STARTER_FILLS) {
+      expect(deltaE76(fill, starter), `${fill} vs ${starter}`).toBeGreaterThanOrEqual(
+        MIN_SEPARATION,
+      );
+    }
+  });
+
+  it('reads as a dot on the white card and the cream page', () => {
+    expect(contrastRatio(fill, readToken('--mac-white'))).toBeGreaterThanOrEqual(MIN_BAR_CONTRAST);
+    expect(contrastRatio(fill, readToken('--mac-cream'))).toBeGreaterThanOrEqual(MIN_BAR_CONTRAST);
+  });
+
+  it.each(['light', 'dark'] as const)('wires the %s mood token', (mood) => {
+    expect(moodBlock(mood)).toContain(`${semantic}: var(${raw});`);
+  });
 });

@@ -61,7 +61,7 @@ function SwatchAddSheetOpen({
   const [text, setText] = useState(initialText ?? DEFAULT_TEXT);
 
   const save = () => {
-    onConfirm(fill, kind === 'calendar' ? null : text);
+    onConfirm(fill, kind === 'timetable' ? text : null);
   };
 
   return (
@@ -89,7 +89,7 @@ function SwatchAddSheetOpen({
         </div>
       }
     >
-      {kind === 'calendar' ? (
+      {kind !== 'timetable' ? (
         <ColourWheel value={fill} onChange={setFill} />
       ) : (
         <div className="flex flex-col gap-5">
