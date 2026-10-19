@@ -75,7 +75,7 @@ describe('the month summary', () => {
         { categoryId: 'fun', name: 'Fun', spentSen: 2300, percent: 8 },
       ],
       totalSpentSen: 30000,
-      totalIncomeSen: 300000 - 4050,
+      totalIncomeSen: 300000,
     });
   });
 

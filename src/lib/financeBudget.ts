@@ -13,6 +13,7 @@ export type BudgetTone = 'calm' | 'warning' | 'over';
 
 export interface BudgetBar {
   period: BudgetPeriod;
+  budgetSen: number;
   spentSen: number;
   leftSen: number;
   daysLeft: number;
@@ -95,6 +96,22 @@ function spentIn(entries: Entry[], start: string, end: string): number {
     .reduce((sum, entry) => sum + entry.amountSen, 0);
 }
 
+function earnedIn(entries: Entry[], start: string, end: string): number {
+  return entries
+    .filter(
+      (entry) =>
+        entry.source === 'hand' &&
+        entry.kind === 'income' &&
+        entry.date >= start &&
+        entry.date <= end,
+    )
+    .reduce((sum, entry) => sum + entry.amountSen, 0);
+}
+
+function leftIn(entries: Entry[], budgetSen: number, start: string, end: string): number {
+  return budgetSen + earnedIn(entries, start, end) - spentIn(entries, start, end);
+}
+
 function toneFor(amountSen: number, spentSen: number): BudgetTone {
   if (spentSen > amountSen) return 'over';
   return (amountSen - spentSen) * 4 <= amountSen ? 'warning' : 'calm';
@@ -102,17 +119,19 @@ function toneFor(amountSen: number, spentSen: number): BudgetTone {
 
 export function budgetBar(plan: BudgetPlan, entries: Entry[], today: string): BudgetBar {
   const period = periodContaining(plan, today);
+  const budgetSen = period.amountSen + earnedIn(entries, period.start, period.end);
   const spentSen = spentIn(entries, period.start, period.end);
-  const leftSen = period.amountSen - spentSen;
+  const leftSen = budgetSen - spentSen;
   const daysLeft = diffDays(period.end, today) + 1;
   const pending = plan.next !== null && today < plan.next.from ? plan.next : null;
   return {
     period,
+    budgetSen,
     spentSen,
     leftSen,
     daysLeft,
     perDaySen: leftSen > 0 ? Math.floor(leftSen / daysLeft) : 0,
-    tone: toneFor(period.amountSen, spentSen),
+    tone: toneFor(budgetSen, spentSen),
     switchNote:
       pending === null
         ? null
@@ -160,10 +179,10 @@ export interface BudgetTank {
 }
 
 export function budgetTank(bar: BudgetBar): BudgetTank {
-  const budget = formatRM(bar.period.amountSen);
+  const budget = formatRM(bar.budgetSen);
   const over = bar.leftSen < 0;
   return {
-    level: Math.min(Math.abs(bar.leftSen) / bar.period.amountSen, 1),
+    level: Math.min(Math.abs(bar.leftSen) / bar.budgetSen, 1),
     amount: formatRM(Math.abs(bar.leftSen)),
     caption: over ? `over the ${budget} budget` : `left of ${budget}`,
     stats: [
@@ -250,7 +269,7 @@ export function missingSavings(
   return closedPeriods(plan, today)
     .filter((period) => !settled.has(period.start))
     .map((period) => ({
-      amountSen: period.amountSen - spentIn(entries, period.start, period.end),
+      amountSen: leftIn(entries, period.amountSen, period.start, period.end),
       date: period.end,
       periodStart: period.start,
       budgetSen: period.amountSen,
@@ -277,7 +296,7 @@ function recalc(entries: Entry[], savings: SavingEntry[]): SavingUpdate[] {
     .map((entry) => ({
       id: entry.id,
       was: entry.amountSen,
-      amountSen: entry.budgetSen - spentIn(entries, entry.periodStart, entry.date),
+      amountSen: leftIn(entries, entry.budgetSen, entry.periodStart, entry.date),
     }))
     .filter((update) => update.amountSen !== update.was)
     .map(({ id, amountSen }) => ({ id, amountSen }));

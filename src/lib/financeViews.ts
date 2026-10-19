@@ -79,7 +79,8 @@ export function monthSummary(
       percent: Math.round((spentSen * 100) / totalSpentSen),
     }))
     .sort((a, b) => b.spentSen - a.spentSen || a.name.localeCompare(b.name));
-  return { rows, totalSpentSen, totalIncomeSen: sumOf(monthEntries, 'income') };
+  const handEntries = monthEntries.filter((entry) => entry.source === 'hand');
+  return { rows, totalSpentSen, totalIncomeSen: sumOf(handEntries, 'income') };
 }
 
 export function categoriesByUse(

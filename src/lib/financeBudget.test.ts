@@ -175,13 +175,36 @@ describe('the budget bar', () => {
     expect(bar.tone).toBe('calm');
   });
 
-  it('counts every expense and no income, Saving included', () => {
+  it('counts every expense as spent and no income, Saving included', () => {
     const entries = [
       expense('2026-10-03', 10000),
       income('2026-10-03', 900000),
       saving('2026-09-25', '2026-10-01', 50000, 50000),
     ];
     expect(budgetBar(weekly500, entries, '2026-10-04').spentSen).toBe(10000);
+  });
+
+  it('adds income from the same period to the money left', () => {
+    const entries = [expense('2026-10-03', 30000), income('2026-10-04', 3690)];
+    const bar = budgetBar(weekly500, entries, '2026-10-04');
+    expect(budgetText(bar)).toBe('RM 236.90 left · 5 days left · ~RM 47.38/day');
+    expect(bar.budgetSen).toBe(53690);
+  });
+
+  it('leaves income from another period and Saving out of the budget', () => {
+    const entries = [
+      income('2026-10-01', 3690),
+      income('2026-10-09', 3690),
+      saving('2026-09-25', '2026-10-01', 50000, 50000),
+    ];
+    expect(budgetBar(weekly500, entries, '2026-10-04').budgetSen).toBe(50000);
+  });
+
+  it('pulls an overspend back under with income', () => {
+    const entries = [expense('2026-10-02', 52000), income('2026-10-03', 3690)];
+    const bar = budgetBar(weekly500, entries, '2026-10-04');
+    expect(budgetText(bar)).toBe('RM 16.90 left · 5 days left · ~RM 3.38/day');
+    expect(bar.tone).toBe('warning');
   });
 
   it('counts today among the days left and ends on one', () => {
@@ -337,6 +360,13 @@ describe('Saving entries', () => {
     expect(missingSavings(weekly600, [...firstWeek, ...written], '2026-10-19')).toEqual([]);
   });
 
+  it('adds income from the period to what it saved', () => {
+    const pay = income('2026-10-06', 3690);
+    expect(missingSavings(weekly600, [...firstWeek, pay], '2026-10-09')).toEqual([
+      { amountSen: -4050 + 3690, date: '2026-10-08', periodStart: '2026-10-02', budgetSen: 60000 },
+    ]);
+  });
+
   it('writes a zero Saving when the budget was spent exactly', () => {
     expect(
       missingSavings(weekly500, [expense('2026-10-04', 50000)], '2026-10-09'),
@@ -430,9 +460,15 @@ describe('recalculating a closed period', () => {
     ]);
   });
 
-  it('ignores income added inside a closed period', () => {
-    const pay = income('2026-10-07', 300000);
-    expect(savingRecalcs([...base, pay], [pay.date])).toEqual([]);
+  it('raises the Saving when income is added inside it', () => {
+    const pay = income('2026-10-07', 3690);
+    expect(savingRecalcs([...base, pay], [pay.date])).toEqual([
+      { id: closedFirst.id, amountSen: -4050 + 3690 },
+    ]);
+  });
+
+  it('does not count a Saving as income for its own period', () => {
+    expect(allSavingRecalcs(base)).toEqual([]);
   });
 
   it('counts each period once when two touched dates share it', () => {
@@ -523,6 +559,15 @@ describe('the water tank', () => {
       level: 0.0675,
       amount: 'RM 40.50',
       caption: 'over the RM 600.00 budget',
+    });
+  });
+
+  it('measures the tank against the budget plus income', () => {
+    const entries = [expense('2026-10-02', 25000), income('2026-10-02', 10000)];
+    expect(budgetTank(budgetBar(weekly500, entries, '2026-10-02'))).toMatchObject({
+      level: 35000 / 60000,
+      amount: 'RM 350.00',
+      caption: 'left of RM 600.00',
     });
   });
 
